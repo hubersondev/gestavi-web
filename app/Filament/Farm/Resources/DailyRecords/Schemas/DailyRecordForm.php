@@ -159,6 +159,23 @@ class DailyRecordForm
                                             ->helperText('Ne peut pas dépasser l\'effectif présent de la bande')
                                             ->suffix('sujets'),
 
+                                        TextInput::make('culls')
+                                            ->label('Réformes / tri')
+                                            ->numeric()
+                                            ->default(0)
+                                            ->minValue(0)
+                                            ->maxValue(function (Get $get, ?DailyRecord $record): ?int {
+                                                $flock = Flock::query()->find($get('flock_id'));
+
+                                                if (! $flock) {
+                                                    return null;
+                                                }
+
+                                                return (int) $flock->quantity_current + (int) ($record?->culls ?? 0);
+                                            })
+                                            ->helperText('Sujets sortis vivants du lot (tri, réforme), distincts de la mortalité')
+                                            ->suffix('sujets'),
+
                                         Textarea::make('mortality_cause')
                                             ->label('Cause de mortalité')
                                             ->rows(4)

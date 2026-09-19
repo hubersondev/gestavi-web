@@ -21,7 +21,7 @@ class Employee extends Model
         'organisation_id', 'farm_id', 'user_id',
         'employee_number', 'first_name', 'last_name',
         'gender', 'birth_date', 'birth_place', 'nationality', 'marital_status',
-        'cnps_number', 'payment_method',
+        'cnps_number', 'fiscal_parts', 'payment_method',
         'phone', 'phone_secondary', 'email', 'address', 'city',
         'emergency_contact_name', 'emergency_contact_phone', 'emergency_contact_relationship',
         'department', 'status',
@@ -47,6 +47,7 @@ class Employee extends Model
             'is_resident' => 'boolean',
             'is_on_site' => 'boolean',
             'requires_patrol' => 'boolean',
+            'fiscal_parts' => 'decimal:1',
         ];
     }
 
@@ -215,11 +216,15 @@ class Employee extends Model
     public static function generateNumber(int $organisationId): string
     {
         $year = now()->year;
-        $count = static::withTrashed()
-            ->where('organisation_id', $organisationId)
-            ->whereYear('created_at', $year)
-            ->count();
+        $sequence = app(\App\Services\NumberSequence::class);
 
-        return 'EMP-'.$year.'-'.str_pad($count + 1, 3, '0', STR_PAD_LEFT);
+        return $sequence->nextFormatted(
+            prefix: 'EMP-',
+            key: 'employee',
+            scopeId: $organisationId,
+            year: $year,
+            pad: 3,
+            seedUsing: fn (): int => $sequence->maxSuffix('employees', 'employee_number', "EMP-{$year}-", ['organisation_id' => $organisationId]),
+        );
     }
 }

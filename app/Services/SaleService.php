@@ -7,6 +7,7 @@ use App\Enums\QuoteStatus;
 use App\Enums\SaleStatus;
 use App\Exceptions\CommercialException;
 use App\Models\Customer;
+use App\Models\Flock;
 use App\Models\Payment;
 use App\Models\Quote;
 use App\Models\Sale;
@@ -26,6 +27,8 @@ class SaleService
         if (empty($items)) {
             throw CommercialException::emptyItems();
         }
+
+        $this->assertFlocksNotUnderWithdrawal($items, $data['sale_date'] ?? null);
 
         return DB::transaction(function () use ($data, $items): Sale {
             $sale = Sale::create($data);
@@ -66,6 +69,30 @@ class SaleService
             }
 
             return $sale->fresh(['items', 'customer']);
+        });
+    }
+
+    /**
+     * Garde-fou sanitaire : aucune ligne ne peut porter sur une bande dont un
+     * traitement impose encore un délai d'attente (résidus dans la viande ou les œufs).
+     *
+     * @param  array<int, array<string, mixed>>  $items
+     */
+    public function assertFlocksNotUnderWithdrawal(array $items, mixed $saleDate = null): void
+    {
+        $flockIds = collect($items)->pluck('flock_id')->filter()->unique()->values();
+
+        if ($flockIds->isEmpty()) {
+            return;
+        }
+
+        Flock::query()->whereIn('id', $flockIds)->get()->each(function (Flock $flock) use ($saleDate): void {
+            if ($flock->isUnderWithdrawal($saleDate)) {
+                throw CommercialException::flockUnderWithdrawal(
+                    $flock->code,
+                    $flock->getWithdrawalUntil()?->format('d/m/Y') ?? '',
+                );
+            }
         });
     }
 

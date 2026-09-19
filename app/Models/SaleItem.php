@@ -11,7 +11,7 @@ class SaleItem extends Model
     use HasFactory;
 
     protected $fillable = [
-        'sale_id', 'flock_id',
+        'sale_id', 'flock_id', 'is_live_birds',
         'product_name', 'description', 'unit',
         'quantity', 'unit_price',
         'discount_percent', 'discount_amount', 'total',
@@ -37,10 +37,12 @@ class SaleItem extends Model
 
         static::saved(function (SaleItem $item): void {
             $item->sale?->calculateTotals();
+            $item->syncFlockQuantities();
         });
 
         static::deleted(function (SaleItem $item): void {
             $item->sale?->calculateTotals();
+            $item->syncFlockQuantities();
         });
     }
 
@@ -57,6 +59,24 @@ class SaleItem extends Model
     }
 
     // ─── HELPERS ─────────────────────────────────────────────────────────────
+
+    /**
+     * Une ligne « sujets vivants » modifie l'effectif de la bande liée
+     * (y compris si la bande ou le drapeau a changé : on recalcule l'ancienne et la nouvelle).
+     */
+    public function syncFlockQuantities(): void
+    {
+        $flockIds = array_filter(array_unique([
+            $this->flock_id,
+            $this->getOriginal('flock_id'),
+        ]));
+
+        if ($flockIds === [] || (! $this->is_live_birds && ! $this->getOriginal('is_live_birds'))) {
+            return;
+        }
+
+        Flock::query()->whereIn('id', $flockIds)->get()->each->recalculateQuantities();
+    }
 
     public function calculateTotal(): void
     {

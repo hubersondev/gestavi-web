@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Facades\DB;
 
 class DailyRecord extends Model
 {
@@ -19,6 +18,8 @@ class DailyRecord extends Model
         'age_days',
         'mortality',
         'mortality_cause',
+        'culls',
+        'birds_present',
         'eggs_collected',
         'eggs_broken',
         'eggs_sold',
@@ -38,6 +39,9 @@ class DailyRecord extends Model
     {
         return [
             'record_date' => 'date',
+            'mortality' => 'integer',
+            'culls' => 'integer',
+            'birds_present' => 'integer',
             'feed_consumed_kg' => 'decimal:2',
             'water_consumed_l' => 'decimal:2',
             'average_weight_g' => 'decimal:2',
@@ -48,54 +52,53 @@ class DailyRecord extends Model
     }
 
     /**
-     * L'effectif courant de la bande suit la mortalité saisie, quel que soit
-     * le point d'entrée (formulaire, service, import) : création, correction
-     * rétroactive et suppression d'un relevé ajustent quantity_current.
+     * L'effectif courant de la bande est DÉRIVÉ des relevés (mortalité, réformes)
+     * et des ventes de sujets vivants : toute création, correction rétroactive ou
+     * suppression d'un relevé déclenche un recalcul complet, quel que soit le
+     * point d'entrée (formulaire, service, import).
      */
     protected static function booted(): void
     {
         static::creating(function (DailyRecord $record): void {
-            $record->assertMortalityFits((int) $record->mortality);
-        });
-
-        static::created(function (DailyRecord $record): void {
-            $record->applyMortalityToFlock((int) $record->mortality);
+            $record->assertLossesFit((int) $record->mortality + (int) $record->culls);
         });
 
         static::updating(function (DailyRecord $record): void {
-            if ($record->isDirty('mortality')) {
-                $record->assertMortalityFits((int) $record->mortality - (int) $record->getOriginal('mortality'));
+            if ($record->isDirty(['mortality', 'culls'])) {
+                $delta = ((int) $record->mortality + (int) $record->culls)
+                    - ((int) $record->getOriginal('mortality') + (int) $record->getOriginal('culls'));
+
+                $record->assertLossesFit($delta);
             }
         });
 
-        static::updated(function (DailyRecord $record): void {
-            if ($record->wasChanged('mortality')) {
-                $delta = (int) $record->mortality - (int) $record->getOriginal('mortality');
-                $record->applyMortalityToFlock($delta);
-            }
+        static::saved(function (DailyRecord $record): void {
+            $record->flock?->recalculateQuantities();
+            $record->refreshBirdsPresentFrom($record->record_date);
         });
 
         static::deleted(function (DailyRecord $record): void {
-            $record->applyMortalityToFlock(-(int) $record->mortality);
+            $record->flock?->recalculateQuantities();
+            $record->refreshBirdsPresentFrom($record->record_date);
         });
     }
 
     /**
-     * Refuse une mortalité (ou une hausse de mortalité) supérieure à l'effectif
-     * présent : l'effectif ne peut jamais devenir négatif.
+     * Refuse des pertes (mortalité + réformes) supérieures à l'effectif présent :
+     * l'effectif ne peut jamais devenir négatif.
      */
-    protected function assertMortalityFits(int $additionalDeaths): void
+    protected function assertLossesFit(int $additionalLosses): void
     {
-        if ($additionalDeaths <= 0) {
+        if ($additionalLosses <= 0) {
             return;
         }
 
         $flock = Flock::query()->find($this->flock_id);
 
-        if ($flock && $additionalDeaths > (int) $flock->quantity_current) {
+        if ($flock && $additionalLosses > (int) $flock->quantity_current) {
             throw new \InvalidArgumentException(sprintf(
-                'La mortalité saisie (%d) dépasse l\'effectif présent de la bande %s (%d).',
-                $additionalDeaths,
+                'Les pertes saisies (%d) dépassent l\'effectif présent de la bande %s (%d).',
+                $additionalLosses,
                 $flock->code,
                 (int) $flock->quantity_current,
             ));
@@ -103,29 +106,28 @@ class DailyRecord extends Model
     }
 
     /**
-     * Décrémente (delta > 0) ou restitue (delta < 0) des sujets sur la bande,
-     * sous verrou pour éviter les écrasements concurrents.
+     * Recalcule l'effectif présent (fin de journée) de ce relevé et de tous les
+     * relevés postérieurs de la bande : une correction rétroactive se propage.
      */
-    protected function applyMortalityToFlock(int $delta): void
+    protected function refreshBirdsPresentFrom(mixed $fromDate): void
     {
-        if ($delta === 0) {
+        $flock = Flock::query()->find($this->flock_id);
+
+        if (! $flock) {
             return;
         }
 
-        DB::transaction(function () use ($delta): void {
-            $flock = Flock::query()->lockForUpdate()->find($this->flock_id);
+        $records = static::query()
+            ->where('flock_id', $flock->id)
+            ->whereDate('record_date', '>=', $fromDate)
+            ->orderBy('record_date')
+            ->get(['id', 'record_date', 'mortality', 'culls']);
 
-            if (! $flock) {
-                return;
-            }
-
-            $newQuantity = min(
-                (int) $flock->quantity_started,
-                max(0, (int) $flock->quantity_current - $delta),
-            );
-
-            $flock->update(['quantity_current' => $newQuantity]);
-        });
+        foreach ($records as $record) {
+            static::withoutEvents(fn () => static::query()
+                ->whereKey($record->id)
+                ->update(['birds_present' => $flock->birdsPresentOn($record->record_date)]));
+        }
     }
 
     // ===== RELATIONS =====
@@ -165,59 +167,80 @@ class DailyRecord extends Model
     // ===== HELPERS =====
 
     /**
-     * Taux de ponte en pourcentage (œufs collectés / effectif actuel de la bande).
+     * Effectif présent en fin de journée (dénormalisé), à défaut l'effectif courant de la bande.
+     */
+    public function getBirdsPresent(): int
+    {
+        return (int) ($this->birds_present ?? $this->flock?->quantity_current ?? 0);
+    }
+
+    /**
+     * Effectif présent en début de journée (avant les pertes du jour).
+     */
+    public function getBirdsAtStartOfDay(): int
+    {
+        return $this->getBirdsPresent() + (int) $this->mortality + (int) $this->culls;
+    }
+
+    /**
+     * Taux de ponte du jour en % : œufs collectés / poules présentes.
      */
     public function getLayingRate(): ?float
     {
-        $quantity = $this->flock?->quantity_current;
-        if (! $quantity || $quantity <= 0) {
+        $birds = $this->getBirdsPresent();
+
+        if ($birds <= 0) {
             return null;
         }
 
-        return round(($this->eggs_collected / $quantity) * 100, 2);
+        return round(($this->eggs_collected / $birds) * 100, 2);
     }
 
     /**
-     * Consommation d'aliment par sujet en grammes.
+     * Consommation d'aliment par sujet présent, en grammes.
      */
     public function getFeedPerBird(): ?float
     {
-        $quantity = $this->flock?->quantity_current;
-        if (! $quantity || $quantity <= 0) {
+        $birds = $this->getBirdsPresent();
+
+        if ($birds <= 0) {
             return null;
         }
 
-        return round(($this->feed_consumed_kg * 1000) / $quantity, 1);
+        return round(((float) $this->feed_consumed_kg * 1000) / $birds, 1);
     }
 
     /**
-     * Consommation d'eau par sujet en millilitres.
+     * Consommation d'eau par sujet présent, en millilitres.
      */
     public function getWaterPerBird(): ?float
     {
-        $quantity = $this->flock?->quantity_current;
-        if (! $quantity || $quantity <= 0) {
+        $birds = $this->getBirdsPresent();
+
+        if ($birds <= 0) {
             return null;
         }
 
-        return round(($this->water_consumed_l * 1000) / $quantity, 1);
+        return round(((float) $this->water_consumed_l * 1000) / $birds, 1);
     }
 
     /**
-     * Taux de mortalité journalier en pourcentage.
+     * Taux de mortalité journalier en % : morts du jour / effectif présent en début de journée
+     * (convention avicole ; l'effectif initial n'est utilisé que pour le cumul).
      */
     public function getMortalityRate(): ?float
     {
-        $quantity = $this->flock?->quantity_started;
-        if (! $quantity || $quantity <= 0) {
+        $birds = $this->getBirdsAtStartOfDay();
+
+        if ($birds <= 0) {
             return null;
         }
 
-        return round(($this->mortality / $quantity) * 100, 4);
+        return round(($this->mortality / $birds) * 100, 4);
     }
 
     /**
-     * Taux de casse en pourcentage.
+     * Taux de casse en %.
      */
     public function getEggsBrokenRate(): ?float
     {

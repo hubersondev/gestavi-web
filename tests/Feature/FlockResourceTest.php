@@ -224,14 +224,19 @@ it('masque la navigation si le plan n\'a pas la feature Flocks', function () {
 //  Helpers métier
 // ──────────────────────────────────────────────
 
-it('calcule le taux de mortalité', function () {
-    $flock = Flock::factory()->create([
+it('calcule le taux de mortalité à partir des relevés quotidiens', function () {
+    $flock = Flock::factory()->active()->create([
         'building_id' => $this->building->id,
         'quantity_started' => 1000,
-        'quantity_current' => 950,
+        'quantity_current' => 1000,
+        'start_date' => now()->subDays(10),
     ]);
 
-    expect($flock->getMortalityRate())->toBe(5.0);
+    \App\Models\DailyRecord::create(['flock_id' => $flock->id, 'record_date' => now()->subDays(2)->toDateString(), 'mortality' => 30]);
+    \App\Models\DailyRecord::create(['flock_id' => $flock->id, 'record_date' => now()->subDay()->toDateString(), 'mortality' => 20]);
+
+    expect($flock->fresh()->getMortalityRate())->toBe(5.0)
+        ->and($flock->fresh()->quantity_current)->toBe(950);
 });
 
 it('calcule l\'âge en jours', function () {
@@ -245,12 +250,16 @@ it('calcule l\'âge en jours', function () {
     expect($flock->getCurrentAgeInDays())->toBe(17);
 });
 
-it('calcule les pertes', function () {
-    $flock = Flock::factory()->create([
+it('calcule les pertes (mortalité + réformes) à partir des relevés', function () {
+    $flock = Flock::factory()->active()->create([
         'building_id' => $this->building->id,
         'quantity_started' => 2000,
-        'quantity_current' => 1850,
+        'quantity_current' => 2000,
+        'start_date' => now()->subDays(10),
     ]);
 
-    expect($flock->getLossCount())->toBe(150);
+    \App\Models\DailyRecord::create(['flock_id' => $flock->id, 'record_date' => now()->subDay()->toDateString(), 'mortality' => 100, 'culls' => 50]);
+
+    expect($flock->fresh()->getLossCount())->toBe(150)
+        ->and($flock->fresh()->quantity_current)->toBe(1850);
 });

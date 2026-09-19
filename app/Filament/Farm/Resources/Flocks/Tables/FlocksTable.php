@@ -134,7 +134,18 @@ class FlocksTable
                     ->modalHeading('Terminer la bande')
                     ->modalDescription('La bande passera en statut "Terminé" et la date de fin réelle sera enregistrée.')
                     ->visible(fn ($record) => $record->isActive() && FlockResource::canPerformAction('complete'))
-                    ->action(fn ($record) => app(\App\Services\FlockService::class)->completeFlock($record)),
+                    ->action(function ($record): void {
+                        try {
+                            app(\App\Services\FlockService::class)->completeFlock($record);
+                        } catch (\LogicException $e) {
+                            \Filament\Notifications\Notification::make()
+                                ->title('Clôture impossible')
+                                ->body($e->getMessage())
+                                ->danger()
+                                ->persistent()
+                                ->send();
+                        }
+                    }),
                 Action::make('cancel')
                     ->label('Annuler')
                     ->icon('heroicon-o-x-circle')

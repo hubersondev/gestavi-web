@@ -34,8 +34,16 @@ class ContractAmendment extends Model
     public static function generateNumber(int $contractId): string
     {
         $year = now()->year;
-        $count = static::where('contract_id', $contractId)->whereYear('created_at', $year)->count();
+        $sequence = app(\App\Services\NumberSequence::class);
 
-        return 'AVN-'.$year.'-'.str_pad($count + 1, 3, '0', STR_PAD_LEFT);
+        return $sequence->nextFormatted(
+            prefix: 'AVN-',
+            key: 'contract_amendment',
+            scopeId: $contractId,
+            year: $year,
+            pad: 3,
+            scope: \App\Services\NumberSequence::SCOPE_CONTRACT,
+            seedUsing: fn (): int => $sequence->maxSuffix('contract_amendments', 'amendment_number', "AVN-{$year}-", ['contract_id' => $contractId]),
+        );
     }
 }

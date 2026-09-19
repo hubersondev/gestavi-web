@@ -66,6 +66,17 @@ class DailyRecordsTable
                     ->suffix(' sujets')
                     ->color(fn ($state) => $state > 0 ? 'danger' : null)
                     ->icon(fn ($state) => $state > 0 ? 'heroicon-m-exclamation-triangle' : null),
+                TextColumn::make('culls')
+                    ->label('Réformes')
+                    ->numeric()
+                    ->sortable()
+                    ->suffix(' sujets')
+                    ->toggleable(),
+                TextColumn::make('birds_present')
+                    ->label('Effectif présent')
+                    ->numeric()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 TextColumn::make('eggs_collected')
                     ->label('Œufs collectés')

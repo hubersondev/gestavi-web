@@ -148,8 +148,16 @@ class SaleForm
                                                     })
                                                     ->searchable()
                                                     ->nullable()
+                                                    ->live()
                                                     ->helperText('Optionnel')
                                                     ->columnSpan(2),
+
+                                                \Filament\Forms\Components\Toggle::make('is_live_birds')
+                                                    ->label('Sujets vivants')
+                                                    ->helperText('Décrémente l\'effectif de la bande liée')
+                                                    ->default(false)
+                                                    ->visible(fn (Get $get): bool => filled($get('flock_id')))
+                                                    ->columnSpan(1),
 
                                                 TextInput::make('unit')
                                                     ->label('Unité')

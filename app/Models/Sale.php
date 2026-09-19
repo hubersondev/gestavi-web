@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\PaymentMethod;
 use App\Enums\SaleStatus;
 use App\Enums\TransactionCategory;
+use App\Exceptions\CommercialException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -245,6 +246,14 @@ class Sale extends Model
         ?\DateTimeInterface $paidAt = null,
     ): Payment {
         return DB::transaction(function () use ($amount, $method, $accountId, $reference, $paidAt): Payment {
+            // Verrouiller la facture : le solde dû est relu en base avant d'accepter le paiement
+            /** @var Sale $locked */
+            $locked = static::query()->lockForUpdate()->findOrFail($this->getKey());
+
+            if ($amount > (float) $locked->balance + 0.01) {
+                throw CommercialException::paymentExceedsBalance($locked->invoice_number, (float) $locked->balance, $amount);
+            }
+
             /** @var Payment $payment */
             $payment = $this->payments()->create([
                 'user_id' => auth()->id(),
@@ -255,7 +264,7 @@ class Sale extends Model
                 'payment_date' => $paidAt ?? now(),
             ]);
 
-            // Créditer le compte financier si configuré
+            // Créditer le compte financier si configuré, à la date réelle du paiement
             if ($payment->account_id) {
                 $payment->account?->credit(
                     amount: $amount,
@@ -264,6 +273,7 @@ class Sale extends Model
                     referenceType: self::class,
                     referenceId: $this->id,
                     referenceNumber: $this->invoice_number,
+                    date: $paidAt,
                 );
 
                 $payment->update(['is_recorded' => true]);
@@ -305,14 +315,15 @@ class Sale extends Model
     public static function generateInvoiceNumber(int $organisationId): string
     {
         $year = now()->year;
-        $prefix = "FAC-{$year}-";
+        $sequence = app(\App\Services\NumberSequence::class);
 
-        $lastNumber = (int) static::withTrashed()
-            ->where('organisation_id', $organisationId)
-            ->where('invoice_number', 'like', "{$prefix}%")
-            ->selectRaw("MAX(CAST(SUBSTRING(invoice_number FROM '.{5}$') AS INTEGER)) as max_num")
-            ->value('max_num');
-
-        return sprintf('%s%05d', $prefix, $lastNumber + 1);
+        // Numérotation continue et verrouillée : exigence SYSCOHADA sur les factures
+        return $sequence->nextFormatted(
+            prefix: 'FAC-',
+            key: 'invoice',
+            scopeId: $organisationId,
+            year: $year,
+            seedUsing: fn (): int => $sequence->maxSuffix('sales', 'invoice_number', "FAC-{$year}-", ['organisation_id' => $organisationId]),
+        );
     }
 }

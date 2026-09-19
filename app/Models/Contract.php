@@ -129,8 +129,16 @@ class Contract extends Model
     public static function generateNumber(int $employeeId): string
     {
         $year = now()->year;
-        $count = static::where('employee_id', $employeeId)->whereYear('created_at', $year)->count();
+        $sequence = app(\App\Services\NumberSequence::class);
 
-        return 'CTR-'.$year.'-'.str_pad($count + 1, 3, '0', STR_PAD_LEFT);
+        return $sequence->nextFormatted(
+            prefix: 'CTR-',
+            key: 'contract',
+            scopeId: $employeeId,
+            year: $year,
+            pad: 3,
+            scope: \App\Services\NumberSequence::SCOPE_EMPLOYEE,
+            seedUsing: fn (): int => $sequence->maxSuffix('contracts', 'contract_number', "CTR-{$year}-", ['employee_id' => $employeeId]),
+        );
     }
 }

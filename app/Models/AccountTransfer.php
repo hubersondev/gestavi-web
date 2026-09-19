@@ -129,24 +129,25 @@ class AccountTransfer extends Model
             throw AccountException::transferAlreadyProcessed($this->reference ?? (string) $this->id);
         }
 
-        $fromAccount = $this->fromAccount()->lockForUpdate()->first();
-        $toAccount = $this->toAccount()->lockForUpdate()->first();
+        // Les verrous doivent vivre dans la transaction, sinon ils sont relâchés immédiatement (autocommit)
+        DB::transaction(function (): void {
+            $fromAccount = $this->fromAccount()->lockForUpdate()->first();
+            $toAccount = $this->toAccount()->lockForUpdate()->first();
 
-        if (! $fromAccount?->is_active) {
-            throw AccountException::accountNotActive($fromAccount?->name ?? 'source');
-        }
+            if (! $fromAccount?->is_active) {
+                throw AccountException::accountNotActive($fromAccount?->name ?? 'source');
+            }
 
-        if (! $toAccount?->is_active) {
-            throw AccountException::accountNotActive($toAccount?->name ?? 'destination');
-        }
+            if (! $toAccount?->is_active) {
+                throw AccountException::accountNotActive($toAccount?->name ?? 'destination');
+            }
 
-        $total = $this->getTotalAmount();
+            $total = $this->getTotalAmount();
 
-        if ((float) $fromAccount->current_balance < $total) {
-            throw AccountException::insufficientBalance($fromAccount->name, $total, (float) $fromAccount->current_balance);
-        }
+            if ((float) $fromAccount->current_balance < $total) {
+                throw AccountException::insufficientBalance($fromAccount->name, $total, (float) $fromAccount->current_balance);
+            }
 
-        DB::transaction(function () use ($fromAccount, $toAccount, $total): void {
             $feesPart = (float) $this->fees > 0 ? ' (frais inclus '.number_format((float) $this->fees, 0, ',', ' ').' XOF)' : '';
 
             $fromAccount->debit(
@@ -186,18 +187,18 @@ class AccountTransfer extends Model
             throw AccountException::transferNotCompleted($this->reference ?? (string) $this->id);
         }
 
-        $fromAccount = $this->fromAccount()->lockForUpdate()->first();
-        $toAccount = $this->toAccount()->lockForUpdate()->first();
+        DB::transaction(function (): void {
+            $fromAccount = $this->fromAccount()->lockForUpdate()->first();
+            $toAccount = $this->toAccount()->lockForUpdate()->first();
 
-        if (! $toAccount || (float) $toAccount->current_balance < (float) $this->amount) {
-            throw AccountException::insufficientBalance(
-                $toAccount?->name ?? 'destination',
-                (float) $this->amount,
-                (float) ($toAccount?->current_balance ?? 0),
-            );
-        }
+            if (! $toAccount || (float) $toAccount->current_balance < (float) $this->amount) {
+                throw AccountException::insufficientBalance(
+                    $toAccount?->name ?? 'destination',
+                    (float) $this->amount,
+                    (float) ($toAccount?->current_balance ?? 0),
+                );
+            }
 
-        DB::transaction(function () use ($fromAccount, $toAccount): void {
             $toAccount->debit(
                 amount: (float) $this->amount,
                 description: "Contrepassation transfert {$this->reference}",
@@ -223,12 +224,14 @@ class AccountTransfer extends Model
     public static function generateReference(int $organisationId): string
     {
         $year = now()->year;
+        $sequence = app(\App\Services\NumberSequence::class);
 
-        $count = static::query()
-            ->where('organisation_id', $organisationId)
-            ->whereYear('created_at', $year)
-            ->count();
-
-        return 'TRF-'.$year.'-'.str_pad((string) ($count + 1), 5, '0', STR_PAD_LEFT);
+        return $sequence->nextFormatted(
+            prefix: 'TRF-',
+            key: 'account_transfer',
+            scopeId: $organisationId,
+            year: $year,
+            seedUsing: fn (): int => $sequence->maxSuffix('account_transfers', 'reference', "TRF-{$year}-", ['organisation_id' => $organisationId]),
+        );
     }
 }

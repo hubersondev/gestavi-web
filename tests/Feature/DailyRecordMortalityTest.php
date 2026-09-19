@@ -54,24 +54,30 @@ it('restitue les sujets lors de la suppression d\'un relevé', function () {
 });
 
 it('refuse une mortalité supérieure à l\'effectif présent, à la création comme en correction', function () {
-    $this->flock->update(['quantity_current' => 10]);
+    // L'effectif est dérivé des relevés : on part d'une petite bande de 10 sujets
+    $small = Flock::factory()->active()->create([
+        'quantity_started' => 10,
+        'quantity_current' => 10,
+        'start_date' => now()->subDays(10),
+        'age_at_arrival' => 0,
+    ]);
 
     expect(fn () => DailyRecord::create([
-        'flock_id' => $this->flock->id,
+        'flock_id' => $small->id,
         'record_date' => now()->toDateString(),
         'mortality' => 50,
     ]))->toThrow(InvalidArgumentException::class);
 
-    expect($this->flock->fresh()->quantity_current)->toBe(10)
-        ->and(DailyRecord::query()->where('flock_id', $this->flock->id)->count())->toBe(0);
+    expect($small->fresh()->quantity_current)->toBe(10)
+        ->and(DailyRecord::query()->where('flock_id', $small->id)->count())->toBe(0);
 
     $record = DailyRecord::create([
-        'flock_id' => $this->flock->id,
+        'flock_id' => $small->id,
         'record_date' => now()->toDateString(),
         'mortality' => 4,
     ]);
 
-    expect($this->flock->fresh()->quantity_current)->toBe(6);
+    expect($small->fresh()->quantity_current)->toBe(6);
 
     // Passer de 4 à 11 morts demande 7 sujets de plus, il n'en reste que 6
     expect(fn () => $record->update(['mortality' => 11]))->toThrow(InvalidArgumentException::class);
@@ -79,7 +85,7 @@ it('refuse une mortalité supérieure à l\'effectif présent, à la création c
     // Passer de 4 à 10 est possible (exactement l'effectif restant)
     $record->update(['mortality' => 10]);
 
-    expect($this->flock->fresh()->quantity_current)->toBe(0);
+    expect($small->fresh()->quantity_current)->toBe(0);
 });
 
 it('le service calcule l\'âge et refuse une mortalité supérieure à l\'effectif présent', function () {

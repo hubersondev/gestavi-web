@@ -6,12 +6,14 @@ use App\Enums\AccountType;
 use App\Enums\MobileMoneyOperator;
 use App\Enums\TransactionCategory;
 use App\Enums\TransactionType;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 
 class Account extends Model
 {
@@ -135,6 +137,12 @@ class Account extends Model
 
     // ─── ACTIONS ─────────────────────────────────────────────────────────────
 
+    /**
+     * Crédite le compte. Le solde est relu sous verrou (SELECT … FOR UPDATE)
+     * afin que deux encaissements simultanés ne s'écrasent pas.
+     *
+     * @param  \DateTimeInterface|string|null  $date  Date comptable (défaut : aujourd'hui)
+     */
     public function credit(
         float $amount,
         string $description,
@@ -142,29 +150,16 @@ class Account extends Model
         ?string $referenceType = null,
         ?int $referenceId = null,
         ?string $referenceNumber = null,
+        \DateTimeInterface|string|null $date = null,
     ): Transaction {
-        $balanceBefore = (float) $this->current_balance;
-        $balanceAfter = $balanceBefore + $amount;
-
-        $transaction = $this->transactions()->create([
-            'user_id' => auth()->id(),
-            'type' => TransactionType::Credit,
-            'category' => $category,
-            'amount' => $amount,
-            'balance_before' => $balanceBefore,
-            'balance_after' => $balanceAfter,
-            'reference_type' => $referenceType,
-            'reference_id' => $referenceId,
-            'reference_number' => $referenceNumber,
-            'description' => $description,
-            'transaction_date' => now()->toDateString(),
-        ]);
-
-        $this->update(['current_balance' => $balanceAfter]);
-
-        return $transaction;
+        return $this->recordMovement(TransactionType::Credit, $amount, $description, $category, $referenceType, $referenceId, $referenceNumber, $date);
     }
 
+    /**
+     * Débite le compte, sous le même verrou que credit().
+     *
+     * @param  \DateTimeInterface|string|null  $date  Date comptable (défaut : aujourd'hui)
+     */
     public function debit(
         float $amount,
         string $description,
@@ -172,27 +167,60 @@ class Account extends Model
         ?string $referenceType = null,
         ?int $referenceId = null,
         ?string $referenceNumber = null,
+        \DateTimeInterface|string|null $date = null,
     ): Transaction {
-        $balanceBefore = (float) $this->current_balance;
-        $balanceAfter = $balanceBefore - $amount;
+        return $this->recordMovement(TransactionType::Debit, $amount, $description, $category, $referenceType, $referenceId, $referenceNumber, $date);
+    }
 
-        $transaction = $this->transactions()->create([
-            'user_id' => auth()->id(),
-            'type' => TransactionType::Debit,
-            'category' => $category,
-            'amount' => $amount,
-            'balance_before' => $balanceBefore,
-            'balance_after' => $balanceAfter,
-            'reference_type' => $referenceType,
-            'reference_id' => $referenceId,
-            'reference_number' => $referenceNumber,
-            'description' => $description,
-            'transaction_date' => now()->toDateString(),
-        ]);
+    /**
+     * Écriture atomique : verrou de la ligne du compte, calcul du solde à partir
+     * de la valeur en base (jamais de la valeur en mémoire), puis mise à jour.
+     */
+    protected function recordMovement(
+        TransactionType $type,
+        float $amount,
+        string $description,
+        TransactionCategory $category,
+        ?string $referenceType,
+        ?int $referenceId,
+        ?string $referenceNumber,
+        \DateTimeInterface|string|null $date,
+    ): Transaction {
+        if ($amount <= 0) {
+            throw new \InvalidArgumentException('Le montant d\'une écriture doit être strictement positif.');
+        }
 
-        $this->update(['current_balance' => $balanceAfter]);
+        return DB::transaction(function () use ($type, $amount, $description, $category, $referenceType, $referenceId, $referenceNumber, $date): Transaction {
+            /** @var Account $locked */
+            $locked = static::query()->lockForUpdate()->findOrFail($this->getKey());
 
-        return $transaction;
+            $balanceBefore = (float) $locked->current_balance;
+            $balanceAfter = $type === TransactionType::Credit
+                ? $balanceBefore + $amount
+                : $balanceBefore - $amount;
+
+            $transaction = $locked->transactions()->create([
+                'user_id' => auth()->id(),
+                'type' => $type,
+                'category' => $category,
+                'amount' => $amount,
+                'balance_before' => $balanceBefore,
+                'balance_after' => $balanceAfter,
+                'reference_type' => $referenceType,
+                'reference_id' => $referenceId,
+                'reference_number' => $referenceNumber,
+                'description' => $description,
+                'transaction_date' => $date ? Carbon::parse($date)->toDateString() : now()->toDateString(),
+            ]);
+
+            $locked->update(['current_balance' => $balanceAfter]);
+
+            // Synchroniser l'instance appelante avec la valeur réellement persistée
+            $this->current_balance = $balanceAfter;
+            $this->syncOriginalAttribute('current_balance');
+
+            return $transaction;
+        });
     }
 
     public function getTotalCredits(?\DateTimeInterface $from = null, ?\DateTimeInterface $to = null): float

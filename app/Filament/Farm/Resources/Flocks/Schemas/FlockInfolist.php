@@ -99,6 +99,67 @@ class FlockInfolist
                                             ->weight('bold'),
                                     ]),
 
+                                Section::make('Performances zootechniques')
+                                    ->description('Indicateurs calculés à partir des relevés quotidiens et des ventes de sujets')
+                                    ->columns(4)
+                                    ->schema([
+                                        TextEntry::make('perf_mortality')
+                                            ->label('Taux de mortalité')
+                                            ->state(fn ($record) => number_format($record->getMortalityRate(), 2, ',', ' ').' %')
+                                            ->color(fn ($record) => match (true) {
+                                                $record->getMortalityRate() > 5 => 'danger',
+                                                $record->getMortalityRate() > 2 => 'warning',
+                                                default => 'success',
+                                            })
+                                            ->badge(),
+
+                                        TextEntry::make('perf_culls')
+                                            ->label('Taux de réforme')
+                                            ->state(fn ($record) => number_format($record->getCullRate(), 2, ',', ' ').' %'),
+
+                                        TextEntry::make('perf_sold')
+                                            ->label('Sujets vendus')
+                                            ->state(fn ($record) => number_format((int) $record->quantity_sold, 0, ',', ' ')),
+
+                                        TextEntry::make('perf_feed')
+                                            ->label('Aliment consommé')
+                                            ->state(fn ($record) => number_format((float) $record->dailyRecords()->sum('feed_consumed_kg'), 1, ',', ' ').' kg'),
+
+                                        TextEntry::make('perf_gmq')
+                                            ->label('GMQ')
+                                            ->state(fn ($record) => self::indicator($record, 'gmq', ' g/j'))
+                                            ->visible(fn ($record) => $record->productionKind()->tracksWeight()),
+
+                                        TextEntry::make('perf_ic')
+                                            ->label('Indice de consommation')
+                                            ->state(fn ($record) => self::indicator($record, 'ic'))
+                                            ->helperText('kg d\'aliment par kg de poids vif produit')
+                                            ->visible(fn ($record) => $record->productionKind()->tracksWeight()),
+
+                                        TextEntry::make('perf_ipe')
+                                            ->label('IPE (EPEF)')
+                                            ->state(fn ($record) => self::indicator($record, 'ipe'))
+                                            ->visible(fn ($record) => $record->productionKind()->tracksWeight()),
+
+                                        TextEntry::make('perf_laying')
+                                            ->label('Taux de ponte moyen')
+                                            ->state(fn ($record) => self::indicator($record, 'taux_ponte_moyen', ' %'))
+                                            ->visible(fn ($record) => $record->productionKind()->tracksEggs()),
+
+                                        TextEntry::make('perf_hhp')
+                                            ->label('Œufs par poule logée')
+                                            ->state(fn ($record) => self::indicator($record, 'oeufs_par_poule_logee'))
+                                            ->visible(fn ($record) => $record->productionKind()->tracksEggs()),
+
+                                        TextEntry::make('perf_withdrawal')
+                                            ->label('Délai d\'attente')
+                                            ->state(fn ($record) => $record->isUnderWithdrawal()
+                                                ? 'Vente interdite jusqu\'au '.$record->getWithdrawalUntil()?->format('d/m/Y')
+                                                : 'Aucun')
+                                            ->color(fn ($record) => $record->isUnderWithdrawal() ? 'danger' : 'success')
+                                            ->badge(),
+                                    ]),
+
                                 Section::make('Phase de production actuelle')
                                     ->columns(3)
                                     ->schema([
@@ -219,5 +280,18 @@ class FlockInfolist
                     ])
                     ->columnSpanFull(),
             ]);
+    }
+
+    /**
+     * Formate un indicateur calculé par FlockService (null → « — »).
+     */
+    private static function indicator(\App\Models\Flock $flock, string $key, string $suffix = ''): string
+    {
+        static $cache = [];
+
+        $cache[$flock->getKey()] ??= app(\App\Services\FlockService::class)->calculatePerformanceIndicators($flock);
+        $value = $cache[$flock->getKey()][$key] ?? null;
+
+        return $value === null ? '—' : number_format((float) $value, 2, ',', ' ').$suffix;
     }
 }

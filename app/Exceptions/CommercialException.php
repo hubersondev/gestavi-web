@@ -16,6 +16,15 @@ class CommercialException extends Exception
         ));
     }
 
+    public static function flockUnderWithdrawal(string $flockCode, string $untilDate): self
+    {
+        return new self(sprintf(
+            'La bande %s est sous délai d\'attente sanitaire jusqu\'au %s : la vente de ses sujets ou de ses œufs est interdite avant cette date.',
+            $flockCode,
+            $untilDate,
+        ));
+    }
+
     public static function saleAlreadyCancelled(string $invoiceNumber): self
     {
         return new self("La facture {$invoiceNumber} est déjà annulée.");

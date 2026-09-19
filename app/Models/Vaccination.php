@@ -23,6 +23,8 @@ class Vaccination extends Model
         'age_at_treatment',
         'administration_route',
         'dosage',
+        'withdrawal_days',
+        'withdrawal_until',
         'batch_number',
         'expiry_date',
         'birds_treated',
@@ -39,6 +41,8 @@ class Vaccination extends Model
             'scheduled_date' => 'date',
             'administered_date' => 'date',
             'expiry_date' => 'date',
+            'withdrawal_days' => 'integer',
+            'withdrawal_until' => 'date',
             'cost' => 'decimal:2',
         ];
     }
@@ -179,10 +183,27 @@ class Vaccination extends Model
      */
     public function markAsDone(array $data = []): void
     {
+        $administeredDate = \Carbon\Carbon::parse($data['administered_date'] ?? now()->toDateString());
+        $withdrawalDays = (int) ($data['withdrawal_days'] ?? $this->withdrawal_days ?? 0);
+
         $this->update(array_merge([
             'status' => VaccinationStatus::Done,
-            'administered_date' => $data['administered_date'] ?? now()->toDateString(),
+            'administered_date' => $administeredDate->toDateString(),
+            // Délai d'attente : aucune vente ni abattage avant cette date
+            'withdrawal_until' => $withdrawalDays > 0
+                ? $administeredDate->copy()->addDays($withdrawalDays)->toDateString()
+                : null,
         ], $data));
+    }
+
+    /**
+     * Vrai si le délai d'attente de ce traitement court encore.
+     */
+    public function isWithdrawalActive(): bool
+    {
+        return $this->isDone()
+            && $this->withdrawal_until !== null
+            && $this->withdrawal_until->endOfDay()->isFuture();
     }
 
     /**

@@ -102,6 +102,7 @@ class FlockService
                 'treatment_type' => $program->treatment_type,
                 'administration_route' => $program->administration_route,
                 'dosage' => $program->dosage,
+                'withdrawal_days' => (int) ($program->withdrawal_days ?? 0),
                 'scheduled_date' => $scheduledDate,
                 'age_at_treatment' => $program->scheduled_day,
                 'status' => VaccinationStatus::Pending,
@@ -148,10 +149,19 @@ class FlockService
      * Marque les vaccinations en attente comme ignorées,
      * génère un rapport de performance et crée une entrée de journal.
      */
-    public function completeFlock(Flock $flock, ?string $notes = null): array
+    public function completeFlock(Flock $flock, ?string $notes = null, bool $ignoreWithdrawal = false): array
     {
         if (! $flock->isActive()) {
             throw new \LogicException('Seule une bande en cours peut être clôturée.');
+        }
+
+        // Clôturer = vendre ou abattre : interdit pendant le délai d'attente d'un traitement
+        if (! $ignoreWithdrawal && $flock->isUnderWithdrawal()) {
+            throw new \LogicException(sprintf(
+                'La bande %s est sous délai d\'attente jusqu\'au %s : aucune vente ni abattage avant cette date.',
+                $flock->code,
+                $flock->getWithdrawalUntil()?->format('d/m/Y'),
+            ));
         }
 
         return DB::transaction(function () use ($flock, $notes) {
@@ -265,22 +275,31 @@ class FlockService
     public function calculatePerformanceIndicators(Flock $flock): array
     {
         $lastRecord = $flock->dailyRecords()->orderByDesc('record_date')->first();
+        $kind = $flock->productionKind();
 
         $indicators = [
             'age_jours' => $flock->getCurrentAgeInDays(),
             'age_semaines' => $flock->getCurrentAgeInWeeks(),
             'phase_actuelle' => $flock->getCurrentPhase()?->name,
+            'orientation' => $kind->getLabel(),
 
             'effectif_initial' => $flock->quantity_started,
             'effectif_actuel' => $flock->quantity_current,
+            'sujets_vendus' => $flock->quantity_sold,
+            'mortalite_totale' => $flock->getTotalMortality(),
+            'reformes_totales' => $flock->getTotalCulls(),
             'pertes_totales' => $flock->getLossCount(),
-            'taux_mortalite' => round($flock->getMortalityRate(), 2),
+            'taux_mortalite' => $flock->getMortalityRate(),
+            'taux_reforme' => $flock->getCullRate(),
+            'viabilite' => $flock->getViabilityRate(),
 
+            'aliment_total_kg' => round((float) $flock->dailyRecords()->sum('feed_consumed_kg'), 1),
             'cout_par_sujet' => $flock->getCostPerCurrentUnit(),
 
             'vaccinations_a_jour' => $flock->vaccinations()->overdue()->doesntExist(),
             'vaccinations_en_retard' => $flock->vaccinations()->overdue()->count(),
             'prochaine_vaccination' => $this->getNextVaccinationInfo($flock),
+            'delai_attente_jusqu_au' => $flock->getWithdrawalUntil()?->format('d/m/Y'),
         ];
 
         // Indicateurs depuis le dernier relevé quotidien
@@ -290,20 +309,21 @@ class FlockService
             $indicators['mortalite_dernier_jour'] = $lastRecord->mortality;
         }
 
-        // Indicateurs pondeuse
-        $chickenTypeName = strtolower($flock->chickenType?->name ?? '');
-        if (str_contains($chickenTypeName, 'ponde')) {
+        // Indicateurs de ponte (pondeuses, reproducteurs, mixte)
+        if ($kind->tracksEggs()) {
             $indicators['oeufs_jour'] = $lastRecord?->eggs_collected;
             $indicators['taux_ponte_jour'] = $lastRecord?->getLayingRate();
             $indicators['taux_ponte_moyen'] = $this->getAverageLayingRate($flock);
             $indicators['oeufs_total'] = $this->getTotalEggsCollected($flock);
+            $indicators['oeufs_par_poule_logee'] = $this->getEggsPerHenHoused($flock);
         }
 
-        // Indicateurs chair
-        if (str_contains($chickenTypeName, 'chair')) {
+        // Indicateurs de croissance (chair, reproducteurs, mixte)
+        if ($kind->tracksWeight()) {
             $indicators['poids_moyen'] = $lastRecord?->average_weight_g;
             $indicators['gmq'] = $this->calculateGMQ($flock);
             $indicators['ic'] = $this->getFeedConversionRatio($flock);
+            $indicators['ipe'] = $this->getEuropeanEfficiencyFactor($flock);
         }
 
         return $indicators;
@@ -337,97 +357,172 @@ class FlockService
      */
     private function generateFlockCode(int $buildingId): string
     {
-        $year = date('Y');
-        $prefix = "BND-{$year}-";
+        $year = (int) date('Y');
+        $farmId = (int) \App\Models\Building::query()->where('id', $buildingId)->value('farm_id');
+        $sequence = app(NumberSequence::class);
 
-        // Chercher dans tous les bâtiments de la même ferme
-        $last = Flock::whereHas('building', fn ($q) => $q->where(
-            'farm_id',
-            \App\Models\Building::where('id', $buildingId)->value('farm_id')
-        ))
-            ->where('code', 'like', "{$prefix}%")
-            ->orderByDesc('code')
-            ->first();
-
-        $next = 1;
-        if ($last) {
-            $parts = explode('-', $last->code);
-            $next = ((int) end($parts)) + 1;
-        }
-
-        return sprintf('BND-%s-%03d', $year, $next);
+        // Compteur par ferme (tous les bâtiments de la ferme partagent la numérotation)
+        return $sequence->nextFormatted(
+            prefix: 'BND-',
+            key: 'flock',
+            scopeId: $farmId,
+            year: $year,
+            pad: 3,
+            scope: NumberSequence::SCOPE_FARM,
+            seedUsing: fn (): int => (int) DB::table('flocks')
+                ->join('buildings', 'buildings.id', '=', 'flocks.building_id')
+                ->where('buildings.farm_id', $farmId)
+                ->where('flocks.code', 'like', "BND-{$year}-%")
+                ->selectRaw("MAX(CAST(SUBSTRING(flocks.code FROM '[0-9]+$') AS INTEGER)) AS max_num")
+                ->value('max_num'),
+        );
     }
 
     /**
-     * Calculer le Gain Moyen Quotidien en grammes (chair uniquement).
+     * Poids moyen d'un poussin d'un jour (g), utilisé quand aucune pesée n'a été
+     * faite dans les trois premiers jours de vie.
      */
-    private function calculateGMQ(Flock $flock): ?float
+    public const DEFAULT_CHICK_WEIGHT_G = 40.0;
+
+    /**
+     * Poids de référence de départ : première pesée réalisée à J0–J3, sinon le poids
+     * standard du poussin d'un jour. Retourne [poids en g, âge en jours].
+     *
+     * @return array{0: float, 1: int}
+     */
+    private function getInitialWeight(Flock $flock): array
     {
-        $first = $flock->dailyRecords()
+        $early = $flock->dailyRecords()
             ->whereNotNull('average_weight_g')
+            ->where('age_days', '<=', 3)
             ->orderBy('record_date')
             ->first();
 
-        $last = $flock->dailyRecords()
+        if ($early) {
+            return [(float) $early->average_weight_g, (int) $early->age_days];
+        }
+
+        return [self::DEFAULT_CHICK_WEIGHT_G, 0];
+    }
+
+    /**
+     * Dernière pesée disponible.
+     */
+    private function getLastWeighing(Flock $flock): ?DailyRecord
+    {
+        return $flock->dailyRecords()
             ->whereNotNull('average_weight_g')
             ->orderByDesc('record_date')
             ->first();
-
-        if (! $first || ! $last || $first->id === $last->id) {
-            return null;
-        }
-
-        $days = (int) $first->record_date->diffInDays($last->record_date);
-
-        if ($days === 0) {
-            return null;
-        }
-
-        return round(((float) $last->average_weight_g - (float) $first->average_weight_g) / $days, 2);
     }
 
     /**
-     * Calculer l'Indice de Consommation (IC = kg aliment / kg poids vif gagné).
+     * Gain Moyen Quotidien (g/j) = (poids moyen à la dernière pesée − poids de départ) / âge écoulé.
+     */
+    private function calculateGMQ(Flock $flock): ?float
+    {
+        $last = $this->getLastWeighing($flock);
+
+        if (! $last) {
+            return null;
+        }
+
+        [$initialWeight, $initialAge] = $this->getInitialWeight($flock);
+        $days = (int) $last->age_days - $initialAge;
+
+        if ($days <= 0) {
+            return null;
+        }
+
+        return round(((float) $last->average_weight_g - $initialWeight) / $days, 2);
+    }
+
+    /**
+     * Indice de Consommation (IC / FCR) = kg d'aliment consommé / kg de poids vif produit.
+     *
+     * Poids vif produit = poids moyen à la dernière pesée × (effectif présent + sujets vendus)
+     *                     − poids de départ × effectif initial.
+     * Hypothèse : les sujets vendus sont comptés au poids moyen de la dernière pesée
+     * (à défaut d'une pesée à la vente). Les morts ne sont pas comptés dans le poids produit.
      */
     private function getFeedConversionRatio(Flock $flock): ?float
     {
-        $totalFeed = $flock->dailyRecords()->sum('feed_consumed_kg');
+        $totalFeed = (float) $flock->dailyRecords()->sum('feed_consumed_kg');
+        $last = $this->getLastWeighing($flock);
 
-        $firstRecord = $flock->dailyRecords()->whereNotNull('average_weight_g')->orderBy('record_date')->first();
-        $lastRecord = $flock->dailyRecords()->whereNotNull('average_weight_g')->orderByDesc('record_date')->first();
-
-        if (! $firstRecord || ! $lastRecord || $firstRecord->id === $lastRecord->id || $totalFeed <= 0) {
+        if (! $last || $totalFeed <= 0) {
             return null;
         }
 
-        $weightGainKg = ((float) $lastRecord->average_weight_g - (float) $firstRecord->average_weight_g)
-            * $flock->quantity_current
-            / 1000;
+        [$initialWeight] = $this->getInitialWeight($flock);
 
-        if ($weightGainKg <= 0) {
+        $finalBirds = (int) $flock->quantity_current + (int) $flock->quantity_sold;
+        $liveWeightProducedKg = (((float) $last->average_weight_g * $finalBirds) - ($initialWeight * (int) $flock->quantity_started)) / 1000;
+
+        if ($liveWeightProducedKg <= 0) {
             return null;
         }
 
-        return round((float) $totalFeed / $weightGainKg, 2);
+        return round($totalFeed / $liveWeightProducedKg, 2);
     }
 
     /**
-     * Taux de ponte moyen sur toute la durée de la bande (pondeuse).
+     * Indice de Performance Européen (IPE / EPEF)
+     * = viabilité (%) × poids vif moyen (kg) / (âge en jours × IC) × 100.
      */
-    private function getAverageLayingRate(Flock $flock): ?float
+    private function getEuropeanEfficiencyFactor(Flock $flock): ?float
     {
-        $records = $flock->dailyRecords()
-            ->whereNotNull('eggs_collected')
-            ->where('eggs_collected', '>', 0)
-            ->get();
+        $last = $this->getLastWeighing($flock);
+        $ic = $this->getFeedConversionRatio($flock);
+        $age = (int) $last?->age_days;
 
-        if ($records->isEmpty()) {
+        if (! $last || ! $ic || $ic <= 0 || $age <= 0) {
             return null;
         }
 
-        $rates = $records->map(fn ($r) => $r->getLayingRate())->filter();
+        $weightKg = (float) $last->average_weight_g / 1000;
 
-        return $rates->isNotEmpty() ? round($rates->avg(), 2) : null;
+        return round(($flock->getViabilityRate() * $weightKg) / ($age * $ic) * 100, 1);
+    }
+
+    /**
+     * Taux de ponte moyen (%) = Σ œufs collectés / Σ poules présentes par jour,
+     * sur la période de ponte (depuis le premier relevé avec des œufs, jours à 0 œuf inclus).
+     */
+    private function getAverageLayingRate(Flock $flock): ?float
+    {
+        $firstLaying = $flock->dailyRecords()
+            ->where('eggs_collected', '>', 0)
+            ->orderBy('record_date')
+            ->first();
+
+        if (! $firstLaying) {
+            return null;
+        }
+
+        $records = $flock->dailyRecords()
+            ->whereDate('record_date', '>=', $firstLaying->record_date)
+            ->get(['id', 'flock_id', 'eggs_collected', 'birds_present', 'mortality', 'culls']);
+
+        $henDays = $records->sum(fn (DailyRecord $record): int => $record->getBirdsPresent());
+
+        if ($henDays <= 0) {
+            return null;
+        }
+
+        return round(($records->sum('eggs_collected') / $henDays) * 100, 2);
+    }
+
+    /**
+     * Œufs par poule logée (HHP) = Σ œufs collectés / effectif initial.
+     */
+    private function getEggsPerHenHoused(Flock $flock): ?float
+    {
+        if ($flock->quantity_started <= 0) {
+            return null;
+        }
+
+        return round($this->getTotalEggsCollected($flock) / $flock->quantity_started, 1);
     }
 
     /**
@@ -484,16 +579,18 @@ class FlockService
                 ->count(),
         ];
 
-        $chickenTypeName = strtolower($flock->chickenType?->name ?? '');
+        $kind = $flock->productionKind();
 
-        if (str_contains($chickenTypeName, 'ponde')) {
+        if ($kind->tracksEggs()) {
             $report['oeufs_total'] = $this->getTotalEggsCollected($flock);
             $report['taux_ponte_moyen'] = $this->getAverageLayingRate($flock);
+            $report['oeufs_par_poule_logee'] = $this->getEggsPerHenHoused($flock);
         }
 
-        if (str_contains($chickenTypeName, 'chair')) {
+        if ($kind->tracksWeight()) {
             $report['gmq'] = $this->calculateGMQ($flock);
             $report['ic'] = $this->getFeedConversionRatio($flock);
+            $report['ipe'] = $this->getEuropeanEfficiencyFactor($flock);
         }
 
         return $report;

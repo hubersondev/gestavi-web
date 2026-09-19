@@ -174,11 +174,14 @@ class PurchaseOrder extends Model
     public static function generateOrderNumber(int $organisationId): string
     {
         $year = now()->year;
-        $count = static::withTrashed()
-            ->where('organisation_id', $organisationId)
-            ->whereYear('created_at', $year)
-            ->count();
+        $sequence = app(\App\Services\NumberSequence::class);
 
-        return sprintf('BC-%d-%05d', $year, $count + 1);
+        return $sequence->nextFormatted(
+            prefix: 'BC-',
+            key: 'purchase_order',
+            scopeId: $organisationId,
+            year: $year,
+            seedUsing: fn (): int => $sequence->maxSuffix('purchase_orders', 'order_number', "BC-{$year}-", ['organisation_id' => $organisationId]),
+        );
     }
 }

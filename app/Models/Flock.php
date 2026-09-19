@@ -22,6 +22,7 @@ class Flock extends Model
         'name',
         'quantity_started',
         'quantity_current',
+        'quantity_sold',
         'age_at_arrival',
         'start_date',
         'expected_end_date',
@@ -168,8 +169,79 @@ class Flock extends Model
         return round($days / 7, 1);
     }
 
+    // ===== EFFECTIF DÉRIVÉ =====
+
     /**
-     * Taux de mortalité en pourcentage.
+     * Sujets vivants vendus (lignes de vente « sujets vivants » de factures non annulées).
+     */
+    public function getSoldCount(): int
+    {
+        return (int) SaleItem::query()
+            ->where('flock_id', $this->id)
+            ->where('is_live_birds', true)
+            ->whereHas('sale', fn (Builder $q) => $q->where('status', '!=', \App\Enums\SaleStatus::Cancelled->value))
+            ->sum('quantity');
+    }
+
+    /**
+     * Mortalité cumulée (somme des relevés quotidiens).
+     */
+    public function getTotalMortality(): int
+    {
+        return (int) $this->dailyRecords()->sum('mortality');
+    }
+
+    /**
+     * Réformes / tris cumulés (somme des relevés quotidiens).
+     */
+    public function getTotalCulls(): int
+    {
+        return (int) $this->dailyRecords()->sum('culls');
+    }
+
+    /**
+     * Recalcule quantity_current et quantity_sold depuis les faits :
+     * effectif initial − mortalité − réformes − sujets vendus.
+     */
+    public function recalculateQuantities(): void
+    {
+        $sold = $this->getSoldCount();
+        $current = max(0, (int) $this->quantity_started - $this->getTotalMortality() - $this->getTotalCulls() - $sold);
+
+        static::withoutEvents(fn () => static::query()
+            ->whereKey($this->id)
+            ->update(['quantity_current' => $current, 'quantity_sold' => $sold]));
+
+        $this->quantity_current = $current;
+        $this->quantity_sold = $sold;
+        $this->syncOriginalAttributes(['quantity_current', 'quantity_sold']);
+    }
+
+    /**
+     * Effectif présent à la fin d'une date donnée (pertes et ventes jusqu'à cette date incluse).
+     */
+    public function birdsPresentOn(mixed $date): int
+    {
+        $date = \Carbon\Carbon::parse($date)->toDateString();
+
+        $losses = (int) $this->dailyRecords()
+            ->whereDate('record_date', '<=', $date)
+            ->selectRaw('COALESCE(SUM(mortality + culls), 0) AS losses')
+            ->value('losses');
+
+        $sold = (int) SaleItem::query()
+            ->where('flock_id', $this->id)
+            ->where('is_live_birds', true)
+            ->whereHas('sale', fn (Builder $q) => $q
+                ->where('status', '!=', \App\Enums\SaleStatus::Cancelled->value)
+                ->whereDate('sale_date', '<=', $date))
+            ->sum('quantity');
+
+        return max(0, (int) $this->quantity_started - $losses - $sold);
+    }
+
+    /**
+     * Taux de mortalité cumulé en % de l'effectif initial (les réformes et ventes ne sont pas des morts).
      */
     public function getMortalityRate(): float
     {
@@ -177,17 +249,74 @@ class Flock extends Model
             return 0;
         }
 
-        $losses = $this->quantity_started - $this->quantity_current;
-
-        return round(($losses / $this->quantity_started) * 100, 2);
+        return round(($this->getTotalMortality() / $this->quantity_started) * 100, 2);
     }
 
     /**
-     * Nombre de sujets perdus.
+     * Taux de réforme cumulé en % de l'effectif initial.
+     */
+    public function getCullRate(): float
+    {
+        if ($this->quantity_started <= 0) {
+            return 0;
+        }
+
+        return round(($this->getTotalCulls() / $this->quantity_started) * 100, 2);
+    }
+
+    /**
+     * Viabilité en % (100 − taux de mortalité).
+     */
+    public function getViabilityRate(): float
+    {
+        return round(100 - $this->getMortalityRate(), 2);
+    }
+
+    /**
+     * Nombre de sujets perdus (mortalité + réformes).
      */
     public function getLossCount(): int
     {
-        return max(0, $this->quantity_started - $this->quantity_current);
+        return $this->getTotalMortality() + $this->getTotalCulls();
+    }
+
+    // ===== DÉLAI D'ATTENTE =====
+
+    /**
+     * Date de fin du délai d'attente le plus lointain parmi les traitements administrés.
+     */
+    public function getWithdrawalUntil(): ?\Carbon\CarbonInterface
+    {
+        $date = $this->vaccinations()
+            ->where('status', \App\Enums\VaccinationStatus::Done->value)
+            ->whereNotNull('withdrawal_until')
+            ->max('withdrawal_until');
+
+        return $date ? \Carbon\Carbon::parse($date) : null;
+    }
+
+    /**
+     * Vrai si un traitement récent interdit encore la vente ou l'abattage.
+     */
+    public function isUnderWithdrawal(mixed $onDate = null): bool
+    {
+        $until = $this->getWithdrawalUntil();
+
+        if (! $until) {
+            return false;
+        }
+
+        $reference = $onDate ? \Carbon\Carbon::parse($onDate) : now();
+
+        return $until->endOfDay()->greaterThanOrEqualTo($reference->startOfDay());
+    }
+
+    /**
+     * Orientation zootechnique du type de volaille (chair, pondeuse, reproducteur, mixte).
+     */
+    public function productionKind(): \App\Enums\ProductionKind
+    {
+        return $this->chickenType?->productionKind() ?? \App\Enums\ProductionKind::Mixed;
     }
 
     /**

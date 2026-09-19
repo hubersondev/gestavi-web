@@ -51,10 +51,21 @@ class ViewFlock extends ViewRecord
                         ->rows(3),
                 ])
                 ->action(function (array $data) {
-                    $report = app(FlockService::class)->completeFlock(
-                        $this->record,
-                        $data['notes'] ?? null,
-                    );
+                    try {
+                        $report = app(FlockService::class)->completeFlock(
+                            $this->record,
+                            $data['notes'] ?? null,
+                        );
+                    } catch (\LogicException $e) {
+                        Notification::make()
+                            ->title('Clôture impossible')
+                            ->body($e->getMessage())
+                            ->danger()
+                            ->persistent()
+                            ->send();
+
+                        return;
+                    }
 
                     $duration = $report['duree_jours'] ?? '—';
                     $mortality = number_format($report['taux_mortalite'] ?? 0, 1);

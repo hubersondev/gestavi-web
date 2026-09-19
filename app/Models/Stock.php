@@ -140,21 +140,25 @@ class Stock extends Model
         }
 
         return DB::transaction(function () use ($quantity, $reason, $unitPrice, $stockLotId, $flockId, $reference, $notes): StockMovement {
-            $movement = $this->movements()->create([
+            /** @var Stock $locked */
+            $locked = static::query()->lockForUpdate()->findOrFail($this->getKey());
+
+            $movement = $locked->movements()->create([
                 'stock_lot_id' => $stockLotId,
                 'user_id' => auth()->id(),
                 'flock_id' => $flockId,
                 'type' => StockMovementType::In,
                 'reason' => $reason,
                 'quantity' => $quantity,
-                'unit_price' => $unitPrice ?? $this->unit_price,
-                'total_price' => $quantity * ($unitPrice ?? (float) $this->unit_price),
+                'unit_price' => $unitPrice ?? $locked->unit_price,
+                'total_price' => $quantity * ($unitPrice ?? (float) $locked->unit_price),
                 'movement_date' => now()->toDateString(),
                 'reference' => $reference,
                 'notes' => $notes,
             ]);
 
-            $this->increment('quantity', $quantity);
+            $locked->increment('quantity', $quantity);
+            $this->syncQuantityFrom($locked);
 
             return $movement;
         });
@@ -174,28 +178,42 @@ class Stock extends Model
             throw StockException::invalidQuantity();
         }
 
-        if ((float) $this->quantity < $quantity) {
-            throw StockException::insufficientStock($this->name, $quantity, (float) $this->quantity);
-        }
-
         return DB::transaction(function () use ($quantity, $reason, $flockId, $reference, $notes): StockMovement {
-            $movement = $this->movements()->create([
+            // La disponibilité est vérifiée sur la ligne verrouillée, pas sur l'instance en mémoire
+            /** @var Stock $locked */
+            $locked = static::query()->lockForUpdate()->findOrFail($this->getKey());
+
+            if ((float) $locked->quantity < $quantity) {
+                throw StockException::insufficientStock($locked->name, $quantity, (float) $locked->quantity);
+            }
+
+            $movement = $locked->movements()->create([
                 'user_id' => auth()->id(),
                 'flock_id' => $flockId,
                 'type' => StockMovementType::Out,
                 'reason' => $reason,
                 'quantity' => $quantity,
-                'unit_price' => $this->unit_price,
-                'total_price' => $quantity * (float) $this->unit_price,
+                'unit_price' => $locked->unit_price,
+                'total_price' => $quantity * (float) $locked->unit_price,
                 'movement_date' => now()->toDateString(),
                 'reference' => $reference,
                 'notes' => $notes,
             ]);
 
-            $this->decrement('quantity', $quantity);
+            $locked->decrement('quantity', $quantity);
+            $this->syncQuantityFrom($locked);
 
             return $movement;
         });
+    }
+
+    /**
+     * Aligne l'instance appelante sur la quantité réellement persistée.
+     */
+    protected function syncQuantityFrom(Stock $locked): void
+    {
+        $this->quantity = $locked->fresh()->quantity;
+        $this->syncOriginalAttribute('quantity');
     }
 
     /**
@@ -210,10 +228,13 @@ class Stock extends Model
 
     public static function generateCode(int $organisationId): string
     {
-        $count = static::withTrashed()
-            ->where('organisation_id', $organisationId)
-            ->count();
+        $sequence = app(\App\Services\NumberSequence::class);
 
-        return 'STK-'.str_pad((string) ($count + 1), 5, '0', STR_PAD_LEFT);
+        return $sequence->nextFormatted(
+            prefix: 'STK-',
+            key: 'stock',
+            scopeId: $organisationId,
+            seedUsing: fn (): int => $sequence->maxSuffix('stocks', 'code', 'STK-', ['organisation_id' => $organisationId]),
+        );
     }
 }

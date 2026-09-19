@@ -154,10 +154,13 @@ class Customer extends Model
 
     public static function generateCode(int $organisationId): string
     {
-        $count = static::withTrashed()
-            ->where('organisation_id', $organisationId)
-            ->count();
+        $sequence = app(\App\Services\NumberSequence::class);
 
-        return 'CLI-'.str_pad((string) ($count + 1), 5, '0', STR_PAD_LEFT);
+        return $sequence->nextFormatted(
+            prefix: 'CLI-',
+            key: 'customer',
+            scopeId: $organisationId,
+            seedUsing: fn (): int => $sequence->maxSuffix('customers', 'code', 'CLI-', ['organisation_id' => $organisationId]),
+        );
     }
 }

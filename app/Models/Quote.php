@@ -163,11 +163,14 @@ class Quote extends Model
     public static function generateQuoteNumber(int $organisationId): string
     {
         $year = now()->year;
-        $count = static::withTrashed()
-            ->where('organisation_id', $organisationId)
-            ->whereYear('created_at', $year)
-            ->count();
+        $sequence = app(\App\Services\NumberSequence::class);
 
-        return sprintf('DEV-%d-%05d', $year, $count + 1);
+        return $sequence->nextFormatted(
+            prefix: 'DEV-',
+            key: 'quote',
+            scopeId: $organisationId,
+            year: $year,
+            seedUsing: fn (): int => $sequence->maxSuffix('quotes', 'quote_number', "DEV-{$year}-", ['organisation_id' => $organisationId]),
+        );
     }
 }

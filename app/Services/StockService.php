@@ -126,11 +126,14 @@ class StockService
             throw StockException::invalidQuantity();
         }
 
-        if ((float) $stock->quantity < $quantity) {
-            throw StockException::insufficientStock($stock->name, $quantity, (float) $stock->quantity);
-        }
-
         return DB::transaction(function () use ($stock, $quantity, $flockId, $reference): Collection {
+            // Produit et lots verrouillés : la disponibilité est relue en base
+            $stock = Stock::query()->lockForUpdate()->findOrFail($stock->getKey());
+
+            if ((float) $stock->quantity < $quantity) {
+                throw StockException::insufficientStock($stock->name, $quantity, (float) $stock->quantity);
+            }
+
             $remaining = $quantity;
             $movements = collect();
 
@@ -138,6 +141,7 @@ class StockService
                 ->whereIn('status', [StockLotStatus::Available, StockLotStatus::Low])
                 ->where('current_quantity', '>', 0)
                 ->fifo()
+                ->lockForUpdate()
                 ->get();
 
             foreach ($lots as $lot) {

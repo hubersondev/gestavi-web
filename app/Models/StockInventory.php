@@ -210,11 +210,14 @@ class StockInventory extends Model
     public static function generateReference(int $organisationId): string
     {
         $year = now()->year;
-        $count = static::query()
-            ->where('organisation_id', $organisationId)
-            ->whereYear('created_at', $year)
-            ->count();
+        $sequence = app(\App\Services\NumberSequence::class);
 
-        return sprintf('INV-%d-%05d', $year, $count + 1);
+        return $sequence->nextFormatted(
+            prefix: 'INV-',
+            key: 'stock_inventory',
+            scopeId: $organisationId,
+            year: $year,
+            seedUsing: fn (): int => $sequence->maxSuffix('stock_inventories', 'inventory_ref', "INV-{$year}-", ['organisation_id' => $organisationId]),
+        );
     }
 }

@@ -186,11 +186,14 @@ class CreditNote extends Model
     public static function generateNumber(int $organisationId): string
     {
         $year = now()->year;
-        $count = static::withTrashed()
-            ->where('organisation_id', $organisationId)
-            ->whereYear('created_at', $year)
-            ->count();
+        $sequence = app(\App\Services\NumberSequence::class);
 
-        return sprintf('AV-%d-%05d', $year, $count + 1);
+        return $sequence->nextFormatted(
+            prefix: 'AV-',
+            key: 'credit_note',
+            scopeId: $organisationId,
+            year: $year,
+            seedUsing: fn (): int => $sequence->maxSuffix('credit_notes', 'credit_note_number', "AV-{$year}-", ['organisation_id' => $organisationId]),
+        );
     }
 }

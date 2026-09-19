@@ -296,8 +296,18 @@ class Equipment extends Model
 
     public static function generateInventoryNumber(int $orgId): string
     {
-        $count = self::whereHas('farm', fn ($q) => $q->where('organisation_id', $orgId))->count();
+        $sequence = app(\App\Services\NumberSequence::class);
 
-        return sprintf('EQP-%05d', $count + 1);
+        return $sequence->nextFormatted(
+            prefix: 'EQP-',
+            key: 'equipment',
+            scopeId: $orgId,
+            seedUsing: fn (): int => (int) \Illuminate\Support\Facades\DB::table('equipments')
+                ->join('farms', 'farms.id', '=', 'equipments.farm_id')
+                ->where('farms.organisation_id', $orgId)
+                ->where('equipments.inventory_number', 'like', 'EQP-%')
+                ->selectRaw("MAX(CAST(SUBSTRING(equipments.inventory_number FROM '[0-9]+$') AS INTEGER)) AS max_num")
+                ->value('max_num'),
+        );
     }
 }

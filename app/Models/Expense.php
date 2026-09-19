@@ -287,11 +287,14 @@ class Expense extends Model
     public static function generateExpenseNumber(int $organisationId): string
     {
         $year = now()->year;
-        $count = static::withTrashed()
-            ->where('organisation_id', $organisationId)
-            ->whereYear('created_at', $year)
-            ->count();
+        $sequence = app(\App\Services\NumberSequence::class);
 
-        return sprintf('DEP-%d-%05d', $year, $count + 1);
+        return $sequence->nextFormatted(
+            prefix: 'DEP-',
+            key: 'expense',
+            scopeId: $organisationId,
+            year: $year,
+            seedUsing: fn (): int => $sequence->maxSuffix('expenses', 'expense_number', "DEP-{$year}-", ['organisation_id' => $organisationId]),
+        );
     }
 }
