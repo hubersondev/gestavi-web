@@ -3,10 +3,16 @@
 use App\Enums\UserType;
 use App\Models\PlatformRole;
 use App\Models\User;
+use Database\Seeders\PlatformRoleSeeder;
 
 // ──────────────────────────────────────────────
 //  Helpers plateforme
 // ──────────────────────────────────────────────
+
+// Les rôles et permissions plateforme sont fournis par le seeder (plus par une migration de données).
+beforeEach(function () {
+    $this->seed(PlatformRoleSeeder::class);
+});
 
 it('identifie un super admin', function () {
     $user = User::factory()->superAdmin()->create();

@@ -8,6 +8,7 @@ use App\Filament\Resources\Users\Pages\ViewUser;
 use App\Filament\Resources\Users\RelationManagers\OrganisationsRelationManager;
 use App\Models\PlatformRole;
 use App\Models\User;
+use Database\Seeders\PlatformRoleSeeder;
 use Livewire\Livewire;
 
 use function Pest\Laravel\actingAs;
@@ -16,6 +17,11 @@ use function Pest\Laravel\assertDatabaseHas;
 // ──────────────────────────────────────────────
 //  Liste
 // ──────────────────────────────────────────────
+
+// Les rôles et permissions plateforme sont fournis par le seeder (plus par une migration de données).
+beforeEach(function () {
+    $this->seed(PlatformRoleSeeder::class);
+});
 
 it('peut afficher la liste des utilisateurs', function () {
     actingAs(User::factory()->superAdmin()->create());

@@ -47,6 +47,14 @@ vendor/bin/pint                     # formatage (obligatoire avant commit)
 `phpunit.xml` lit `DB_PASSWORD` depuis `.env`. Pour lancer plusieurs suites en parallèle,
 préfixer par `DB_DATABASE=<autre base>`.
 
+Le schéma est consolidé dans `database/schema/pgsql-schema.sql` (les migrations antérieures au
+19/09/2026 ont été fusionnées) : `migrate:fresh` et la suite de tests le chargent avec `psql`, qui doit
+donc être dans le `PATH` (`C:\Program Files\PostgreSQL\17\bin` sous Windows). Les nouvelles évolutions
+de schéma restent des migrations classiques dans `database/migrations/`. Régénérer le dump après une
+série de migrations : `php artisan schema:dump --prune` (nécessite `pg_dump`).
+
+PostgreSQL est la seule base supportée : les requêtes de rapport utilisent `DISTINCT ON`, `FILTER` et `to_char`.
+
 ## Tâches planifiées et files
 
 ```bash
