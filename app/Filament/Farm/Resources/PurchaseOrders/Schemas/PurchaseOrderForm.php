@@ -10,6 +10,7 @@ use App\Models\Supplier;
 use App\Services\CurrentFarm;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
@@ -108,8 +109,9 @@ class PurchaseOrderForm
                                     ->schema([
                                         Repeater::make('items')
                                             ->label('')
-                                            ->relationship()
                                             ->schema([
+                                                Hidden::make('id'),
+
                                                 Select::make('stock_id')
                                                     ->label('Produit existant')
                                                     ->options(function (): array {

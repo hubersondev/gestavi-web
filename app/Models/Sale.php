@@ -6,6 +6,7 @@ use App\Enums\PaymentMethod;
 use App\Enums\SaleStatus;
 use App\Enums\TransactionCategory;
 use App\Exceptions\CommercialException;
+use App\Models\Concerns\LogsAuditTrail;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -16,7 +17,7 @@ use Illuminate\Support\Facades\DB;
 
 class Sale extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, LogsAuditTrail, SoftDeletes;
 
     protected $fillable = [
         'organisation_id', 'farm_id',
@@ -231,11 +232,27 @@ class Sale extends Model
             'status' => $status,
         ]);
 
-        if ($this->customer) {
-            $this->customer->update([
-                'balance' => $this->customer->sales()->sum('balance'),
-            ]);
-        }
+        $this->customer?->recalculateBalance();
+    }
+
+    /**
+     * Chiffre d'affaires net de la facture : total − avoirs imputés.
+     */
+    public function getNetTotal(): float
+    {
+        $creditNotes = (float) $this->creditNotes()
+            ->where('status', \App\Enums\CreditNoteStatus::Applied->value)
+            ->sum('amount');
+
+        return max(0, (float) $this->total - $creditNotes);
+    }
+
+    /**
+     * Une facture ayant reçu un paiement ne se modifie plus : on émet un avoir.
+     */
+    public function isLocked(): bool
+    {
+        return $this->isCancelled() || $this->payments()->exists();
     }
 
     public function addPayment(
@@ -299,11 +316,13 @@ class Sale extends Model
                 );
             }
 
-            if ($this->customer) {
-                $this->customer->subtractFromBalance((float) $this->balance);
-            }
+            // Une facture annulée ne doit plus rien : solde à zéro, encours client recalculé
+            $this->update(['status' => SaleStatus::Cancelled, 'balance' => 0]);
 
-            $this->update(['status' => SaleStatus::Cancelled]);
+            $this->customer?->recalculateBalance();
+
+            // Les sujets vivants vendus reviennent dans l'effectif de leur bande
+            $this->items()->where('is_live_birds', true)->get()->each->syncFlockQuantities();
         });
     }
 

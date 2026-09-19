@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\StockLotStatus;
+use App\Models\Concerns\LogsAuditTrail;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,7 +12,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class StockLot extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, LogsAuditTrail, SoftDeletes;
 
     protected $fillable = [
         'stock_id', 'supplier_id',
@@ -39,12 +40,13 @@ class StockLot extends Model
 
     protected static function booted(): void
     {
-        static::creating(function (StockLot $lot): void {
-            $lot->current_quantity ??= $lot->initial_quantity;
-            $lot->total_value = (float) $lot->initial_quantity * (float) $lot->unit_price;
-        });
-
+        // `saving` précède `creating` : la quantité courante est initialisée ici pour que
+        // la valeur et le statut soient calculés sur une quantité renseignée.
         static::saving(function (StockLot $lot): void {
+            $lot->current_quantity ??= $lot->initial_quantity;
+
+            // La valeur du lot suit la quantité restante, pas la quantité initiale
+            $lot->total_value = round((float) $lot->current_quantity * (float) $lot->unit_price, 2);
             $lot->status = $lot->resolveStatus();
         });
     }

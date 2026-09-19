@@ -4,9 +4,13 @@ namespace App\Filament\Farm\Resources\CreditNotes\Pages;
 
 use App\Enums\CreditNoteStatus;
 use App\Filament\Farm\Resources\CreditNotes\CreditNoteResource;
+use App\Models\Account;
 use App\Models\CreditNote;
+use App\Services\CurrentFarm;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
+use Filament\Facades\Filament;
+use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
 use Throwable;
@@ -35,14 +39,44 @@ class ViewCreditNote extends ViewRecord
                 ->color('success')
                 ->visible(fn (CreditNote $record): bool => $record->canBeApplied() && CreditNoteResource::canPerformAction('apply'))
                 ->requiresConfirmation()
-                ->modalDescription(fn (CreditNote $record): string => sprintf(
-                    'Diminuer le solde de la facture %s de %s XOF (débit du compte d\'encaissement si présent) ?',
-                    $record->sale?->invoice_number ?? '—',
-                    number_format((float) $record->amount, 0, ',', ' '),
-                ))
-                ->action(function (CreditNote $record): void {
+                ->modalDescription(function (CreditNote $record): string {
+                    $refund = $record->getRefundableAmount();
+                    $credit = (float) $record->amount - $refund;
+
+                    $text = sprintf(
+                        'Facture %s : %s XOF viendront en réduction du solde dû (sans mouvement de trésorerie).',
+                        $record->sale?->invoice_number ?? '—',
+                        number_format($credit, 0, ',', ' '),
+                    );
+
+                    if ($refund > 0) {
+                        $text .= sprintf(' La facture étant déjà réglée à hauteur de ce montant, %s XOF seront remboursés au client par débit du compte choisi.', number_format($refund, 0, ',', ' '));
+                    }
+
+                    return $text;
+                })
+                ->schema(fn (CreditNote $record): array => $record->getRefundableAmount() > 0 ? [
+                    Select::make('refund_account_id')
+                        ->label('Compte à débiter pour le remboursement')
+                        ->options(function (): array {
+                            $tenant = Filament::getTenant();
+
+                            return Account::query()
+                                ->where('organisation_id', $tenant?->getKey())
+                                ->tap(fn ($q) => app(CurrentFarm::class)->restrictForCurrentUser($q, 'farm_id', allowOrganisationLevel: true))
+                                ->active()
+                                ->orderBy('name')
+                                ->pluck('name', 'id')
+                                ->toArray();
+                        })
+                        ->default(fn () => $record->sale?->account_id)
+                        ->required()
+                        ->searchable()
+                        ->native(false),
+                ] : [])
+                ->action(function (CreditNote $record, array $data): void {
                     try {
-                        $record->apply();
+                        $record->apply(isset($data['refund_account_id']) ? (int) $data['refund_account_id'] : null);
                         Notification::make()->title('Avoir imputé avec succès.')->success()->send();
                     } catch (Throwable $e) {
                         Notification::make()

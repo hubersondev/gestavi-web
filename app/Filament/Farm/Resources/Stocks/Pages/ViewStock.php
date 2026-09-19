@@ -120,14 +120,20 @@ class ViewStock extends ViewRecord
                 ])
                 ->action(function (Stock $record, array $data): void {
                     try {
-                        $record->recordOut(
+                        // FIFO/FEFO par lots quand le produit est suivi par lots
+                        $movements = app(\App\Services\StockService::class)->recordOut(
+                            stock: $record,
                             quantity: (float) $data['quantity'],
                             reason: StockMovementReason::from($data['reason']),
                             flockId: ! empty($data['flock_id']) ? (int) $data['flock_id'] : null,
                             reference: $data['reference'] ?? null,
                             notes: $data['notes'] ?? null,
                         );
-                        Notification::make()->title('Sortie enregistrée')->success()->send();
+                        Notification::make()
+                            ->title('Sortie enregistrée')
+                            ->body($movements->count() > 1 ? "Répartie sur {$movements->count()} lots (FIFO)." : null)
+                            ->success()
+                            ->send();
                     } catch (Throwable $e) {
                         Notification::make()->title('Erreur')->body($e->getMessage())->danger()->send();
                     }

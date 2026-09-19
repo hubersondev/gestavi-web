@@ -25,6 +25,25 @@ class CommercialException extends Exception
         ));
     }
 
+    public static function saleLocked(string $invoiceNumber): self
+    {
+        return new self("La facture {$invoiceNumber} a déjà reçu un paiement : ses lignes ne sont plus modifiables (émettre un avoir).");
+    }
+
+    public static function refundAccountRequired(string $creditNoteNumber, float $refund): self
+    {
+        return new self(sprintf(
+            'L\'avoir %s dépasse le solde dû de la facture : %s XOF doivent être remboursés, indiquez le compte de trésorerie à débiter.',
+            $creditNoteNumber,
+            number_format($refund, 0, ',', ' '),
+        ));
+    }
+
+    public static function purchaseOrderLocked(string $orderNumber): self
+    {
+        return new self("Le bon de commande {$orderNumber} a déjà été réceptionné (au moins partiellement) : ses lignes ne sont plus modifiables.");
+    }
+
     public static function saleAlreadyCancelled(string $invoiceNumber): self
     {
         return new self("La facture {$invoiceNumber} est déjà annulée.");

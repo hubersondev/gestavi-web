@@ -6,6 +6,7 @@ use App\Enums\CreditNoteStatus;
 use App\Enums\SaleStatus;
 use App\Enums\TransactionCategory;
 use App\Exceptions\CommercialException;
+use App\Models\Concerns\LogsAuditTrail;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -15,12 +16,13 @@ use Illuminate\Support\Facades\DB;
 
 class CreditNote extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, LogsAuditTrail, SoftDeletes;
 
     protected $fillable = [
         'organisation_id', 'sale_id', 'customer_id', 'user_id',
         'credit_note_number', 'issue_date',
-        'amount', 'reason', 'description',
+        'amount', 'applied_amount', 'refunded_amount', 'refund_account_id',
+        'reason', 'description',
         'status', 'applied_at',
     ];
 
@@ -29,6 +31,8 @@ class CreditNote extends Model
         return [
             'issue_date' => 'date',
             'amount' => 'decimal:2',
+            'applied_amount' => 'decimal:2',
+            'refunded_amount' => 'decimal:2',
             'status' => CreditNoteStatus::class,
             'applied_at' => 'datetime',
         ];
@@ -69,6 +73,11 @@ class CreditNote extends Model
     public function issuer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function refundAccount(): BelongsTo
+    {
+        return $this->belongsTo(Account::class, 'refund_account_id');
     }
 
     // ─── SCOPES ──────────────────────────────────────────────────────────────
@@ -118,56 +127,85 @@ class CreditNote extends Model
     // ─── ACTIONS ─────────────────────────────────────────────────────────────
 
     /**
-     * Impute l'avoir sur la facture : réduit le solde dû et, si un compte est lié,
-     * contrepasse le montant comptable (débit du compte).
+     * Part de l'avoir qui dépasserait le solde dû de la facture, donc à rembourser réellement.
      */
-    public function apply(): void
+    public function getRefundableAmount(): float
+    {
+        if (! $this->sale) {
+            return 0.0;
+        }
+
+        return round(max(0, (float) $this->amount - (float) $this->sale->balance), 2);
+    }
+
+    /**
+     * Impute l'avoir sur la facture en deux parts distinctes :
+     *  (a) réduction de créance : diminue le solde dû, sans aucun mouvement de trésorerie
+     *      (l'argent n'a jamais été encaissé) ;
+     *  (b) remboursement : la part au-delà du solde dû (facture déjà réglée) est réellement
+     *      rendue au client par un débit du compte de trésorerie.
+     *
+     * @param  int|null  $refundAccountId  Compte à débiter pour la part remboursée (défaut : compte de la facture)
+     */
+    public function apply(?int $refundAccountId = null): void
     {
         if (! $this->canBeApplied()) {
             throw CommercialException::creditNoteNotApplicable($this->credit_note_number);
         }
 
-        DB::transaction(function (): void {
-            $sale = $this->sale;
-            $amount = (float) $this->amount;
-            $remaining = min($amount, (float) $sale->balance);
+        DB::transaction(function () use ($refundAccountId): void {
+            /** @var Sale $sale */
+            $sale = Sale::query()->lockForUpdate()->findOrFail($this->sale_id);
 
-            // Comptablement : si un compte a encaissé la facture, on le débite du montant remboursé
-            if ($sale->account_id) {
-                $sale->account?->debit(
-                    amount: $remaining,
-                    description: "Avoir {$this->credit_note_number} sur facture {$sale->invoice_number}",
+            $amount = (float) $this->amount;
+            $creditPart = round(min($amount, (float) $sale->balance), 2);
+            $refundPart = round($amount - $creditPart, 2);
+
+            $accountId = $refundPart > 0 ? ($refundAccountId ?? $sale->account_id) : null;
+
+            if ($refundPart > 0 && ! $accountId) {
+                throw CommercialException::refundAccountRequired($this->credit_note_number, $refundPart);
+            }
+
+            // (b) Remboursement réel de la part déjà encaissée
+            if ($refundPart > 0) {
+                /** @var Account $account */
+                $account = Account::query()->findOrFail($accountId);
+
+                $account->debit(
+                    amount: $refundPart,
+                    description: "Remboursement avoir {$this->credit_note_number} sur facture {$sale->invoice_number}",
                     category: TransactionCategory::Refund,
                     referenceType: self::class,
                     referenceId: $this->id,
                     referenceNumber: $this->credit_note_number,
+                    date: $this->issue_date,
                 );
             }
 
-            // Diminuer le solde dû de la facture
-            $newBalance = max(0, (float) $sale->balance - $remaining);
-            $newPaid = (float) $sale->total - $newBalance;
+            // (a) Réduction de créance : le montant payé ne change pas, seul le solde dû diminue
+            if ($creditPart > 0) {
+                $newBalance = max(0, (float) $sale->balance - $creditPart);
 
-            $newStatus = match (true) {
-                $newBalance <= 0 && (float) $sale->total > 0 => SaleStatus::Paid,
-                $newPaid > 0 => SaleStatus::Partial,
-                default => $sale->status,
-            };
+                $newStatus = match (true) {
+                    $sale->isCancelled() => $sale->status,
+                    $newBalance <= 0 && (float) $sale->total > 0 => SaleStatus::Paid,
+                    (float) $sale->paid > 0 => SaleStatus::Partial,
+                    default => $sale->status,
+                };
 
-            $sale->update([
-                'balance' => $newBalance,
-                'paid' => $newPaid,
-                'status' => $newStatus,
-            ]);
-
-            // Mettre à jour le solde client
-            if ($sale->customer) {
-                $sale->customer->update([
-                    'balance' => $sale->customer->sales()->sum('balance'),
+                $sale->update([
+                    'balance' => $newBalance,
+                    'status' => $newStatus,
                 ]);
             }
 
+            $sale->customer?->recalculateBalance();
+
             $this->update([
+                'applied_amount' => $creditPart,
+                'refunded_amount' => $refundPart,
+                'refund_account_id' => $refundPart > 0 ? $accountId : null,
                 'status' => CreditNoteStatus::Applied,
                 'applied_at' => now(),
             ]);

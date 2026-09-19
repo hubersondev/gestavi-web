@@ -26,6 +26,16 @@ class StockException extends Exception
         return new self('Impossible de créer le bon de commande : aucune ligne n\'a été renseignée.');
     }
 
+    public static function receptionExceedsOrdered(string $productName, float $requested, float $remaining): self
+    {
+        return new self(sprintf(
+            'Réception refusée pour « %s » : %s demandés alors qu\'il ne reste que %s à recevoir.',
+            $productName,
+            rtrim(rtrim(number_format($requested, 2, ',', ' '), '0'), ','),
+            rtrim(rtrim(number_format($remaining, 2, ',', ' '), '0'), ','),
+        ));
+    }
+
     public static function purchaseOrderNotReceivable(string $orderNumber): self
     {
         return new self("Le bon de commande {$orderNumber} ne peut pas être réceptionné à cet état.");

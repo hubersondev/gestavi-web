@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\PaymentTerms;
 use App\Enums\PurchaseOrderStatus;
+use App\Models\Concerns\LogsAuditTrail;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -13,7 +14,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class PurchaseOrder extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, LogsAuditTrail, SoftDeletes;
 
     protected $fillable = [
         'organisation_id', 'farm_id', 'supplier_id',

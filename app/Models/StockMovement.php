@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\StockMovementReason;
 use App\Enums\StockMovementType;
+use App\Models\Concerns\LogsAuditTrail;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class StockMovement extends Model
 {
-    use HasFactory;
+    use HasFactory, LogsAuditTrail;
 
     protected $fillable = [
         'stock_id', 'stock_lot_id', 'user_id', 'flock_id',

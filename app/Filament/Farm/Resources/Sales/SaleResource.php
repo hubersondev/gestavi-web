@@ -45,6 +45,16 @@ class SaleResource extends Resource
 
     protected static string $permissionGroup = 'sales';
 
+    /**
+     * Une facture payée (même partiellement) ou annulée ne se modifie plus : on émet un avoir.
+     */
+    public static function canEdit(Model $record): bool
+    {
+        return static::memberHasPermission('update')
+            && $record instanceof Sale
+            && ! $record->isLocked();
+    }
+
     protected static ?string $recordTitleAttribute = 'invoice_number';
 
     public static function getRequiredPlanFeatures(): array

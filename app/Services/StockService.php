@@ -40,11 +40,52 @@ class StockService
     }
 
     /**
-     * Réceptionne tout ou partie des lignes d'un bon de commande.
-     * Pour chaque ligne, met à jour quantity_received, crée un lot de stock si demandé,
-     * et enregistre une entrée de stock avec reason=purchase.
+     * Remplace les lignes d'un bon de commande (édition). Interdit dès qu'une réception a eu lieu.
      *
-     * @param  array<int, array{item_id: int, quantity: float, create_lot?: bool, lot_number?: string, expiry_date?: string|null}>  $receptions
+     * @param  array<int, array<string, mixed>>  $items
+     */
+    public function syncPurchaseOrderItems(PurchaseOrder $order, array $items): PurchaseOrder
+    {
+        if ($order->items()->where('quantity_received', '>', 0)->exists()) {
+            throw \App\Exceptions\CommercialException::purchaseOrderLocked($order->order_number);
+        }
+
+        if (empty($items)) {
+            throw StockException::emptyItems();
+        }
+
+        $columns = ['stock_id', 'product_name', 'description', 'unit', 'quantity_ordered', 'unit_price'];
+
+        return DB::transaction(function () use ($order, $items, $columns): PurchaseOrder {
+            $keptIds = [];
+
+            foreach (array_values($items) as $index => $item) {
+                $attributes = array_merge(array_intersect_key($item, array_flip($columns)), ['sort_order' => $index]);
+                $existing = ! empty($item['id']) ? $order->items()->find($item['id']) : null;
+
+                if ($existing) {
+                    $existing->update($attributes);
+                    $keptIds[] = $existing->getKey();
+                } else {
+                    $keptIds[] = $order->items()->create($attributes)->getKey();
+                }
+            }
+
+            $order->items()->whereNotIn('id', $keptIds)->get()->each->delete();
+
+            $order->refresh()->calculateTotals();
+
+            return $order->fresh(['items', 'supplier']);
+        });
+    }
+
+    /**
+     * Réceptionne tout ou partie des lignes d'un bon de commande, ligne par ligne.
+     * Pour chaque ligne : quantité reçue (refusée si supérieure au reste à recevoir),
+     * lot créé dès qu'un numéro de lot est fourni (péremption, prix réel), entrée de stock
+     * valorisée au prix réel (CMUP) et rattachée au lot.
+     *
+     * @param  array<int, array{item_id: int, quantity: float, lot_number?: string|null, expiry_date?: string|null, unit_price?: float|null, create_lot?: bool}>  $receptions
      */
     public function receivePurchaseOrder(PurchaseOrder $order, array $receptions): PurchaseOrder
     {
@@ -54,7 +95,7 @@ class StockService
 
         return DB::transaction(function () use ($order, $receptions): PurchaseOrder {
             foreach ($receptions as $reception) {
-                $item = $order->items()->find($reception['item_id'] ?? 0);
+                $item = $order->items()->lockForUpdate()->find($reception['item_id'] ?? 0);
 
                 if (! $item || ! $item->stock_id) {
                     continue;
@@ -67,27 +108,30 @@ class StockService
                 }
 
                 $remaining = $item->getQuantityPending();
-                $actualQuantity = min($quantity, $remaining);
 
-                if ($actualQuantity <= 0) {
-                    continue;
+                if ($quantity > $remaining + 0.001) {
+                    throw StockException::receptionExceedsOrdered($item->product_name, $quantity, $remaining);
                 }
 
                 /** @var Stock $stock */
                 $stock = Stock::findOrFail($item->stock_id);
 
+                $unitPrice = isset($reception['unit_price']) && $reception['unit_price'] !== '' && $reception['unit_price'] !== null
+                    ? (float) $reception['unit_price']
+                    : (float) $item->unit_price;
+
                 $stockLotId = null;
 
-                if (! empty($reception['create_lot']) && ! empty($reception['lot_number'])) {
+                if (! empty($reception['lot_number'])) {
                     $lot = StockLot::create([
                         'stock_id' => $stock->id,
                         'supplier_id' => $order->supplier_id,
                         'lot_number' => $reception['lot_number'],
                         'reception_date' => now()->toDateString(),
                         'expiry_date' => $reception['expiry_date'] ?? null,
-                        'initial_quantity' => $actualQuantity,
-                        'current_quantity' => $actualQuantity,
-                        'unit_price' => $item->unit_price,
+                        'initial_quantity' => $quantity,
+                        'current_quantity' => $quantity,
+                        'unit_price' => $unitPrice,
                         'status' => StockLotStatus::Available,
                     ]);
 
@@ -95,16 +139,16 @@ class StockService
                 }
 
                 $stock->recordIn(
-                    quantity: $actualQuantity,
+                    quantity: $quantity,
                     reason: StockMovementReason::Purchase,
-                    unitPrice: (float) $item->unit_price,
+                    unitPrice: $unitPrice,
                     stockLotId: $stockLotId,
                     reference: $order->order_number,
-                    notes: "Réception BC {$order->order_number}",
+                    notes: "Réception BC {$order->order_number}".($stockLotId ? " — lot {$reception['lot_number']}" : ''),
                 );
 
                 $item->update([
-                    'quantity_received' => (float) $item->quantity_received + $actualQuantity,
+                    'quantity_received' => (float) $item->quantity_received + $quantity,
                     'stock_lot_id' => $stockLotId ?? $item->stock_lot_id,
                     'status' => $item->getQuantityPending() <= 0 ? 'received' : 'partial',
                 ]);
@@ -120,13 +164,19 @@ class StockService
      * Consomme une quantité depuis les lots d'un produit en suivant l'ordre FIFO
      * (expiration la plus proche d'abord, puis date de réception la plus ancienne).
      */
-    public function consumeFromLots(Stock $stock, float $quantity, ?int $flockId = null, ?string $reference = null): Collection
-    {
+    public function consumeFromLots(
+        Stock $stock,
+        float $quantity,
+        ?int $flockId = null,
+        ?string $reference = null,
+        StockMovementReason $reason = StockMovementReason::Consumption,
+        ?string $notes = null,
+    ): Collection {
         if ($quantity <= 0) {
             throw StockException::invalidQuantity();
         }
 
-        return DB::transaction(function () use ($stock, $quantity, $flockId, $reference): Collection {
+        return DB::transaction(function () use ($stock, $quantity, $flockId, $reference, $reason, $notes): Collection {
             // Produit et lots verrouillés : la disponibilité est relue en base
             $stock = Stock::query()->lockForUpdate()->findOrFail($stock->getKey());
 
@@ -153,10 +203,10 @@ class StockService
 
                 $movement = $stock->recordOut(
                     quantity: $take,
-                    reason: StockMovementReason::Consumption,
+                    reason: $reason,
                     flockId: $flockId,
                     reference: $reference,
-                    notes: "Lot {$lot->lot_number}",
+                    notes: trim(($notes ? $notes.' — ' : '')."Lot {$lot->lot_number}"),
                 );
 
                 $movement->update(['stock_lot_id' => $lot->id]);
@@ -169,8 +219,37 @@ class StockService
                 $remaining -= $take;
             }
 
+            // Stock non tracé par lot (entrées antérieures au suivi par lots) : sortie simple du reliquat
+            if ($remaining > 0.0001) {
+                $movements->push($stock->recordOut(
+                    quantity: $remaining,
+                    reason: $reason,
+                    flockId: $flockId,
+                    reference: $reference,
+                    notes: $notes,
+                ));
+            }
+
             return $movements;
         });
+    }
+
+    /**
+     * Sortie de stock : FIFO/FEFO par lots quand le produit en possède, sortie simple sinon.
+     */
+    public function recordOut(
+        Stock $stock,
+        float $quantity,
+        StockMovementReason $reason = StockMovementReason::Consumption,
+        ?int $flockId = null,
+        ?string $reference = null,
+        ?string $notes = null,
+    ): Collection {
+        if ($stock->hasAvailableLots()) {
+            return $this->consumeFromLots($stock, $quantity, $flockId, $reference, $reason, $notes);
+        }
+
+        return collect([$stock->recordOut($quantity, $reason, $flockId, $reference, $notes)]);
     }
 
     /**

@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Enums\CustomerType;
+use App\Enums\SaleStatus;
+use App\Models\Concerns\LogsAuditTrail;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -13,7 +15,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Customer extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, LogsAuditTrail, SoftDeletes;
 
     protected $fillable = [
         'organisation_id', 'farm_id',
@@ -132,14 +134,20 @@ class Customer extends Model
         return ((float) $this->balance + $amount) <= (float) $this->credit_limit;
     }
 
-    public function addToBalance(float $amount): void
+    /**
+     * Encours client = somme des soldes dus des factures actives
+     * (les brouillons et les factures annulées n'entrent pas dans l'encours).
+     */
+    public function recalculateBalance(): void
     {
-        $this->increment('balance', $amount);
-    }
+        $balance = (float) $this->sales()
+            ->whereNotIn('status', [SaleStatus::Draft->value, SaleStatus::Cancelled->value])
+            ->sum('balance');
 
-    public function subtractFromBalance(float $amount): void
-    {
-        $this->decrement('balance', min($amount, (float) $this->balance));
+        static::withoutEvents(fn () => static::query()->whereKey($this->getKey())->update(['balance' => $balance]));
+
+        $this->balance = $balance;
+        $this->syncOriginalAttribute('balance');
     }
 
     public function getTotalPurchases(): float

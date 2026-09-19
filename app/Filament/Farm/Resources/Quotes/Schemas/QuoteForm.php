@@ -9,6 +9,7 @@ use App\Models\Flock;
 use App\Services\CurrentFarm;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
@@ -129,8 +130,9 @@ class QuoteForm
                                     ->schema([
                                         Repeater::make('items')
                                             ->label('')
-                                            ->relationship()
                                             ->schema([
+                                                Hidden::make('id'),
+
                                                 TextInput::make('product_name')
                                                     ->label('Désignation')
                                                     ->required()

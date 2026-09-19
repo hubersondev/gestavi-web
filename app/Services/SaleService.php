@@ -62,14 +62,122 @@ class SaleService
                 $sale->update(['status' => SaleStatus::Pending]);
             }
 
-            if ($sale->customer) {
-                $sale->customer->update([
-                    'balance' => $sale->customer->sales()->sum('balance'),
-                ]);
-            }
+            $sale->customer?->recalculateBalance();
 
             return $sale->fresh(['items', 'customer']);
         });
+    }
+
+    /**
+     * Remplace les lignes d'une facture (édition). Interdit dès qu'un paiement existe.
+     *
+     * @param  array<int, array<string, mixed>>  $items
+     */
+    public function syncSaleItems(Sale $sale, array $items): Sale
+    {
+        if ($sale->isLocked()) {
+            throw CommercialException::saleLocked($sale->invoice_number);
+        }
+
+        if (empty($items)) {
+            throw CommercialException::emptyItems();
+        }
+
+        $this->assertFlocksNotUnderWithdrawal($items, $sale->sale_date);
+
+        return DB::transaction(function () use ($sale, $items): Sale {
+            $this->syncLines($sale->items(), $items, ['product_name', 'description', 'unit', 'quantity', 'unit_price', 'discount_percent', 'flock_id', 'is_live_birds']);
+
+            $sale->refresh()->calculateTotals();
+            $sale->customer?->recalculateBalance();
+
+            return $sale->fresh(['items', 'customer']);
+        });
+    }
+
+    /**
+     * Crée un devis et ses lignes.
+     *
+     * @param  array<string, mixed>  $data
+     * @param  array<int, array<string, mixed>>  $items
+     */
+    public function createQuote(array $data, array $items): Quote
+    {
+        if (empty($items)) {
+            throw CommercialException::emptyItems();
+        }
+
+        return DB::transaction(function () use ($data, $items): Quote {
+            $quote = Quote::create($data);
+
+            foreach ($items as $index => $item) {
+                $quote->items()->create(array_merge($this->only($item, ['product_name', 'description', 'unit', 'quantity', 'unit_price', 'discount_percent', 'flock_id']), ['sort_order' => $index]));
+            }
+
+            $quote->refresh()->calculateTotals();
+
+            return $quote->fresh(['items', 'customer']);
+        });
+    }
+
+    /**
+     * Remplace les lignes d'un devis (édition). Un devis converti n'est plus modifiable.
+     *
+     * @param  array<int, array<string, mixed>>  $items
+     */
+    public function syncQuoteItems(Quote $quote, array $items): Quote
+    {
+        if ($quote->isConverted()) {
+            throw CommercialException::quoteAlreadyConverted($quote->quote_number);
+        }
+
+        if (empty($items)) {
+            throw CommercialException::emptyItems();
+        }
+
+        return DB::transaction(function () use ($quote, $items): Quote {
+            $this->syncLines($quote->items(), $items, ['product_name', 'description', 'unit', 'quantity', 'unit_price', 'discount_percent', 'flock_id']);
+
+            $quote->refresh()->calculateTotals();
+
+            return $quote->fresh(['items', 'customer']);
+        });
+    }
+
+    /**
+     * Synchronise des lignes saisies (avec `id` optionnel) sur une relation HasMany :
+     * mise à jour des lignes existantes, création des nouvelles, suppression des absentes.
+     *
+     * @param  array<int, array<string, mixed>>  $items
+     * @param  list<string>  $columns
+     */
+    private function syncLines(\Illuminate\Database\Eloquent\Relations\HasMany $relation, array $items, array $columns): void
+    {
+        $keptIds = [];
+
+        foreach (array_values($items) as $index => $item) {
+            $attributes = array_merge($this->only($item, $columns), ['sort_order' => $index]);
+            $existing = ! empty($item['id']) ? $relation->getQuery()->clone()->find($item['id']) : null;
+
+            if ($existing) {
+                $existing->update($attributes);
+                $keptIds[] = $existing->getKey();
+            } else {
+                $keptIds[] = $relation->create($attributes)->getKey();
+            }
+        }
+
+        $relation->getQuery()->clone()->whereNotIn('id', $keptIds)->get()->each->delete();
+    }
+
+    /**
+     * @param  array<string, mixed>  $item
+     * @param  list<string>  $columns
+     * @return array<string, mixed>
+     */
+    private function only(array $item, array $columns): array
+    {
+        return array_intersect_key($item, array_flip($columns));
     }
 
     /**

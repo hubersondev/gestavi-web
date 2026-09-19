@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\StockMovementReason;
 use App\Enums\StockMovementType;
 use App\Exceptions\StockException;
+use App\Models\Concerns\LogsAuditTrail;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -15,7 +16,7 @@ use Illuminate\Support\Facades\DB;
 
 class Stock extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, LogsAuditTrail, SoftDeletes;
 
     protected $fillable = [
         'organisation_id', 'farm_id', 'stock_category_id',
@@ -157,11 +158,38 @@ class Stock extends Model
                 'notes' => $notes,
             ]);
 
-            $locked->increment('quantity', $quantity);
+            // Valorisation au coût moyen unitaire pondéré (CMUP) quand un prix d'entrée est connu
+            $attributes = ['quantity' => (float) $locked->quantity + $quantity];
+
+            if ($unitPrice !== null) {
+                $attributes['unit_price'] = self::weightedAverageCost(
+                    (float) $locked->quantity,
+                    (float) $locked->unit_price,
+                    $quantity,
+                    $unitPrice,
+                );
+            }
+
+            $locked->update($attributes);
             $this->syncQuantityFrom($locked);
 
             return $movement;
         });
+    }
+
+    /**
+     * CMUP = (quantité avant × prix avant + quantité entrée × prix entrée) / quantité après.
+     * Un stock nul ou négatif avant l'entrée prend simplement le prix d'entrée.
+     */
+    public static function weightedAverageCost(float $quantityBefore, float $priceBefore, float $quantityIn, float $priceIn): float
+    {
+        $quantityAfter = $quantityBefore + $quantityIn;
+
+        if ($quantityBefore <= 0 || $quantityAfter <= 0) {
+            return round($priceIn, 2);
+        }
+
+        return round((($quantityBefore * $priceBefore) + ($quantityIn * $priceIn)) / $quantityAfter, 2);
     }
 
     /**
@@ -212,8 +240,22 @@ class Stock extends Model
      */
     protected function syncQuantityFrom(Stock $locked): void
     {
-        $this->quantity = $locked->fresh()->quantity;
-        $this->syncOriginalAttribute('quantity');
+        $fresh = $locked->fresh();
+
+        $this->quantity = $fresh->quantity;
+        $this->unit_price = $fresh->unit_price;
+        $this->syncOriginalAttributes(['quantity', 'unit_price']);
+    }
+
+    /**
+     * Vrai si le produit possède des lots encore disponibles (sorties à consommer en FIFO/FEFO).
+     */
+    public function hasAvailableLots(): bool
+    {
+        return $this->lots()
+            ->whereIn('status', [\App\Enums\StockLotStatus::Available, \App\Enums\StockLotStatus::Low])
+            ->where('current_quantity', '>', 0)
+            ->exists();
     }
 
     /**
