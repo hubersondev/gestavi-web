@@ -6,7 +6,6 @@ use App\Enums\PlanFeature;
 use App\Filament\Farm\Concerns\ChecksOrganisationPermissions;
 use App\Filament\Farm\Concerns\RequiresPlanFeatures;
 use App\Filament\Farm\Resources\StockMovements\Pages\CreateStockMovement;
-use App\Filament\Farm\Resources\StockMovements\Pages\EditStockMovement;
 use App\Filament\Farm\Resources\StockMovements\Pages\ListStockMovements;
 use App\Filament\Farm\Resources\StockMovements\Pages\ViewStockMovement;
 use App\Filament\Farm\Resources\StockMovements\Schemas\StockMovementForm;
@@ -41,6 +40,25 @@ class StockMovementResource extends Resource
 
     protected static string $permissionGroup = 'stock_movements';
 
+    /**
+     * Un mouvement de stock est un journal : il a déjà modifié la quantité
+     * du produit et ne se modifie ni ne se supprime après coup.
+     */
+    public static function canEdit(Model $record): bool
+    {
+        return false;
+    }
+
+    public static function canDelete(Model $record): bool
+    {
+        return false;
+    }
+
+    public static function canDeleteAny(): bool
+    {
+        return false;
+    }
+
     public static function getRequiredPlanFeatures(): array
     {
         return [PlanFeature::StockManagement];
@@ -67,7 +85,6 @@ class StockMovementResource extends Resource
             'index' => ListStockMovements::route('/'),
             'create' => CreateStockMovement::route('/create'),
             'view' => ViewStockMovement::route('/{record}'),
-            'edit' => EditStockMovement::route('/{record}/edit'),
         ];
     }
 

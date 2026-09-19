@@ -23,7 +23,7 @@ class ViewAccount extends ViewRecord
                 ->label('Définir par défaut')
                 ->icon('heroicon-o-star')
                 ->color('warning')
-                ->visible(fn (Account $record): bool => ! $record->isDefault() && AccountResource::canPerformAction('update'))
+                ->visible(fn (Account $record): bool => ! $record->isDefault() && AccountResource::canPerformAction('set_default'))
                 ->requiresConfirmation()
                 ->action(function (Account $record): void {
                     $record->setAsDefault();
@@ -38,7 +38,7 @@ class ViewAccount extends ViewRecord
                 ->label('Recalculer le solde')
                 ->icon('heroicon-o-calculator')
                 ->color('info')
-                ->visible(fn (): bool => AccountResource::canPerformAction('update'))
+                ->visible(fn (): bool => AccountResource::canPerformAction('recalculate_balance'))
                 ->requiresConfirmation()
                 ->modalDescription('Recalcule le solde à partir du solde initial et de toutes les transactions.')
                 ->action(function (Account $record): void {
@@ -46,7 +46,7 @@ class ViewAccount extends ViewRecord
 
                     Notification::make()
                         ->title('Solde recalculé.')
-                        ->body("Nouveau solde : ".number_format((float) $record->fresh()->current_balance, 0, ',', ' ').' XOF')
+                        ->body('Nouveau solde : '.number_format((float) $record->fresh()->current_balance, 0, ',', ' ').' XOF')
                         ->success()
                         ->send();
                 }),

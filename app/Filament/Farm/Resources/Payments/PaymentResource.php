@@ -7,7 +7,6 @@ use App\Filament\Farm\Concerns\ChecksOrganisationPermissions;
 use App\Filament\Farm\Concerns\RequiresPlanFeatures;
 use App\Filament\Farm\Concerns\ScopesToMemberFarms;
 use App\Filament\Farm\Resources\Payments\Pages\CreatePayment;
-use App\Filament\Farm\Resources\Payments\Pages\EditPayment;
 use App\Filament\Farm\Resources\Payments\Pages\ListPayments;
 use App\Filament\Farm\Resources\Payments\Pages\ViewPayment;
 use App\Filament\Farm\Resources\Payments\Schemas\PaymentForm;
@@ -43,6 +42,25 @@ class PaymentResource extends Resource
 
     protected static string $permissionGroup = 'payments';
 
+    /**
+     * Un paiement encaissé a déjà mis à jour la facture et crédité le compte :
+     * il ne se modifie ni ne se supprime (annulation par contrepassation à venir).
+     */
+    public static function canEdit(Model $record): bool
+    {
+        return false;
+    }
+
+    public static function canDelete(Model $record): bool
+    {
+        return false;
+    }
+
+    public static function canDeleteAny(): bool
+    {
+        return false;
+    }
+
     public static function getRequiredPlanFeatures(): array
     {
         return [PlanFeature::Payments];
@@ -69,7 +87,6 @@ class PaymentResource extends Resource
             'index' => ListPayments::route('/'),
             'create' => CreatePayment::route('/create'),
             'view' => ViewPayment::route('/{record}'),
-            'edit' => EditPayment::route('/{record}/edit'),
         ];
     }
 

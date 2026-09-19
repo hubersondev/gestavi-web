@@ -43,6 +43,29 @@ class AccountTransferResource extends Resource
 
     protected static string $permissionGroup = 'account_transfers';
 
+    /**
+     * Seul un transfert encore en attente (aucun compte mouvementé) peut être
+     * modifié ou supprimé ; un transfert complété se contrepasse.
+     */
+    public static function canEdit(Model $record): bool
+    {
+        return $record instanceof AccountTransfer
+            && $record->isPending()
+            && static::memberHasPermission('update');
+    }
+
+    public static function canDelete(Model $record): bool
+    {
+        return $record instanceof AccountTransfer
+            && $record->isPending()
+            && static::memberHasPermission('delete');
+    }
+
+    public static function canDeleteAny(): bool
+    {
+        return false;
+    }
+
     protected static ?string $recordTitleAttribute = 'reference';
 
     public static function getRequiredPlanFeatures(): array

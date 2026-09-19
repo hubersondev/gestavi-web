@@ -3,8 +3,6 @@
 namespace App\Filament\Farm\Resources\Sales\RelationManagers;
 
 use App\Enums\PaymentMethod;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\RelationManagers\RelationManager;
@@ -118,11 +116,6 @@ class PaymentsRelationManager extends RelationManager
             ->headerActions([])
             ->recordActions([
                 ViewAction::make(),
-            ])
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
             ]);
     }
 }

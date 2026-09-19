@@ -51,7 +51,7 @@ class ViewSale extends ViewRecord
                 ->label('Enregistrer un paiement')
                 ->icon('heroicon-o-banknotes')
                 ->color('success')
-                ->visible(fn (Sale $record): bool => $record->hasBalance() && ! $record->isCancelled() && SaleResource::canPerformAction('update'))
+                ->visible(fn (Sale $record): bool => $record->hasBalance() && ! $record->isCancelled() && SaleResource::canPerformAction('record_payment'))
                 ->schema([
                     TextInput::make('amount')
                         ->label('Montant')

@@ -5,8 +5,6 @@ namespace App\Filament\Farm\Resources\Stocks\RelationManagers;
 use App\Enums\StockMovementReason;
 use App\Enums\StockMovementType;
 use App\Models\StockMovement;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\RelationManagers\RelationManager;
@@ -123,11 +121,6 @@ class MovementsRelationManager extends RelationManager
             ->headerActions([])
             ->recordActions([
                 ViewAction::make(),
-            ])
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
             ]);
     }
 }

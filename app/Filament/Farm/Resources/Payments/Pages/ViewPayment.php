@@ -3,7 +3,6 @@
 namespace App\Filament\Farm\Resources\Payments\Pages;
 
 use App\Filament\Farm\Resources\Payments\PaymentResource;
-use Filament\Actions\EditAction;
 use Filament\Resources\Pages\ViewRecord;
 
 class ViewPayment extends ViewRecord
@@ -13,7 +12,6 @@ class ViewPayment extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
-            EditAction::make(),
         ];
     }
 }

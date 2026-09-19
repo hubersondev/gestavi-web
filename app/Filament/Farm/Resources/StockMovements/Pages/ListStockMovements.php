@@ -2,7 +2,6 @@
 
 namespace App\Filament\Farm\Resources\StockMovements\Pages;
 
-use App\Enums\StockMovementType;
 use App\Filament\Farm\Resources\StockMovements\StockMovementResource;
 use App\Models\StockMovement;
 use Filament\Actions\Action;
@@ -62,7 +61,7 @@ class ListStockMovements extends ListRecords
                     }
 
                     return response()->streamDownload(function () use ($movements): void {
-                        $writer = new Writer();
+                        $writer = new Writer;
                         $writer->openToFile('php://output');
 
                         $writer->addRow(Row::fromValues([

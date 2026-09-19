@@ -22,7 +22,7 @@ class ViewAccountTransfer extends ViewRecord
                 ->label('Compléter le transfert')
                 ->icon('heroicon-o-check-circle')
                 ->color('success')
-                ->visible(fn (AccountTransfer $record): bool => $record->isPending() && AccountTransferResource::canPerformAction('update'))
+                ->visible(fn (AccountTransfer $record): bool => $record->isPending() && AccountTransferResource::canPerformAction('complete'))
                 ->requiresConfirmation()
                 ->modalDescription(fn (AccountTransfer $record): string => sprintf(
                     'Débiter %s XOF (dont %s XOF de frais) du compte "%s" et créditer %s XOF sur "%s" ?',
@@ -49,7 +49,7 @@ class ViewAccountTransfer extends ViewRecord
                 ->label('Annuler')
                 ->icon('heroicon-o-x-circle')
                 ->color('danger')
-                ->visible(fn (AccountTransfer $record): bool => $record->canBeCancelled() && AccountTransferResource::canPerformAction('update'))
+                ->visible(fn (AccountTransfer $record): bool => $record->canBeCancelled() && AccountTransferResource::canPerformAction('cancel'))
                 ->requiresConfirmation()
                 ->action(function (AccountTransfer $record): void {
                     $record->cancel();
@@ -60,7 +60,7 @@ class ViewAccountTransfer extends ViewRecord
                 ->label('Contrepasser')
                 ->icon('heroicon-o-arrow-uturn-left')
                 ->color('warning')
-                ->visible(fn (AccountTransfer $record): bool => $record->isCompleted() && AccountTransferResource::canPerformAction('delete'))
+                ->visible(fn (AccountTransfer $record): bool => $record->isCompleted() && AccountTransferResource::canPerformAction('reverse'))
                 ->requiresConfirmation()
                 ->modalDescription('Crée deux transactions opposées pour annuler l\'effet de ce transfert sur les deux comptes.')
                 ->action(function (AccountTransfer $record): void {

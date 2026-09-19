@@ -42,6 +42,30 @@ class StockLotResource extends Resource
 
     protected static string $permissionGroup = 'stock_lots';
 
+    /**
+     * Un lot a généré une entrée de stock à sa création : on ne le supprime pas
+     * (les quantités sont pilotées par les mouvements, ses métadonnées restent éditables).
+     */
+    public static function canDelete(Model $record): bool
+    {
+        return false;
+    }
+
+    public static function canDeleteAny(): bool
+    {
+        return false;
+    }
+
+    public static function canForceDelete(Model $record): bool
+    {
+        return false;
+    }
+
+    public static function canForceDeleteAny(): bool
+    {
+        return false;
+    }
+
     protected static ?string $recordTitleAttribute = 'lot_number';
 
     public static function getRequiredPlanFeatures(): array

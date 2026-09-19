@@ -6,7 +6,6 @@ use App\Filament\Farm\Resources\Transactions\TransactionResource;
 use App\Models\Transaction;
 use App\Services\TransactionService;
 use Filament\Actions\Action;
-use Filament\Actions\EditAction;
 use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
@@ -23,7 +22,7 @@ class ViewTransaction extends ViewRecord
                 ->label('Rapprocher')
                 ->icon('heroicon-o-check-circle')
                 ->color('success')
-                ->visible(fn (Transaction $record): bool => ! $record->isReconciled() && TransactionResource::canPerformAction('update'))
+                ->visible(fn (Transaction $record): bool => ! $record->isReconciled() && TransactionResource::canPerformAction('reconcile'))
                 ->requiresConfirmation()
                 ->action(function (Transaction $record): void {
                     $record->reconcile();
@@ -34,7 +33,7 @@ class ViewTransaction extends ViewRecord
                 ->label('Annuler le rapprochement')
                 ->icon('heroicon-o-x-circle')
                 ->color('warning')
-                ->visible(fn (Transaction $record): bool => $record->isReconciled() && TransactionResource::canPerformAction('update'))
+                ->visible(fn (Transaction $record): bool => $record->isReconciled() && TransactionResource::canPerformAction('reconcile'))
                 ->action(function (Transaction $record): void {
                     $record->unreconcile();
                     Notification::make()->title('Rapprochement annulé.')->success()->send();
@@ -44,7 +43,7 @@ class ViewTransaction extends ViewRecord
                 ->label('Contrepasser')
                 ->icon('heroicon-o-arrow-uturn-left')
                 ->color('danger')
-                ->visible(fn (Transaction $record): bool => ! $record->isReconciled() && TransactionResource::canPerformAction('delete'))
+                ->visible(fn (Transaction $record): bool => ! $record->isReconciled() && TransactionResource::canPerformAction('reverse'))
                 ->requiresConfirmation()
                 ->modalDescription('Crée une écriture opposée pour annuler cette transaction. Le montant sera reversé sur le solde du compte.')
                 ->schema([
@@ -71,7 +70,6 @@ class ViewTransaction extends ViewRecord
                     }
                 }),
 
-            EditAction::make(),
         ];
     }
 }

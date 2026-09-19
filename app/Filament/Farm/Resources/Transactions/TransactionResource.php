@@ -7,7 +7,6 @@ use App\Filament\Farm\Concerns\ChecksOrganisationPermissions;
 use App\Filament\Farm\Concerns\RequiresPlanFeatures;
 use App\Filament\Farm\Concerns\ScopesToMemberFarms;
 use App\Filament\Farm\Resources\Transactions\Pages\CreateTransaction;
-use App\Filament\Farm\Resources\Transactions\Pages\EditTransaction;
 use App\Filament\Farm\Resources\Transactions\Pages\ListTransactions;
 use App\Filament\Farm\Resources\Transactions\Pages\ViewTransaction;
 use App\Filament\Farm\Resources\Transactions\Schemas\TransactionForm;
@@ -43,6 +42,25 @@ class TransactionResource extends Resource
 
     protected static string $permissionGroup = 'transactions';
 
+    /**
+     * Une écriture de trésorerie est intangible : elle ne se modifie ni ne se
+     * supprime, elle se contrepasse (TransactionService::reverseTransaction).
+     */
+    public static function canEdit(Model $record): bool
+    {
+        return false;
+    }
+
+    public static function canDelete(Model $record): bool
+    {
+        return false;
+    }
+
+    public static function canDeleteAny(): bool
+    {
+        return false;
+    }
+
     public static function getRequiredPlanFeatures(): array
     {
         return [PlanFeature::Accounting];
@@ -69,7 +87,6 @@ class TransactionResource extends Resource
             'index' => ListTransactions::route('/'),
             'create' => CreateTransaction::route('/create'),
             'view' => ViewTransaction::route('/{record}'),
-            'edit' => EditTransaction::route('/{record}/edit'),
         ];
     }
 

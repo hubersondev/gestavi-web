@@ -5,8 +5,6 @@ namespace App\Filament\Farm\Resources\StockMovements\Tables;
 use App\Enums\StockMovementReason;
 use App\Enums\StockMovementType;
 use App\Models\StockMovement;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -86,11 +84,6 @@ class StockMovementsTable
             ])
             ->recordActions([
                 ViewAction::make(),
-            ])
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
             ]);
     }
 }
