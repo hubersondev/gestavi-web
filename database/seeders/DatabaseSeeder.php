@@ -48,6 +48,11 @@ class DatabaseSeeder extends Seeder
             HealthProgramSeeder::class,
         ]);
 
+        // Paramètres de paie légaux par défaut (CNPS, ITS)
+        $this->call([
+            PayrollParameterSeeder::class,
+        ]);
+
         // Super Admin Gestavi
         $superAdmin = User::factory()->superAdmin()->create([
             'name' => 'Super Admin',

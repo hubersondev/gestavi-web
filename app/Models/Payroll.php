@@ -2,20 +2,26 @@
 
 namespace App\Models;
 
+use App\Enums\ExpenseCategory;
+use App\Enums\ExpenseStatus;
 use App\Enums\PayrollStatus;
+use App\Exceptions\AccountException;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 
 class Payroll extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'employee_id', 'contract_id', 'validated_by', 'paid_by',
+        'employee_id', 'contract_id', 'payroll_parameter_id', 'validated_by', 'paid_by', 'expense_id',
         'period_year', 'period_month', 'status',
         'gross_salary', 'cnps_employee', 'cnps_employer', 'its',
+        'cnps_ceiling_applied', 'fiscal_parts_applied',
         'other_deductions', 'total_deductions', 'net_salary',
         'worked_days', 'leave_days', 'overtime_hours',
         'validated_at', 'paid_at', 'notes',
@@ -29,6 +35,8 @@ class Payroll extends Model
             'cnps_employee' => 'decimal:2',
             'cnps_employer' => 'decimal:2',
             'its' => 'decimal:2',
+            'cnps_ceiling_applied' => 'decimal:2',
+            'fiscal_parts_applied' => 'decimal:1',
             'other_deductions' => 'decimal:2',
             'total_deductions' => 'decimal:2',
             'net_salary' => 'decimal:2',
@@ -48,6 +56,16 @@ class Payroll extends Model
     public function contract(): BelongsTo
     {
         return $this->belongsTo(Contract::class);
+    }
+
+    public function parameter(): BelongsTo
+    {
+        return $this->belongsTo(PayrollParameter::class, 'payroll_parameter_id');
+    }
+
+    public function expense(): BelongsTo
+    {
+        return $this->belongsTo(Expense::class);
     }
 
     public function validator(): BelongsTo
@@ -126,10 +144,30 @@ class Payroll extends Model
         return $months[$this->period_month].' '.$this->period_year;
     }
 
+    /**
+     * Référence du bulletin utilisée comme pièce justificative comptable.
+     */
+    public function getReference(): string
+    {
+        return sprintf(
+            'PAIE-%d-%02d-%s',
+            $this->period_year,
+            $this->period_month,
+            $this->employee?->employee_number ?? $this->employee_id,
+        );
+    }
+
+    /**
+     * Totaux : brut = Σ gains ; retenues = Σ retenues (CNPS, ITS…) + autres retenues saisies ;
+     * net = brut − retenues, jamais négatif.
+     */
     public function recalculate(): void
     {
-        $gross = $this->items()->where('is_deduction', false)->sum('amount');
-        $deductions = $this->items()->where('is_deduction', true)->sum('amount');
+        $gross = (float) $this->items()->where('is_deduction', false)->sum('amount');
+        $itemDeductions = (float) $this->items()->where('is_deduction', true)->sum('amount');
+        $otherDeductions = (float) ($this->other_deductions ?? 0);
+        $deductions = $itemDeductions + $otherDeductions;
+
         $this->update([
             'gross_salary' => $gross,
             'total_deductions' => $deductions,
@@ -148,13 +186,63 @@ class Payroll extends Model
         ]);
     }
 
-    public function markAsPaid(int $userId, ?\Carbon\Carbon $date = null): void
+    /**
+     * Paye le bulletin : crée la dépense « salaires » imputée à la ferme de l'employé,
+     * débite le compte choisi (verrouillé) et lie la dépense au bulletin.
+     * La paie apparaît ainsi dans la trésorerie et dans les charges de la ferme.
+     */
+    public function markAsPaid(int $userId, int $accountId, ?CarbonInterface $date = null): void
     {
-        $this->update([
-            'status' => PayrollStatus::Paid,
-            'paid_by' => $userId,
-            'paid_at' => $date ?? now(),
-        ]);
+        if (! $this->isValidated()) {
+            throw new \LogicException('Seul un bulletin validé peut être marqué comme payé.');
+        }
+
+        $date ??= now();
+        $net = (float) $this->net_salary;
+
+        DB::transaction(function () use ($userId, $accountId, $date, $net): void {
+            /** @var Account|null $account */
+            $account = Account::lockForUpdate()->find($accountId);
+
+            if (! $account?->is_active) {
+                throw AccountException::accountNotActive($account?->name ?? 'compte');
+            }
+
+            if ((float) $account->current_balance < $net) {
+                throw AccountException::insufficientBalance($account->name, $net, (float) $account->current_balance);
+            }
+
+            $employee = $this->employee;
+            $expenseId = null;
+
+            if ($net > 0) {
+                $expense = Expense::create([
+                    'organisation_id' => $employee->organisation_id,
+                    'farm_id' => $employee->farm_id,
+                    'flock_id' => null,
+                    'account_id' => $account->id,
+                    'user_id' => $userId,
+                    'expense_date' => $date->toDateString(),
+                    'category' => ExpenseCategory::Salaries,
+                    'status' => ExpenseStatus::Unpaid,
+                    'amount' => $net,
+                    'paid_amount' => 0,
+                    'description' => "Salaire {$this->getPeriodLabel()} — {$employee->full_name}",
+                    'reference' => $this->getReference(),
+                ]);
+
+                // Débite le compte (catégorie Paie) et passe la dépense en « payée »
+                $expense->recordPayment($net, $account->id);
+                $expenseId = $expense->id;
+            }
+
+            $this->update([
+                'status' => PayrollStatus::Paid,
+                'paid_by' => $userId,
+                'paid_at' => $date,
+                'expense_id' => $expenseId,
+            ]);
+        });
     }
 
     public function cancel(): void

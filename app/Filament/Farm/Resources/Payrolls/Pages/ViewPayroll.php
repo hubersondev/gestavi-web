@@ -3,6 +3,7 @@
 namespace App\Filament\Farm\Resources\Payrolls\Pages;
 
 use App\Filament\Farm\Resources\Payrolls\PayrollResource;
+use App\Filament\Farm\Resources\Payrolls\Support\PayrollPaymentAction;
 use App\Services\PayrollService;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
@@ -38,24 +39,25 @@ class ViewPayroll extends ViewRecord
                 ->visible(fn () => $this->record->isDraft() && PayrollResource::canPerformAction('validate')),
 
             Action::make('mark_paid')
-                ->label('Marquer payé')
+                ->label('Payer')
                 ->icon('heroicon-o-banknotes')
                 ->color('success')
-                ->requiresConfirmation()
-                ->modalHeading('Marquer comme payé')
-                ->modalDescription('Le bulletin passera en statut "Payé". Confirmez-vous ?')
-                ->action(function () {
-                    $this->record->markAsPaid(auth()->id());
-
-                    Notification::make()
-                        ->title('Bulletin marqué comme payé')
-                        ->body("Le bulletin de {$this->record->employee?->full_name} pour {$this->record->getPeriodLabel()} a été marqué comme payé.")
-                        ->success()
-                        ->send();
-
-                    $this->refreshFormData(['status', 'paid_at', 'paid_by']);
+                ->modalHeading('Payer le bulletin')
+                ->modalDescription(fn () => 'Le net à payer ('.number_format((float) $this->record->net_salary, 0, ',', ' ').' XOF) sera débité du compte choisi et une dépense « Salaires » sera créée.')
+                ->schema(PayrollPaymentAction::schema())
+                ->action(function (array $data): void {
+                    if (PayrollPaymentAction::handle($this->record, $data)) {
+                        $this->refreshFormData(['status', 'paid_at', 'paid_by', 'expense_id']);
+                    }
                 })
                 ->visible(fn () => $this->record->isValidated() && PayrollResource::canPerformAction('mark_paid')),
+
+            Action::make('payslip_pdf')
+                ->label('Bulletin PDF')
+                ->icon('heroicon-o-document-arrow-down')
+                ->color('gray')
+                ->visible(fn () => ! $this->record->isDraft() && PayrollResource::canPerformAction('view'))
+                ->action(fn () => PayrollPaymentAction::downloadPayslip($this->record)),
 
             Action::make('cancel')
                 ->label('Annuler')

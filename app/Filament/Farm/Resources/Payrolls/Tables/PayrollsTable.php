@@ -4,6 +4,7 @@ namespace App\Filament\Farm\Resources\Payrolls\Tables;
 
 use App\Enums\PayrollStatus;
 use App\Filament\Farm\Resources\Payrolls\PayrollResource;
+use App\Filament\Farm\Resources\Payrolls\Support\PayrollPaymentAction;
 use App\Services\PayrollService;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
@@ -106,14 +107,21 @@ class PayrollsTable
                     ->action(fn ($record) => app(PayrollService::class)->validatePayroll($record, auth()->id())),
 
                 Action::make('mark_paid')
-                    ->label('Marquer payé')
+                    ->label('Payer')
                     ->icon('heroicon-o-banknotes')
                     ->color('success')
-                    ->requiresConfirmation()
-                    ->modalHeading('Marquer comme payé')
-                    ->modalDescription('Le bulletin passera en statut "Payé". Confirmez-vous ?')
+                    ->modalHeading('Payer le bulletin')
+                    ->modalDescription(fn ($record) => 'Le net à payer ('.number_format((float) $record->net_salary, 0, ',', ' ').' XOF) sera débité du compte choisi et une dépense « Salaires » sera créée.')
+                    ->schema(PayrollPaymentAction::schema())
                     ->visible(fn ($record) => $record->isValidated() && PayrollResource::canPerformAction('mark_paid'))
-                    ->action(fn ($record) => $record->markAsPaid(auth()->id())),
+                    ->action(fn ($record, array $data) => PayrollPaymentAction::handle($record, $data)),
+
+                Action::make('payslip_pdf')
+                    ->label('Bulletin PDF')
+                    ->icon('heroicon-o-document-arrow-down')
+                    ->color('gray')
+                    ->visible(fn ($record) => ! $record->isDraft() && PayrollResource::canPerformAction('view'))
+                    ->action(fn ($record) => PayrollPaymentAction::downloadPayslip($record)),
 
                 Action::make('cancel')
                     ->label('Annuler')

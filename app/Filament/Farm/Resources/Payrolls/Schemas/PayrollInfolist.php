@@ -100,6 +100,15 @@ class PayrollInfolist
                             ->label('Payé le')
                             ->date('d/m/Y')
                             ->placeholder('—'),
+
+                        TextEntry::make('expense.expense_number')
+                            ->label('Dépense comptabilisée')
+                            ->placeholder('—'),
+
+                        TextEntry::make('parameter_label')
+                            ->label('Paramétrage appliqué')
+                            ->state(fn ($record) => $record->parameter?->getLabel() ?? 'Barème légal embarqué')
+                            ->helperText(fn ($record) => $record->parameter?->source),
                     ])
                     ->columns(2),
             ]);

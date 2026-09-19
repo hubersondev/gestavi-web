@@ -18,4 +18,12 @@ class EditPayroll extends EditRecord
             DeleteAction::make(),
         ];
     }
+
+    /**
+     * Les autres retenues saisies modifient le net : on recalcule les totaux.
+     */
+    protected function afterSave(): void
+    {
+        $this->record->recalculate();
+    }
 }

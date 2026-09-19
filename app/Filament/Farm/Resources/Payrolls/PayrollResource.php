@@ -5,6 +5,7 @@ namespace App\Filament\Farm\Resources\Payrolls;
 use App\Enums\PlanFeature;
 use App\Filament\Farm\Concerns\ChecksOrganisationPermissions;
 use App\Filament\Farm\Concerns\RequiresPlanFeatures;
+use App\Filament\Farm\Concerns\ScopesToMemberFarms;
 use App\Filament\Farm\Resources\Payrolls\Pages\CreatePayroll;
 use App\Filament\Farm\Resources\Payrolls\Pages\EditPayroll;
 use App\Filament\Farm\Resources\Payrolls\Pages\ListPayrolls;
@@ -27,6 +28,7 @@ class PayrollResource extends Resource
 {
     use ChecksOrganisationPermissions;
     use RequiresPlanFeatures;
+    use ScopesToMemberFarms;
 
     protected static ?string $model = Payroll::class;
 
@@ -86,6 +88,9 @@ class PayrollResource extends Resource
 
     public static function scopeEloquentQueryToTenant(Builder $query, ?Model $tenant): Builder
     {
-        return $query->whereHas('employee', fn (Builder $q) => $q->where('organisation_id', $tenant?->getKey()));
+        return static::applyFarmScopeThrough(
+            $query->whereHas('employee', fn (Builder $q) => $q->where('organisation_id', $tenant?->getKey())),
+            'employee',
+        );
     }
 }
