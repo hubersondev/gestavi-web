@@ -5,6 +5,7 @@ namespace App\Filament\Farm\Pages\Reports;
 use App\Enums\SaleStatus;
 use App\Models\Customer;
 use App\Models\Sale;
+use App\Services\CurrentFarm;
 use BackedEnum;
 use Filament\Actions\Action as TableAction;
 use Filament\Facades\Filament;
@@ -73,6 +74,7 @@ class CommercialReportPage extends Page implements HasTable
 
                 $query
                     ->where('organisation_id', $tenant?->getKey())
+                    ->tap(fn (Builder $q) => app(CurrentFarm::class)->restrictForCurrentUser($q))
                     ->whereBetween('sale_date', [$from, $to])
                     ->whereNot('status', SaleStatus::Cancelled);
             })
@@ -131,6 +133,7 @@ class CommercialReportPage extends Page implements HasTable
         return Sale::query()
             ->with('customer')
             ->where('organisation_id', $tenant?->getKey())
+            ->tap(fn (Builder $q) => app(CurrentFarm::class)->restrictForCurrentUser($q))
             ->whereBetween('sale_date', [$from, $to])
             ->whereNot('status', SaleStatus::Cancelled)
             ->orderByDesc('sale_date')
@@ -159,6 +162,7 @@ class CommercialReportPage extends Page implements HasTable
 
         return Customer::query()
             ->where('organisation_id', $tenant?->getKey())
+            ->tap(fn (Builder $q) => app(CurrentFarm::class)->restrictForCurrentUser($q))
             ->whereHas('sales', fn (Builder $q) => $q
                 ->whereBetween('sale_date', [$from, $to])
                 ->whereNot('status', SaleStatus::Cancelled))

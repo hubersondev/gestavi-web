@@ -92,14 +92,8 @@ class SaleResource extends Resource
 
     public static function scopeEloquentQueryToTenant(Builder $query, ?Model $tenant): Builder
     {
-        $currentFarm = static::currentFarm();
-
-        return $query
-            ->where('organisation_id', $tenant?->getKey())
-            ->when($currentFarm, function (Builder $q) use ($currentFarm): void {
-                $q->where(function (Builder $inner) use ($currentFarm): void {
-                    $inner->where('farm_id', $currentFarm->id)->orWhereNull('farm_id');
-                });
-            });
+        return static::applyFarmScope(
+            $query->where('organisation_id', $tenant?->getKey()),
+        );
     }
 }

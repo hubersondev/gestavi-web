@@ -4,6 +4,7 @@ namespace App\Filament\Farm\Resources\Stocks\Schemas;
 
 use App\Models\Farm;
 use App\Models\StockCategory;
+use App\Services\CurrentFarm;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
@@ -64,6 +65,7 @@ class StockForm
 
                                                 return Farm::query()
                                                     ->where('organisation_id', $tenant?->getKey())
+                                                    ->tap(fn ($q) => app(CurrentFarm::class)->restrictForCurrentUser($q, 'id'))
                                                     ->orderBy('name')
                                                     ->pluck('name', 'id')
                                                     ->toArray();

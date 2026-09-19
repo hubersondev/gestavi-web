@@ -5,6 +5,7 @@ namespace App\Filament\Farm\Resources\Leaves;
 use App\Enums\PlanFeature;
 use App\Filament\Farm\Concerns\ChecksOrganisationPermissions;
 use App\Filament\Farm\Concerns\RequiresPlanFeatures;
+use App\Filament\Farm\Concerns\ScopesToMemberFarms;
 use App\Filament\Farm\Resources\Leaves\Pages\CreateLeave;
 use App\Filament\Farm\Resources\Leaves\Pages\EditLeave;
 use App\Filament\Farm\Resources\Leaves\Pages\ListLeaves;
@@ -27,6 +28,7 @@ class LeaveResource extends Resource
 {
     use ChecksOrganisationPermissions;
     use RequiresPlanFeatures;
+    use ScopesToMemberFarms;
 
     protected static ?string $model = Leave::class;
 
@@ -86,6 +88,9 @@ class LeaveResource extends Resource
 
     public static function scopeEloquentQueryToTenant(Builder $query, ?Model $tenant): Builder
     {
-        return $query->whereHas('employee', fn (Builder $q) => $q->where('organisation_id', $tenant?->getKey()));
+        return static::applyFarmScopeThrough(
+            $query->whereHas('employee', fn (Builder $q) => $q->where('organisation_id', $tenant?->getKey())),
+            'employee',
+        );
     }
 }

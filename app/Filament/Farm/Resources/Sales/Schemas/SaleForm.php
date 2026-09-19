@@ -9,6 +9,7 @@ use App\Models\Customer;
 use App\Models\Farm;
 use App\Models\Flock;
 use App\Models\Quote;
+use App\Services\CurrentFarm;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Placeholder;
@@ -55,6 +56,7 @@ class SaleForm
 
                                                 return Farm::query()
                                                     ->where('organisation_id', $tenant->getKey())
+                                                    ->tap(fn ($q) => app(CurrentFarm::class)->restrictForCurrentUser($q, 'id'))
                                                     ->orderBy('name')
                                                     ->pluck('name', 'id')
                                                     ->toArray();
@@ -70,6 +72,7 @@ class SaleForm
 
                                                 return Customer::query()
                                                     ->where('organisation_id', $tenant?->getKey())
+                                                    ->tap(fn ($q) => app(CurrentFarm::class)->restrictForCurrentUser($q))
                                                     ->active()
                                                     ->orderBy('name')
                                                     ->pluck('name', 'id')
@@ -137,7 +140,7 @@ class SaleForm
                                                         $tenant = Filament::getTenant();
 
                                                         return Flock::query()
-                                                            ->whereHas('building.farm', fn ($q) => $q->where('organisation_id', $tenant?->getKey()))
+                                                            ->whereHas('building.farm', fn ($q) => app(CurrentFarm::class)->restrictFarmsTableForCurrentUser($q->where('organisation_id', $tenant?->getKey())))
                                                             ->orderByDesc('start_date')
                                                             ->get()
                                                             ->mapWithKeys(fn (Flock $flock) => [$flock->id => $flock->code.' – '.$flock->name])
@@ -289,6 +292,7 @@ class SaleForm
 
                                                 return Account::query()
                                                     ->where('organisation_id', $tenant?->getKey())
+                                                    ->tap(fn ($q) => app(CurrentFarm::class)->restrictForCurrentUser($q))
                                                     ->active()
                                                     ->orderBy('name')
                                                     ->pluck('name', 'id')

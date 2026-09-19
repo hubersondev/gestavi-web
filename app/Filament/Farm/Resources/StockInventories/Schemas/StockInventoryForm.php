@@ -5,6 +5,7 @@ namespace App\Filament\Farm\Resources\StockInventories\Schemas;
 use App\Enums\StockInventoryDifferenceReason;
 use App\Enums\StockInventoryStatus;
 use App\Models\Stock;
+use App\Services\CurrentFarm;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Placeholder;
@@ -45,6 +46,7 @@ class StockInventoryForm
 
                                 return Stock::query()
                                     ->where('organisation_id', $tenant?->getKey())
+                                    ->tap(fn ($q) => app(CurrentFarm::class)->restrictForCurrentUser($q))
                                     ->active()
                                     ->orderBy('name')
                                     ->pluck('name', 'id')

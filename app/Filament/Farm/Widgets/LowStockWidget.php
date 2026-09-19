@@ -3,6 +3,7 @@
 namespace App\Filament\Farm\Widgets;
 
 use App\Models\Stock;
+use App\Services\CurrentFarm;
 use Filament\Facades\Filament;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -29,6 +30,7 @@ class LowStockWidget extends TableWidget
 
                 return Stock::query()
                     ->where('organisation_id', $tenant?->getKey())
+                    ->tap(fn (Builder $q) => app(CurrentFarm::class)->restrictForCurrentUser($q))
                     ->active()
                     ->lowStock()
                     ->orderByRaw('quantity / NULLIF(min_quantity, 0) ASC')

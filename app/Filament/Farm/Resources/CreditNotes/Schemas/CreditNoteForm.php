@@ -4,6 +4,7 @@ namespace App\Filament\Farm\Resources\CreditNotes\Schemas;
 
 use App\Enums\CreditNoteStatus;
 use App\Models\Sale;
+use App\Services\CurrentFarm;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
@@ -35,6 +36,7 @@ class CreditNoteForm
 
                                 return Sale::query()
                                     ->where('organisation_id', $tenant?->getKey())
+                                    ->tap(fn ($q) => app(CurrentFarm::class)->restrictForCurrentUser($q))
                                     ->whereNotIn('status', ['cancelled', 'draft'])
                                     ->orderByDesc('sale_date')
                                     ->get()

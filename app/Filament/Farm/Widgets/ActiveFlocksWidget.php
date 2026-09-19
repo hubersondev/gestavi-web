@@ -3,6 +3,7 @@
 namespace App\Filament\Farm\Widgets;
 
 use App\Models\Flock;
+use App\Services\CurrentFarm;
 use Filament\Facades\Filament;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -30,7 +31,7 @@ class ActiveFlocksWidget extends TableWidget
                     ->active()
                     ->when($tenant, fn (Builder $q) => $q->whereHas(
                         'building.farm',
-                        fn (Builder $sub) => $sub->where('organisation_id', $tenant->getKey())
+                        fn (Builder $sub) => app(CurrentFarm::class)->restrictFarmsTableForCurrentUser($sub->where('organisation_id', $tenant->getKey()))
                     ))
                     ->with(['building', 'chickenType'])
                     ->orderByDesc('start_date')

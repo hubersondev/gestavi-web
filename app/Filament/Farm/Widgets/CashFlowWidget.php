@@ -5,8 +5,10 @@ namespace App\Filament\Farm\Widgets;
 use App\Enums\TransactionType;
 use App\Models\Account;
 use App\Models\Transaction;
+use App\Services\CurrentFarm;
 use Filament\Facades\Filament;
 use Filament\Widgets\ChartWidget;
+use Illuminate\Database\Eloquent\Builder;
 
 class CashFlowWidget extends ChartWidget
 {
@@ -36,6 +38,7 @@ class CashFlowWidget extends ChartWidget
 
         $accountIds = Account::query()
             ->where('organisation_id', $tenant->getKey())
+            ->tap(fn (Builder $q) => app(CurrentFarm::class)->restrictForCurrentUser($q))
             ->where('is_active', true)
             ->pluck('id');
 

@@ -5,6 +5,7 @@ namespace App\Filament\Farm\Resources\StockInventories;
 use App\Enums\PlanFeature;
 use App\Filament\Farm\Concerns\ChecksOrganisationPermissions;
 use App\Filament\Farm\Concerns\RequiresPlanFeatures;
+use App\Filament\Farm\Concerns\ScopesToMemberFarms;
 use App\Filament\Farm\Resources\StockInventories\Pages\CreateStockInventory;
 use App\Filament\Farm\Resources\StockInventories\Pages\EditStockInventory;
 use App\Filament\Farm\Resources\StockInventories\Pages\ListStockInventories;
@@ -26,6 +27,7 @@ class StockInventoryResource extends Resource
 {
     use ChecksOrganisationPermissions;
     use RequiresPlanFeatures;
+    use ScopesToMemberFarms;
 
     protected static ?string $model = StockInventory::class;
 
@@ -75,6 +77,9 @@ class StockInventoryResource extends Resource
 
     public static function scopeEloquentQueryToTenant(Builder $query, ?Model $tenant): Builder
     {
-        return $query->where('organisation_id', $tenant?->getKey());
+        return static::applyFarmScopeThrough(
+            $query->where('organisation_id', $tenant?->getKey()),
+            'stock',
+        );
     }
 }

@@ -8,6 +8,7 @@ use App\Models\DailyRecord;
 use App\Models\Flock;
 use App\Models\Sale;
 use App\Models\Stock;
+use App\Services\CurrentFarm;
 use Filament\Facades\Filament;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
@@ -55,7 +56,7 @@ class StatsOverviewWidget extends BaseWidget
     {
         $flocks = Flock::query()
             ->active()
-            ->whereHas('building.farm', fn (Builder $q) => $q->where('organisation_id', $orgId))
+            ->whereHas('building.farm', fn (Builder $q) => app(CurrentFarm::class)->restrictFarmsTableForCurrentUser($q->where('organisation_id', $orgId)))
             ->with('chickenType')
             ->get();
 
@@ -76,12 +77,12 @@ class StatsOverviewWidget extends BaseWidget
     {
         $totalBirds = (int) Flock::query()
             ->active()
-            ->whereHas('building.farm', fn (Builder $q) => $q->where('organisation_id', $orgId))
+            ->whereHas('building.farm', fn (Builder $q) => app(CurrentFarm::class)->restrictFarmsTableForCurrentUser($q->where('organisation_id', $orgId)))
             ->sum('quantity_current');
 
         $totalStarted = (int) Flock::query()
             ->active()
-            ->whereHas('building.farm', fn (Builder $q) => $q->where('organisation_id', $orgId))
+            ->whereHas('building.farm', fn (Builder $q) => app(CurrentFarm::class)->restrictFarmsTableForCurrentUser($q->where('organisation_id', $orgId)))
             ->sum('quantity_started');
 
         $survivalRate = $totalStarted > 0
@@ -98,7 +99,7 @@ class StatsOverviewWidget extends BaseWidget
     {
         $activeFlockIds = Flock::query()
             ->active()
-            ->whereHas('building.farm', fn (Builder $q) => $q->where('organisation_id', $orgId))
+            ->whereHas('building.farm', fn (Builder $q) => app(CurrentFarm::class)->restrictFarmsTableForCurrentUser($q->where('organisation_id', $orgId)))
             ->pluck('id');
 
         if ($activeFlockIds->isEmpty()) {
@@ -162,7 +163,7 @@ class StatsOverviewWidget extends BaseWidget
     {
         $activeFlockIds = Flock::query()
             ->active()
-            ->whereHas('building.farm', fn (Builder $q) => $q->where('organisation_id', $orgId))
+            ->whereHas('building.farm', fn (Builder $q) => app(CurrentFarm::class)->restrictFarmsTableForCurrentUser($q->where('organisation_id', $orgId)))
             ->pluck('id');
 
         if ($activeFlockIds->isEmpty()) {
@@ -201,6 +202,7 @@ class StatsOverviewWidget extends BaseWidget
     {
         $thisMonth = (float) Sale::query()
             ->where('organisation_id', $orgId)
+            ->tap(fn (Builder $q) => app(CurrentFarm::class)->restrictForCurrentUser($q))
             ->whereMonth('sale_date', now()->month)
             ->whereYear('sale_date', now()->year)
             ->whereNot('status', SaleStatus::Cancelled)
@@ -208,6 +210,7 @@ class StatsOverviewWidget extends BaseWidget
 
         $lastMonth = (float) Sale::query()
             ->where('organisation_id', $orgId)
+            ->tap(fn (Builder $q) => app(CurrentFarm::class)->restrictForCurrentUser($q))
             ->whereMonth('sale_date', now()->subMonth()->month)
             ->whereYear('sale_date', now()->subMonth()->year)
             ->whereNot('status', SaleStatus::Cancelled)
@@ -240,6 +243,7 @@ class StatsOverviewWidget extends BaseWidget
     {
         $accounts = Account::query()
             ->where('organisation_id', $orgId)
+            ->tap(fn (Builder $q) => app(CurrentFarm::class)->restrictForCurrentUser($q))
             ->where('is_active', true)
             ->get();
 
@@ -262,6 +266,7 @@ class StatsOverviewWidget extends BaseWidget
     {
         $unpaid = Sale::query()
             ->where('organisation_id', $orgId)
+            ->tap(fn (Builder $q) => app(CurrentFarm::class)->restrictForCurrentUser($q))
             ->whereIn('status', [SaleStatus::Pending, SaleStatus::Partial])
             ->get();
 
@@ -289,6 +294,7 @@ class StatsOverviewWidget extends BaseWidget
     {
         $lowStockCount = Stock::query()
             ->where('organisation_id', $orgId)
+            ->tap(fn (Builder $q) => app(CurrentFarm::class)->restrictForCurrentUser($q))
             ->active()
             ->lowStock()
             ->count();

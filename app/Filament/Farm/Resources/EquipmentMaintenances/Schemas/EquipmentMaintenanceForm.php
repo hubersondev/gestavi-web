@@ -6,6 +6,7 @@ use App\Enums\EquipmentCondition;
 use App\Enums\MaintenanceStatus;
 use App\Enums\MaintenanceType;
 use App\Models\Equipment;
+use App\Services\CurrentFarm;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
@@ -35,7 +36,8 @@ class EquipmentMaintenanceForm
                                                 $tenant = Filament::getTenant();
 
                                                 return Equipment::query()
-                                                    ->whereHas('building.farm', fn ($q) => $q->where('organisation_id', $tenant?->getKey()))
+                                                    ->whereHas('farm', fn ($q) => $q->where('organisation_id', $tenant?->getKey()))
+                                                    ->tap(fn ($q) => app(CurrentFarm::class)->restrictForCurrentUser($q, 'farm_id'))
                                                     ->orderBy('name')
                                                     ->get()
                                                     ->mapWithKeys(fn (Equipment $e) => [

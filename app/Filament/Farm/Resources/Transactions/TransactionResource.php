@@ -92,16 +92,9 @@ class TransactionResource extends Resource
 
     public static function scopeEloquentQueryToTenant(Builder $query, ?Model $tenant): Builder
     {
-        $currentFarm = static::currentFarm();
-
-        return $query->whereHas('account', function (Builder $q) use ($tenant, $currentFarm): void {
-            $q->where('organisation_id', $tenant?->getKey());
-
-            if ($currentFarm) {
-                $q->where(function (Builder $inner) use ($currentFarm): void {
-                    $inner->where('farm_id', $currentFarm->id)->orWhereNull('farm_id');
-                });
-            }
-        });
+        return static::applyFarmScopeThrough(
+            $query->whereHas('account', fn (Builder $q) => $q->where('organisation_id', $tenant?->getKey())),
+            'account',
+        );
     }
 }

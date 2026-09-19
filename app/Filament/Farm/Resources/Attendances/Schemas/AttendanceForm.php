@@ -6,6 +6,7 @@ use App\Enums\AttendanceStatus;
 use App\Enums\EmployeeStatus;
 use App\Models\Employee;
 use App\Models\User;
+use App\Services\CurrentFarm;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
@@ -38,6 +39,7 @@ class AttendanceForm
 
                                                 return Employee::query()
                                                     ->where('organisation_id', $tenant?->getKey())
+                                                    ->tap(fn ($q) => app(CurrentFarm::class)->restrictForCurrentUser($q))
                                                     ->where('status', '!=', EmployeeStatus::Terminated->value)
                                                     ->orderBy('last_name')
                                                     ->orderBy('first_name')

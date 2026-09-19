@@ -5,8 +5,10 @@ namespace App\Filament\Farm\Widgets;
 use App\Enums\SaleStatus;
 use App\Models\Expense;
 use App\Models\Sale;
+use App\Services\CurrentFarm;
 use Filament\Facades\Filament;
 use Filament\Widgets\ChartWidget;
+use Illuminate\Database\Eloquent\Builder;
 
 class RevenueChartWidget extends ChartWidget
 {
@@ -42,6 +44,7 @@ class RevenueChartWidget extends ChartWidget
 
         $revenues = $months->map(fn ($month) => (float) Sale::query()
             ->where('organisation_id', $orgId)
+            ->tap(fn (Builder $q) => app(CurrentFarm::class)->restrictForCurrentUser($q))
             ->whereMonth('sale_date', $month->month)
             ->whereYear('sale_date', $month->year)
             ->whereNot('status', SaleStatus::Cancelled)
@@ -50,6 +53,7 @@ class RevenueChartWidget extends ChartWidget
 
         $expenses = $months->map(fn ($month) => (float) Expense::query()
             ->where('organisation_id', $orgId)
+            ->tap(fn (Builder $q) => app(CurrentFarm::class)->restrictForCurrentUser($q))
             ->whereMonth('expense_date', $month->month)
             ->whereYear('expense_date', $month->year)
             ->whereNot('status', 'cancelled')

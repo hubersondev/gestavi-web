@@ -5,6 +5,7 @@ namespace App\Filament\Farm\Resources\Contracts;
 use App\Enums\PlanFeature;
 use App\Filament\Farm\Concerns\ChecksOrganisationPermissions;
 use App\Filament\Farm\Concerns\RequiresPlanFeatures;
+use App\Filament\Farm\Concerns\ScopesToMemberFarms;
 use App\Filament\Farm\Resources\Contracts\Pages\CreateContract;
 use App\Filament\Farm\Resources\Contracts\Pages\EditContract;
 use App\Filament\Farm\Resources\Contracts\Pages\ListContracts;
@@ -27,6 +28,7 @@ class ContractResource extends Resource
 {
     use ChecksOrganisationPermissions;
     use RequiresPlanFeatures;
+    use ScopesToMemberFarms;
 
     protected static ?string $model = Contract::class;
 
@@ -87,6 +89,9 @@ class ContractResource extends Resource
 
     public static function scopeEloquentQueryToTenant(Builder $query, ?Model $tenant): Builder
     {
-        return $query->whereHas('employee', fn (Builder $q) => $q->where('organisation_id', $tenant?->getKey()));
+        return static::applyFarmScopeThrough(
+            $query->whereHas('employee', fn (Builder $q) => $q->where('organisation_id', $tenant?->getKey())),
+            'employee',
+        );
     }
 }

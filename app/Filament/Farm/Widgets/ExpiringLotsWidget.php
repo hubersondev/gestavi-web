@@ -3,6 +3,7 @@
 namespace App\Filament\Farm\Widgets;
 
 use App\Models\StockLot;
+use App\Services\CurrentFarm;
 use Filament\Facades\Filament;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -28,7 +29,7 @@ class ExpiringLotsWidget extends TableWidget
                 $tenant = Filament::getTenant();
 
                 return StockLot::query()
-                    ->whereHas('stock', fn (Builder $q) => $q->where('organisation_id', $tenant?->getKey()))
+                    ->whereHas('stock', fn (Builder $q) => app(CurrentFarm::class)->restrictForCurrentUser($q->where('organisation_id', $tenant?->getKey())))
                     ->expiringSoon(30)
                     ->where('current_quantity', '>', 0)
                     ->orderBy('expiry_date', 'asc')

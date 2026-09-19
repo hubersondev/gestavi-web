@@ -5,6 +5,7 @@ namespace App\Filament\Farm\Resources\StockLots;
 use App\Enums\PlanFeature;
 use App\Filament\Farm\Concerns\ChecksOrganisationPermissions;
 use App\Filament\Farm\Concerns\RequiresPlanFeatures;
+use App\Filament\Farm\Concerns\ScopesToMemberFarms;
 use App\Filament\Farm\Resources\StockLots\Pages\CreateStockLot;
 use App\Filament\Farm\Resources\StockLots\Pages\EditStockLot;
 use App\Filament\Farm\Resources\StockLots\Pages\ListStockLots;
@@ -27,6 +28,7 @@ class StockLotResource extends Resource
 {
     use ChecksOrganisationPermissions;
     use RequiresPlanFeatures;
+    use ScopesToMemberFarms;
 
     protected static ?string $model = StockLot::class;
 
@@ -106,6 +108,9 @@ class StockLotResource extends Resource
 
     public static function scopeEloquentQueryToTenant(Builder $query, ?Model $tenant): Builder
     {
-        return $query->whereHas('stock', fn (Builder $q) => $q->where('organisation_id', $tenant?->getKey()));
+        return static::applyFarmScopeThrough(
+            $query->whereHas('stock', fn (Builder $q) => $q->where('organisation_id', $tenant?->getKey())),
+            'stock',
+        );
     }
 }

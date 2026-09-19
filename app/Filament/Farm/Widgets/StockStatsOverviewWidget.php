@@ -4,9 +4,11 @@ namespace App\Filament\Farm\Widgets;
 
 use App\Models\Stock;
 use App\Models\StockLot;
+use App\Services\CurrentFarm;
 use Filament\Facades\Filament;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
+use Illuminate\Database\Eloquent\Builder;
 
 class StockStatsOverviewWidget extends StatsOverviewWidget
 {
@@ -26,6 +28,7 @@ class StockStatsOverviewWidget extends StatsOverviewWidget
 
         $stocksBaseQuery = Stock::query()
             ->where('organisation_id', $tenant->getKey())
+            ->tap(fn (Builder $q) => app(CurrentFarm::class)->restrictForCurrentUser($q))
             ->active();
 
         $activeStocks = (clone $stocksBaseQuery)->count();
@@ -35,7 +38,7 @@ class StockStatsOverviewWidget extends StatsOverviewWidget
             ->value('total');
 
         $lotsBaseQuery = StockLot::query()
-            ->whereHas('stock', fn ($q) => $q->where('organisation_id', $tenant->getKey()));
+            ->whereHas('stock', fn ($q) => app(CurrentFarm::class)->restrictForCurrentUser($q->where('organisation_id', $tenant->getKey())));
 
         $activeLots = (clone $lotsBaseQuery)->where('current_quantity', '>', 0)->count();
         $expiringSoon = (clone $lotsBaseQuery)->expiringSoon(7)->where('current_quantity', '>', 0)->count();

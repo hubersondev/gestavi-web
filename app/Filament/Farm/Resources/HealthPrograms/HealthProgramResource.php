@@ -5,6 +5,7 @@ namespace App\Filament\Farm\Resources\HealthPrograms;
 use App\Enums\PlanFeature;
 use App\Filament\Farm\Concerns\ChecksOrganisationPermissions;
 use App\Filament\Farm\Concerns\RequiresPlanFeatures;
+use App\Filament\Farm\Concerns\ScopesToMemberFarms;
 use App\Filament\Farm\Resources\HealthPrograms\Pages\CreateHealthProgram;
 use App\Filament\Farm\Resources\HealthPrograms\Pages\EditHealthProgram;
 use App\Filament\Farm\Resources\HealthPrograms\Pages\ListHealthPrograms;
@@ -26,6 +27,7 @@ class HealthProgramResource extends Resource
 {
     use ChecksOrganisationPermissions;
     use RequiresPlanFeatures;
+    use ScopesToMemberFarms;
 
     protected static ?string $model = HealthProgram::class;
 
@@ -80,6 +82,23 @@ class HealthProgramResource extends Resource
 
     public static function scopeEloquentQueryToTenant(Builder $query, ?Model $tenant): Builder
     {
-        return $query->where('organisation_id', $tenant?->getKey());
+        $membership = static::currentMembership();
+        $query->where('organisation_id', $tenant?->getKey());
+
+        if (! $membership) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        $ids = app(CurrentFarm::class)->accessibleFarmIds($membership);
+
+        if ($ids === null) {
+            return $query;
+        }
+
+        // Référentiel : les programmes d'organisation (farm_id NULL) restent visibles
+        // de tous les membres ; ceux liés à une ferme suivent l'affectation.
+        return $query->where(function (Builder $q) use ($ids): void {
+            $q->whereNull('farm_id')->orWhereIn('farm_id', $ids);
+        });
     }
 }

@@ -5,6 +5,7 @@ namespace App\Filament\Farm\Resources\VetVisits;
 use App\Enums\PlanFeature;
 use App\Filament\Farm\Concerns\ChecksOrganisationPermissions;
 use App\Filament\Farm\Concerns\RequiresPlanFeatures;
+use App\Filament\Farm\Concerns\ScopesToMemberFarms;
 use App\Filament\Farm\Resources\VetVisits\Pages\CreateVetVisit;
 use App\Filament\Farm\Resources\VetVisits\Pages\EditVetVisit;
 use App\Filament\Farm\Resources\VetVisits\Pages\ListVetVisits;
@@ -27,6 +28,7 @@ class VetVisitResource extends Resource
 {
     use ChecksOrganisationPermissions;
     use RequiresPlanFeatures;
+    use ScopesToMemberFarms;
 
     protected static ?string $model = VetVisit::class;
 
@@ -89,6 +91,8 @@ class VetVisitResource extends Resource
 
     public static function scopeEloquentQueryToTenant(Builder $query, ?Model $tenant): Builder
     {
-        return $query->whereHas('farm', fn (Builder $q) => $q->where('organisation_id', $tenant?->getKey()));
+        return static::applyFarmScope(
+            $query->whereHas('farm', fn (Builder $q) => $q->where('organisation_id', $tenant?->getKey())),
+        );
     }
 }

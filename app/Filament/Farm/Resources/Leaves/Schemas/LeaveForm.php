@@ -6,6 +6,7 @@ use App\Enums\EmployeeStatus;
 use App\Enums\LeaveStatus;
 use App\Enums\LeaveType;
 use App\Models\Employee;
+use App\Services\CurrentFarm;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
@@ -40,6 +41,7 @@ class LeaveForm
 
                                                 return Employee::query()
                                                     ->where('organisation_id', $tenant?->getKey())
+                                                    ->tap(fn ($q) => app(CurrentFarm::class)->restrictForCurrentUser($q))
                                                     ->where('status', '!=', EmployeeStatus::Terminated->value)
                                                     ->orderBy('last_name')
                                                     ->orderBy('first_name')

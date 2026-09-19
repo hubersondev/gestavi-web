@@ -4,9 +4,11 @@ namespace App\Filament\Farm\Widgets;
 
 use App\Enums\SaleStatus;
 use App\Models\Sale;
+use App\Services\CurrentFarm;
 use Filament\Facades\Filament;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
+use Illuminate\Database\Eloquent\Builder;
 
 class InvoiceStatusWidget extends BaseWidget
 {
@@ -33,6 +35,7 @@ class InvoiceStatusWidget extends BaseWidget
 
         $sales = Sale::query()
             ->where('organisation_id', $orgId)
+            ->tap(fn (Builder $q) => app(CurrentFarm::class)->restrictForCurrentUser($q))
             ->whereNot('status', SaleStatus::Cancelled)
             ->get();
 
@@ -100,6 +103,7 @@ class InvoiceStatusWidget extends BaseWidget
     {
         $overdue = Sale::query()
             ->where('organisation_id', $orgId)
+            ->tap(fn (Builder $q) => app(CurrentFarm::class)->restrictForCurrentUser($q))
             ->whereIn('status', [SaleStatus::Pending, SaleStatus::Partial])
             ->whereNotNull('due_date')
             ->where('due_date', '<', now())

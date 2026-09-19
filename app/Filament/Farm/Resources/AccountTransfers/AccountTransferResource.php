@@ -14,6 +14,7 @@ use App\Filament\Farm\Resources\AccountTransfers\Schemas\AccountTransferForm;
 use App\Filament\Farm\Resources\AccountTransfers\Schemas\AccountTransferInfolist;
 use App\Filament\Farm\Resources\AccountTransfers\Tables\AccountTransfersTable;
 use App\Models\AccountTransfer;
+use App\Services\CurrentFarm;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -100,6 +101,23 @@ class AccountTransferResource extends Resource
 
     public static function scopeEloquentQueryToTenant(Builder $query, ?Model $tenant): Builder
     {
-        return $query->where('organisation_id', $tenant?->getKey());
+        $membership = static::currentMembership();
+        $query->where('organisation_id', $tenant?->getKey());
+
+        if (! $membership) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        $currentFarm = app(CurrentFarm::class);
+
+        if ($currentFarm->accessibleFarmIds($membership) === null) {
+            return $query;
+        }
+
+        // Un transfert est visible dès qu'un des deux comptes appartient à une ferme accessible
+        return $query->where(function (Builder $q) use ($currentFarm, $membership): void {
+            $q->whereHas('fromAccount', fn (Builder $a): Builder => $currentFarm->restrictToFarms($a, $membership))
+                ->orWhereHas('toAccount', fn (Builder $a): Builder => $currentFarm->restrictToFarms($a, $membership));
+        });
     }
 }

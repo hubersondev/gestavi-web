@@ -7,6 +7,7 @@ use App\Enums\PurchaseOrderStatus;
 use App\Models\Farm;
 use App\Models\Stock;
 use App\Models\Supplier;
+use App\Services\CurrentFarm;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Placeholder;
@@ -47,6 +48,7 @@ class PurchaseOrderForm
 
                                                 return Supplier::query()
                                                     ->where('organisation_id', $tenant?->getKey())
+                                                    ->tap(fn ($q) => app(CurrentFarm::class)->restrictForCurrentUser($q, 'farm_id', allowOrganisationLevel: true))
                                                     ->where('is_active', true)
                                                     ->orderBy('name')
                                                     ->pluck('name', 'id')
@@ -63,6 +65,7 @@ class PurchaseOrderForm
 
                                                 return Farm::query()
                                                     ->where('organisation_id', $tenant?->getKey())
+                                                    ->tap(fn ($q) => app(CurrentFarm::class)->restrictForCurrentUser($q, 'id'))
                                                     ->orderBy('name')
                                                     ->pluck('name', 'id')
                                                     ->toArray();
@@ -114,6 +117,7 @@ class PurchaseOrderForm
 
                                                         return Stock::query()
                                                             ->where('organisation_id', $tenant?->getKey())
+                                                            ->tap(fn ($q) => app(CurrentFarm::class)->restrictForCurrentUser($q))
                                                             ->active()
                                                             ->orderBy('name')
                                                             ->pluck('name', 'id')

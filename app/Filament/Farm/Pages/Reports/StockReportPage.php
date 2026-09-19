@@ -6,6 +6,7 @@ use App\Enums\StockMovementType;
 use App\Models\Stock;
 use App\Models\StockCategory;
 use App\Models\StockMovement;
+use App\Services\CurrentFarm;
 use BackedEnum;
 use Filament\Actions\Action as TableAction;
 use Filament\Facades\Filament;
@@ -92,6 +93,7 @@ class StockReportPage extends Page implements HasTable
                 $query
                     ->whereHas('stock', function (Builder $q) use ($tenant, $categoryId): void {
                         $q->where('organisation_id', $tenant?->getKey());
+                        app(CurrentFarm::class)->restrictForCurrentUser($q);
                         if ($categoryId) {
                             $q->where('stock_category_id', $categoryId);
                         }
@@ -148,6 +150,7 @@ class StockReportPage extends Page implements HasTable
         return Stock::query()
             ->with('category')
             ->where('organisation_id', $tenant?->getKey())
+            ->tap(fn (Builder $q) => app(CurrentFarm::class)->restrictForCurrentUser($q))
             ->active()
             ->when($categoryId, fn (Builder $q) => $q->where('stock_category_id', $categoryId))
             ->orderByRaw('(quantity * unit_price) DESC')
@@ -165,6 +168,7 @@ class StockReportPage extends Page implements HasTable
             ->with(['stock', 'flock'])
             ->whereHas('stock', function (Builder $q) use ($tenant, $categoryId): void {
                 $q->where('organisation_id', $tenant?->getKey());
+                app(CurrentFarm::class)->restrictForCurrentUser($q);
                 if ($categoryId) {
                     $q->where('stock_category_id', $categoryId);
                 }
@@ -198,6 +202,7 @@ class StockReportPage extends Page implements HasTable
 
         return Stock::query()
             ->where('organisation_id', $tenant?->getKey())
+            ->tap(fn (Builder $q) => app(CurrentFarm::class)->restrictForCurrentUser($q))
             ->active()
             ->whereHas('movements', fn ($q) => $q->whereBetween('movement_date', [$from, $to]))
             ->withSum(['movements as entries' => fn ($q) => $q->where('type', 'in')->whereBetween('movement_date', [$from, $to])], 'quantity')

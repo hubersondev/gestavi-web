@@ -91,11 +91,10 @@ class EmployeeResource extends Resource
 
     public static function scopeEloquentQueryToTenant(Builder $query, ?Model $tenant): Builder
     {
-        $currentFarm = static::currentFarm();
-
-        return $query
-            ->with('activeContract')
-            ->where('organisation_id', $tenant?->getKey())
-            ->when($currentFarm, fn (Builder $q) => $q->where('farm_id', $currentFarm->id));
+        return static::applyFarmScope(
+            $query
+                ->with('activeContract')
+                ->where('organisation_id', $tenant?->getKey()),
+        );
     }
 }

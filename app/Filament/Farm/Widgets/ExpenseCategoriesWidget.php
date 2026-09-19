@@ -4,8 +4,10 @@ namespace App\Filament\Farm\Widgets;
 
 use App\Enums\ExpenseCategory;
 use App\Models\Expense;
+use App\Services\CurrentFarm;
 use Filament\Facades\Filament;
 use Filament\Widgets\ChartWidget;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 
 class ExpenseCategoriesWidget extends ChartWidget
@@ -46,6 +48,7 @@ class ExpenseCategoriesWidget extends ChartWidget
 
         $expenses = Expense::query()
             ->where('organisation_id', $tenant->getKey())
+            ->tap(fn (Builder $q) => app(CurrentFarm::class)->restrictForCurrentUser($q))
             ->whereMonth('expense_date', now()->month)
             ->whereYear('expense_date', now()->year)
             ->whereNot('status', 'cancelled')

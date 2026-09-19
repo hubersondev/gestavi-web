@@ -282,11 +282,23 @@ class EmployeeForm
                             ->icon('heroicon-o-banknotes')
                             ->schema([
                                 Section::make('Sécurité sociale')
+                                    ->columns(2)
                                     ->schema([
                                         TextInput::make('cnps_number')
                                             ->label('N° CNPS')
                                             ->maxLength(50)
                                             ->placeholder('Numéro de sécurité sociale'),
+
+                                        Select::make('fiscal_parts')
+                                            ->label('Parts fiscales (ITS)')
+                                            ->options([
+                                                '1.0' => '1 part', '1.5' => '1,5 part', '2.0' => '2 parts', '2.5' => '2,5 parts',
+                                                '3.0' => '3 parts', '3.5' => '3,5 parts', '4.0' => '4 parts', '4.5' => '4,5 parts', '5.0' => '5 parts',
+                                            ])
+                                            ->default('1.0')
+                                            ->required()
+                                            ->native(false)
+                                            ->helperText('Situation de famille déclarée : détermine la réduction d\'ITS pour charges de famille.'),
                                     ]),
 
                                 Section::make('Mode de paiement du salaire')

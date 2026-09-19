@@ -5,6 +5,7 @@ namespace App\Filament\Farm\Resources\Payments\Schemas;
 use App\Enums\PaymentMethod;
 use App\Models\Account;
 use App\Models\Sale;
+use App\Services\CurrentFarm;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
@@ -29,6 +30,7 @@ class PaymentForm
 
                                 return Sale::query()
                                     ->where('organisation_id', $tenant?->getKey())
+                                    ->tap(fn ($q) => app(CurrentFarm::class)->restrictForCurrentUser($q))
                                     ->unpaid()
                                     ->orderByDesc('sale_date')
                                     ->get()
@@ -70,6 +72,7 @@ class PaymentForm
 
                                 return Account::query()
                                     ->where('organisation_id', $tenant?->getKey())
+                                    ->tap(fn ($q) => app(CurrentFarm::class)->restrictForCurrentUser($q))
                                     ->active()
                                     ->orderBy('name')
                                     ->pluck('name', 'id')

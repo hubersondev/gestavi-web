@@ -5,6 +5,7 @@ namespace App\Filament\Farm\Resources\Transactions\Schemas;
 use App\Enums\TransactionCategory;
 use App\Enums\TransactionType;
 use App\Models\Account;
+use App\Services\CurrentFarm;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Placeholder;
@@ -38,6 +39,7 @@ class TransactionForm
 
                                                 return Account::query()
                                                     ->where('organisation_id', $tenant?->getKey())
+                                                    ->tap(fn ($q) => app(CurrentFarm::class)->restrictForCurrentUser($q))
                                                     ->active()
                                                     ->orderBy('name')
                                                     ->pluck('name', 'id')

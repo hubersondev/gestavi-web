@@ -4,6 +4,7 @@ namespace App\Filament\Farm\Widgets;
 
 use App\Models\DailyRecord;
 use App\Models\Flock;
+use App\Services\CurrentFarm;
 use Carbon\Carbon;
 use Filament\Facades\Filament;
 use Filament\Widgets\ChartWidget;
@@ -31,7 +32,7 @@ class ProductionChartWidget extends ChartWidget
 
         $activeFlockIds = Flock::query()
             ->active()
-            ->whereHas('building.farm', fn (Builder $q) => $q->where('organisation_id', $tenant->getKey()))
+            ->whereHas('building.farm', fn (Builder $q) => app(CurrentFarm::class)->restrictFarmsTableForCurrentUser($q->where('organisation_id', $tenant->getKey())))
             ->pluck('id');
 
         if ($activeFlockIds->isEmpty()) {

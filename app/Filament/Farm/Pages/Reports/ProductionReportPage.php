@@ -4,6 +4,7 @@ namespace App\Filament\Farm\Pages\Reports;
 
 use App\Models\DailyRecord;
 use App\Models\Flock;
+use App\Services\CurrentFarm;
 use BackedEnum;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Actions\Action as TableAction;
@@ -75,7 +76,7 @@ class ProductionReportPage extends Page implements HasTable
                     $tenant = Filament::getTenant();
 
                     return Flock::query()
-                        ->whereHas('building.farm', fn ($q) => $q->where('organisation_id', $tenant?->getKey()))
+                        ->whereHas('building.farm', fn ($q) => app(CurrentFarm::class)->restrictFarmsTableForCurrentUser($q->where('organisation_id', $tenant?->getKey())))
                         ->orderByDesc('start_date')
                         ->get()
                         ->mapWithKeys(fn (Flock $f) => [$f->id => $f->code.' — '.$f->name])
@@ -101,7 +102,7 @@ class ProductionReportPage extends Page implements HasTable
                 $flockId = $this->filters['flock_id'] ?? null;
 
                 $query
-                    ->whereHas('flock.building.farm', fn (Builder $q) => $q->where('organisation_id', $tenant?->getKey()))
+                    ->whereHas('flock.building.farm', fn (Builder $q) => app(CurrentFarm::class)->restrictFarmsTableForCurrentUser($q->where('organisation_id', $tenant?->getKey())))
                     ->when($flockId, fn (Builder $q) => $q->where('flock_id', $flockId))
                     ->whereBetween('record_date', [$from, $to]);
             })
@@ -172,7 +173,7 @@ class ProductionReportPage extends Page implements HasTable
 
         return DailyRecord::query()
             ->with('flock')
-            ->whereHas('flock.building.farm', fn (Builder $q) => $q->where('organisation_id', $tenant?->getKey()))
+            ->whereHas('flock.building.farm', fn (Builder $q) => app(CurrentFarm::class)->restrictFarmsTableForCurrentUser($q->where('organisation_id', $tenant?->getKey())))
             ->when($flockId, fn (Builder $q) => $q->where('flock_id', $flockId))
             ->whereBetween('record_date', [$from, $to])
             ->orderBy('record_date')

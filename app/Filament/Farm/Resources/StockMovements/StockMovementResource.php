@@ -5,6 +5,7 @@ namespace App\Filament\Farm\Resources\StockMovements;
 use App\Enums\PlanFeature;
 use App\Filament\Farm\Concerns\ChecksOrganisationPermissions;
 use App\Filament\Farm\Concerns\RequiresPlanFeatures;
+use App\Filament\Farm\Concerns\ScopesToMemberFarms;
 use App\Filament\Farm\Resources\StockMovements\Pages\CreateStockMovement;
 use App\Filament\Farm\Resources\StockMovements\Pages\ListStockMovements;
 use App\Filament\Farm\Resources\StockMovements\Pages\ViewStockMovement;
@@ -25,6 +26,7 @@ class StockMovementResource extends Resource
 {
     use ChecksOrganisationPermissions;
     use RequiresPlanFeatures;
+    use ScopesToMemberFarms;
 
     protected static ?string $model = StockMovement::class;
 
@@ -90,6 +92,9 @@ class StockMovementResource extends Resource
 
     public static function scopeEloquentQueryToTenant(Builder $query, ?Model $tenant): Builder
     {
-        return $query->whereHas('stock', fn (Builder $q) => $q->where('organisation_id', $tenant?->getKey()));
+        return static::applyFarmScopeThrough(
+            $query->whereHas('stock', fn (Builder $q) => $q->where('organisation_id', $tenant?->getKey())),
+            'stock',
+        );
     }
 }

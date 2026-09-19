@@ -5,6 +5,7 @@ namespace App\Filament\Farm\Widgets;
 use App\Enums\VaccinationStatus;
 use App\Models\Flock;
 use App\Models\Vaccination;
+use App\Services\CurrentFarm;
 use Filament\Facades\Filament;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -28,7 +29,7 @@ class VaccinationCalendarWidget extends TableWidget
         $activeFlockIds = $tenant
             ? Flock::query()
                 ->active()
-                ->whereHas('building.farm', fn (Builder $q) => $q->where('organisation_id', $tenant->getKey()))
+                ->whereHas('building.farm', fn (Builder $q) => app(CurrentFarm::class)->restrictFarmsTableForCurrentUser($q->where('organisation_id', $tenant->getKey())))
                 ->pluck('id')
             : collect();
 

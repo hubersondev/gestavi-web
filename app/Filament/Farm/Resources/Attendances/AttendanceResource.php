@@ -5,6 +5,7 @@ namespace App\Filament\Farm\Resources\Attendances;
 use App\Enums\PlanFeature;
 use App\Filament\Farm\Concerns\ChecksOrganisationPermissions;
 use App\Filament\Farm\Concerns\RequiresPlanFeatures;
+use App\Filament\Farm\Concerns\ScopesToMemberFarms;
 use App\Filament\Farm\Resources\Attendances\Pages\CreateAttendance;
 use App\Filament\Farm\Resources\Attendances\Pages\EditAttendance;
 use App\Filament\Farm\Resources\Attendances\Pages\ListAttendances;
@@ -27,6 +28,7 @@ class AttendanceResource extends Resource
 {
     use ChecksOrganisationPermissions;
     use RequiresPlanFeatures;
+    use ScopesToMemberFarms;
 
     protected static ?string $model = Attendance::class;
 
@@ -87,6 +89,9 @@ class AttendanceResource extends Resource
 
     public static function scopeEloquentQueryToTenant(Builder $query, ?Model $tenant): Builder
     {
-        return $query->whereHas('employee', fn (Builder $q) => $q->where('organisation_id', $tenant?->getKey()));
+        return static::applyFarmScopeThrough(
+            $query->whereHas('employee', fn (Builder $q) => $q->where('organisation_id', $tenant?->getKey())),
+            'employee',
+        );
     }
 }

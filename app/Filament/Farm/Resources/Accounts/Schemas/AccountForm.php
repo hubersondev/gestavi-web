@@ -5,6 +5,7 @@ namespace App\Filament\Farm\Resources\Accounts\Schemas;
 use App\Enums\AccountType;
 use App\Enums\MobileMoneyOperator;
 use App\Models\Farm;
+use App\Services\CurrentFarm;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -61,6 +62,7 @@ class AccountForm
 
                                                 return Farm::query()
                                                     ->where('organisation_id', $tenant->getKey())
+                                                    ->tap(fn ($q) => app(CurrentFarm::class)->restrictForCurrentUser($q, 'id'))
                                                     ->orderBy('name')
                                                     ->pluck('name', 'id')
                                                     ->toArray();

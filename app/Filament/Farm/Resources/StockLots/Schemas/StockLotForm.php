@@ -5,6 +5,7 @@ namespace App\Filament\Farm\Resources\StockLots\Schemas;
 use App\Enums\StockLotStatus;
 use App\Models\Stock;
 use App\Models\Supplier;
+use App\Services\CurrentFarm;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
@@ -29,6 +30,7 @@ class StockLotForm
 
                                 return Stock::query()
                                     ->where('organisation_id', $tenant?->getKey())
+                                    ->tap(fn ($q) => app(CurrentFarm::class)->restrictForCurrentUser($q))
                                     ->active()
                                     ->orderBy('name')
                                     ->pluck('name', 'id')
@@ -46,6 +48,7 @@ class StockLotForm
 
                                 return Supplier::query()
                                     ->where('organisation_id', $tenant?->getKey())
+                                    ->tap(fn ($q) => app(CurrentFarm::class)->restrictForCurrentUser($q, 'farm_id', allowOrganisationLevel: true))
                                     ->where('is_active', true)
                                     ->orderBy('name')
                                     ->pluck('name', 'id')

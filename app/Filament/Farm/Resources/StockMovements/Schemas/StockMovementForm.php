@@ -6,6 +6,7 @@ use App\Enums\StockMovementReason;
 use App\Enums\StockMovementType;
 use App\Models\Flock;
 use App\Models\Stock;
+use App\Services\CurrentFarm;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
@@ -30,6 +31,7 @@ class StockMovementForm
 
                                 return Stock::query()
                                     ->where('organisation_id', $tenant?->getKey())
+                                    ->tap(fn ($q) => app(CurrentFarm::class)->restrictForCurrentUser($q))
                                     ->active()
                                     ->orderBy('name')
                                     ->pluck('name', 'id')
@@ -78,7 +80,7 @@ class StockMovementForm
                                 $tenant = Filament::getTenant();
 
                                 return Flock::query()
-                                    ->whereHas('building.farm', fn ($q) => $q->where('organisation_id', $tenant?->getKey()))
+                                    ->whereHas('building.farm', fn ($q) => app(CurrentFarm::class)->restrictFarmsTableForCurrentUser($q->where('organisation_id', $tenant?->getKey())))
                                     ->orderByDesc('start_date')
                                     ->get()
                                     ->mapWithKeys(fn (Flock $flock) => [$flock->id => $flock->code.' – '.$flock->name])

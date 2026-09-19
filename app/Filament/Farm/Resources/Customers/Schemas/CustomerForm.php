@@ -5,6 +5,7 @@ namespace App\Filament\Farm\Resources\Customers\Schemas;
 use App\Enums\CustomerType;
 use App\Models\City;
 use App\Models\Farm;
+use App\Services\CurrentFarm;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -59,6 +60,7 @@ class CustomerForm
 
                                                 return Farm::query()
                                                     ->where('organisation_id', $tenant->getKey())
+                                                    ->tap(fn ($q) => app(CurrentFarm::class)->restrictForCurrentUser($q, 'id'))
                                                     ->orderBy('name')
                                                     ->pluck('name', 'id')
                                                     ->toArray();

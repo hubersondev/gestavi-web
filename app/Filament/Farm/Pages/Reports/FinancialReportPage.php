@@ -6,6 +6,7 @@ use App\Enums\TransactionType;
 use App\Models\Account;
 use App\Models\Expense;
 use App\Models\Transaction;
+use App\Services\CurrentFarm;
 use BackedEnum;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Actions\Action as TableAction;
@@ -68,6 +69,7 @@ class FinancialReportPage extends Page implements HasTable
 
                     return Account::query()
                         ->where('organisation_id', $tenant?->getKey())
+                        ->tap(fn (Builder $q) => app(CurrentFarm::class)->restrictForCurrentUser($q))
                         ->orderBy('name')
                         ->pluck('name', 'id')
                         ->toArray();
@@ -91,7 +93,7 @@ class FinancialReportPage extends Page implements HasTable
                 $accountId = $this->filters['account_id'] ?? null;
 
                 $query
-                    ->whereHas('account', fn (Builder $q) => $q->where('organisation_id', $tenant?->getKey()))
+                    ->whereHas('account', fn (Builder $q) => app(CurrentFarm::class)->restrictForCurrentUser($q->where('organisation_id', $tenant?->getKey())))
                     ->when($accountId, fn (Builder $q) => $q->where('account_id', $accountId))
                     ->whereBetween('transaction_date', [$from, $to]);
             })
@@ -152,7 +154,7 @@ class FinancialReportPage extends Page implements HasTable
 
         return Transaction::query()
             ->with(['account', 'user'])
-            ->whereHas('account', fn (Builder $q) => $q->where('organisation_id', $tenant?->getKey()))
+            ->whereHas('account', fn (Builder $q) => app(CurrentFarm::class)->restrictForCurrentUser($q->where('organisation_id', $tenant?->getKey())))
             ->when($accountId, fn (Builder $q) => $q->where('account_id', $accountId))
             ->whereBetween('transaction_date', [$from, $to])
             ->orderByDesc('transaction_date')
@@ -168,6 +170,7 @@ class FinancialReportPage extends Page implements HasTable
 
         return Expense::query()
             ->where('organisation_id', $tenant?->getKey())
+            ->tap(fn (Builder $q) => app(CurrentFarm::class)->restrictForCurrentUser($q))
             ->whereBetween('expense_date', [$from, $to])
             ->whereNot('status', 'cancelled')
             ->selectRaw('category, COUNT(*) as count, SUM(amount) as total')
