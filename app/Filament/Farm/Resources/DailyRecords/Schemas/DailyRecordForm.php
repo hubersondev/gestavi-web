@@ -332,6 +332,14 @@ class DailyRecordForm
                                             ->rows(6)
                                             ->placeholder('Observations, remarques particulières...')
                                             ->columnSpanFull(),
+
+                                        Textarea::make('correction_reason')
+                                            ->label('Motif de la correction')
+                                            ->helperText('Obligatoire pour toute modification d\'un relevé déjà enregistré ; conservé dans la piste d\'audit.')
+                                            ->rows(3)
+                                            ->required()
+                                            ->visibleOn('edit')
+                                            ->columnSpanFull(),
                                     ]),
                             ]),
                     ])

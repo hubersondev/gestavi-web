@@ -5,6 +5,8 @@ namespace App\Providers\Filament;
 use App\Filament\Farm\Pages\Tenancy\EditOrganisationProfile;
 use App\Http\Middleware\EnsurePlanFeature;
 use App\Models\Organisation;
+use Filament\Auth\MultiFactor\App\AppAuthentication;
+use Filament\Facades\Filament;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -32,6 +34,10 @@ class FarmPanelProvider extends PanelProvider
             ->path('farm')
             ->login()
             ->passwordReset()
+            ->multiFactorAuthentication(
+                [AppAuthentication::make()->recoverable()],
+                isRequired: fn (): bool => Filament::auth()->user()?->mustUseTwoFactor() ?? false,
+            )
             ->tenant(Organisation::class, slugAttribute: 'slug')
             ->tenantProfile(EditOrganisationProfile::class)
             ->colors([

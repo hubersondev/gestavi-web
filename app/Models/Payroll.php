@@ -6,16 +6,18 @@ use App\Enums\ExpenseCategory;
 use App\Enums\ExpenseStatus;
 use App\Enums\PayrollStatus;
 use App\Exceptions\AccountException;
+use App\Models\Concerns\LogsAuditTrail;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
 
 class Payroll extends Model
 {
-    use HasFactory;
+    use HasFactory, LogsAuditTrail, SoftDeletes;
 
     protected $fillable = [
         'employee_id', 'contract_id', 'payroll_parameter_id', 'validated_by', 'paid_by', 'expense_id',

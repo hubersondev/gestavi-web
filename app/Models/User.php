@@ -4,6 +4,8 @@ namespace App\Models;
 
 use App\Enums\MemberStatus;
 use App\Enums\UserType;
+use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthentication;
+use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthenticationRecovery;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Models\Contracts\HasTenants;
 use Filament\Panel;
@@ -17,7 +19,7 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
-class User extends Authenticatable implements FilamentUser, HasTenants
+class User extends Authenticatable implements FilamentUser, HasAppAuthentication, HasAppAuthenticationRecovery, HasTenants
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable, SoftDeletes;
@@ -44,7 +46,65 @@ class User extends Authenticatable implements FilamentUser, HasTenants
             'password' => 'hashed',
             'is_active' => 'boolean',
             'type' => UserType::class,
+            'app_authentication_secret' => 'encrypted',
+            'app_authentication_recovery_codes' => 'encrypted:array',
         ];
+    }
+
+    // ──────────────────────────────────────────────
+    //  Authentification à deux facteurs (application TOTP)
+    // ──────────────────────────────────────────────
+
+    public function getAppAuthenticationSecret(): ?string
+    {
+        return $this->app_authentication_secret;
+    }
+
+    public function saveAppAuthenticationSecret(?string $secret): void
+    {
+        $this->forceFill(['app_authentication_secret' => $secret])->save();
+    }
+
+    public function getAppAuthenticationHolderName(): string
+    {
+        return $this->email;
+    }
+
+    /**
+     * @return array<string>|null
+     */
+    public function getAppAuthenticationRecoveryCodes(): ?array
+    {
+        return $this->app_authentication_recovery_codes;
+    }
+
+    /**
+     * @param  array<string>|null  $codes
+     */
+    public function saveAppAuthenticationRecoveryCodes(?array $codes): void
+    {
+        $this->forceFill(['app_authentication_recovery_codes' => $codes])->save();
+    }
+
+    public function hasTwoFactorEnabled(): bool
+    {
+        return filled($this->app_authentication_secret);
+    }
+
+    /**
+     * Le 2FA est exigé des utilisateurs plateforme et des membres propriétaires ou
+     * administrateurs d'au moins une organisation (accès à la trésorerie et à la paie).
+     */
+    public function mustUseTwoFactor(): bool
+    {
+        if ($this->isPlatformUser()) {
+            return true;
+        }
+
+        return OrganisationUser::query()
+            ->where('user_id', $this->getKey())
+            ->whereHas('organisationRole', fn (Builder $q) => $q->where('weight', '>=', OrganisationRole::FULL_ACCESS_WEIGHT))
+            ->exists();
     }
 
     /**

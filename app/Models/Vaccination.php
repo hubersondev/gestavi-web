@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\VaccinationStatus;
+use App\Models\Concerns\LogsAuditTrail;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -10,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Vaccination extends Model
 {
-    use HasFactory;
+    use HasFactory, LogsAuditTrail;
 
     protected $fillable = [
         'flock_id',

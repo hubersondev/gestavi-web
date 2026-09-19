@@ -3,15 +3,17 @@
 namespace App\Models;
 
 use App\Enums\FlockStatus;
+use App\Models\Concerns\LogsAuditTrail;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Flock extends Model
 {
-    use HasFactory;
+    use HasFactory, LogsAuditTrail, SoftDeletes;
 
     protected $fillable = [
         'building_id',

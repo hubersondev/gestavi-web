@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\AccountTransferStatus;
 use App\Enums\TransactionCategory;
 use App\Exceptions\AccountException;
+use App\Models\Concerns\LogsAuditTrail;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -13,7 +14,7 @@ use Illuminate\Support\Facades\DB;
 
 class AccountTransfer extends Model
 {
-    use HasFactory;
+    use HasFactory, LogsAuditTrail;
 
     protected $fillable = [
         'organisation_id',

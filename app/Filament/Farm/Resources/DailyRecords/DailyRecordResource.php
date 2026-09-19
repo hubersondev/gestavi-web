@@ -90,6 +90,23 @@ class DailyRecordResource extends Resource
         // On désactive l'association automatique de Filament pour éviter l'appel à $record->organisation().
     }
 
+    /**
+     * Correction rétroactive bornée : un relevé de plus de 7 jours n'est modifiable
+     * que par un membre habilité à supprimer les relevés (niveau administrateur).
+     */
+    public static function canEdit(Model $record): bool
+    {
+        if (! static::memberHasPermission('update')) {
+            return false;
+        }
+
+        if ($record instanceof DailyRecord && ! $record->isWithinCorrectionWindow()) {
+            return static::memberHasPermission('delete');
+        }
+
+        return true;
+    }
+
     public static function scopeEloquentQueryToTenant(Builder $query, ?Model $tenant): Builder
     {
         $membership = static::currentMembership();

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\LogsAuditTrail;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -9,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class DailyRecord extends Model
 {
-    use HasFactory;
+    use HasFactory, LogsAuditTrail;
 
     protected $fillable = [
         'flock_id',
@@ -33,7 +34,20 @@ class DailyRecord extends Model
         'temperature_max',
         'humidity_percent',
         'notes',
+        'correction_reason',
     ];
+
+    /**
+     * Fenêtre (en jours) pendant laquelle un relevé reste corrigeable par son saisisseur ;
+     * au-delà, seul un membre habilité à supprimer les relevés (admin) peut corriger.
+     */
+    public const CORRECTION_WINDOW_DAYS = 7;
+
+    public function isWithinCorrectionWindow(): bool
+    {
+        return $this->record_date !== null
+            && $this->record_date->greaterThanOrEqualTo(now()->subDays(self::CORRECTION_WINDOW_DAYS)->startOfDay());
+    }
 
     protected function casts(): array
     {
