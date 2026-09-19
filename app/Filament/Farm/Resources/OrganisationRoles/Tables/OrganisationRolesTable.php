@@ -2,6 +2,7 @@
 
 namespace App\Filament\Farm\Resources\OrganisationRoles\Tables;
 
+use App\Filament\Farm\Resources\OrganisationRoles\OrganisationRoleResource;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
@@ -9,7 +10,6 @@ use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
-use App\Filament\Farm\Resources\OrganisationRoles\OrganisationRoleResource;
 use Filament\Tables\Table;
 
 class OrganisationRolesTable

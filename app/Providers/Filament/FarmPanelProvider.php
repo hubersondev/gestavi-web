@@ -31,6 +31,7 @@ class FarmPanelProvider extends PanelProvider
             ->id('farm')
             ->path('farm')
             ->login()
+            ->passwordReset()
             ->tenant(Organisation::class, slugAttribute: 'slug')
             ->tenantProfile(EditOrganisationProfile::class)
             ->colors([

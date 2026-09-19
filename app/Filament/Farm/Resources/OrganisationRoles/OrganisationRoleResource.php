@@ -20,17 +20,19 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use UnitEnum;
 
 class OrganisationRoleResource extends Resource
 {
-    use RequiresPlanFeatures;
     use ChecksOrganisationPermissions;
+    use RequiresPlanFeatures;
 
     public static function getRequiredPlanFeatures(): array
     {
         return [PlanFeature::TeamManagement];
     }
+
     protected static ?string $model = OrganisationRole::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedShieldCheck;
@@ -44,6 +46,25 @@ class OrganisationRoleResource extends Resource
     protected static ?int $navigationSort = 10;
 
     protected static string $permissionGroup = 'roles';
+
+    /**
+     * Les rôles système (owner, admin, manager, employee) ne sont modifiables
+     * que par un propriétaire ; un admin ne peut pas élargir ses propres droits.
+     */
+    public static function canEdit(Model $record): bool
+    {
+        if (! static::memberHasPermission('update')) {
+            return false;
+        }
+
+        if ($record instanceof OrganisationRole && $record->is_system) {
+            $actor = Filament::auth()->user()?->membershipIn(Filament::getTenant());
+
+            return $actor?->isOwner() ?? false;
+        }
+
+        return true;
+    }
 
     public static function form(Schema $schema): Schema
     {

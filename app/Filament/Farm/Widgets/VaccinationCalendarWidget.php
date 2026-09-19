@@ -13,9 +13,13 @@ use Illuminate\Database\Eloquent\Builder;
 
 class VaccinationCalendarWidget extends TableWidget
 {
+    use \App\Filament\Farm\Concerns\RequiresOrganisationPermission;
+
+    protected static string $requiredPermission = 'vaccinations.view';
+
     protected static ?int $sort = 5;
 
-    protected int | string | array $columnSpan = 'full';
+    protected int|string|array $columnSpan = 'full';
 
     public function table(Table $table): Table
     {

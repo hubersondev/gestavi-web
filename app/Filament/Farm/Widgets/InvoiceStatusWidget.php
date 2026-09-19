@@ -10,6 +10,10 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 
 class InvoiceStatusWidget extends BaseWidget
 {
+    use \App\Filament\Farm\Concerns\RequiresOrganisationPermission;
+
+    protected static string $requiredPermission = 'sales.view';
+
     protected static ?int $sort = 6;
 
     protected function getColumns(): int
@@ -69,7 +73,7 @@ class InvoiceStatusWidget extends BaseWidget
         $percent = $total > 0 ? round(($paidCount / $total) * 100) : 0;
 
         return Stat::make('Payées', $paidCount)
-            ->description("{$percent}% · " . $this->formatXOF($paidAmount))
+            ->description("{$percent}% · ".$this->formatXOF($paidAmount))
             ->descriptionIcon('heroicon-o-check-circle')
             ->color('success');
     }
@@ -87,7 +91,7 @@ class InvoiceStatusWidget extends BaseWidget
         ])->filter()->implode(' · ');
 
         return Stat::make('Impayées', $pending->count())
-            ->description(($details ?: 'Aucune') . ' · ' . $this->formatXOF($pendingBalance))
+            ->description(($details ?: 'Aucune').' · '.$this->formatXOF($pendingBalance))
             ->descriptionIcon('heroicon-o-clock')
             ->color($pending->count() > 0 ? 'warning' : 'success');
     }
@@ -115,7 +119,7 @@ class InvoiceStatusWidget extends BaseWidget
         ])->filter()->implode(' · ');
 
         return Stat::make('En retard', $overdueCount)
-            ->description(($details ?: 'Aucune') . ' · ' . $this->formatXOF($overdueBalance))
+            ->description(($details ?: 'Aucune').' · '.$this->formatXOF($overdueBalance))
             ->descriptionIcon('heroicon-o-exclamation-triangle')
             ->color($overdueCount > 0 ? 'danger' : 'success');
     }
@@ -123,13 +127,13 @@ class InvoiceStatusWidget extends BaseWidget
     private function formatXOF(float $amount): string
     {
         if (abs($amount) >= 1_000_000) {
-            return number_format($amount / 1_000_000, 1) . 'M XOF';
+            return number_format($amount / 1_000_000, 1).'M XOF';
         }
 
         if (abs($amount) >= 1_000) {
-            return number_format($amount / 1_000, 0) . 'K XOF';
+            return number_format($amount / 1_000, 0).'K XOF';
         }
 
-        return number_format($amount, 0) . ' XOF';
+        return number_format($amount, 0).' XOF';
     }
 }

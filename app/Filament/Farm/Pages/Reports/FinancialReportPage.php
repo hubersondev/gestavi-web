@@ -8,12 +8,12 @@ use App\Models\Expense;
 use App\Models\Transaction;
 use BackedEnum;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Filament\Actions\Action as TableAction;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Pages\Page;
 use Filament\Schemas\Schema;
-use Filament\Actions\Action as TableAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
@@ -27,6 +27,10 @@ use UnitEnum;
 
 class FinancialReportPage extends Page implements HasTable
 {
+    use \App\Filament\Farm\Concerns\RequiresOrganisationPermission;
+
+    protected static string $requiredPermission = 'transactions.view';
+
     use InteractsWithTable;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-banknotes';
@@ -193,7 +197,7 @@ class FinancialReportPage extends Page implements HasTable
         $filename = 'rapport-financier-'.($this->filters['date_from'] ?? 'all').'.xlsx';
 
         return response()->streamDownload(function () use ($transactions): void {
-            $writer = new Writer();
+            $writer = new Writer;
             $writer->openToFile('php://output');
 
             $writer->addRow(Row::fromValues([

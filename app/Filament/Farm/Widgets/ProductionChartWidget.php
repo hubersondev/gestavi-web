@@ -11,6 +11,10 @@ use Illuminate\Database\Eloquent\Builder;
 
 class ProductionChartWidget extends ChartWidget
 {
+    use \App\Filament\Farm\Concerns\RequiresOrganisationPermission;
+
+    protected static string $requiredPermission = 'daily_records.view';
+
     protected ?string $heading = 'Production & Mortalité (30 jours)';
 
     protected static ?int $sort = 2;

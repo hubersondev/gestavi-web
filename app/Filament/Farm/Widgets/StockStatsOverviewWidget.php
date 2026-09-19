@@ -10,6 +10,10 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 
 class StockStatsOverviewWidget extends StatsOverviewWidget
 {
+    use \App\Filament\Farm\Concerns\RequiresOrganisationPermission;
+
+    protected static string $requiredPermission = 'stocks.view';
+
     protected static ?int $sort = 9;
 
     protected function getStats(): array

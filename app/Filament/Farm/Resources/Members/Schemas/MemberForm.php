@@ -12,6 +12,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
+use Illuminate\Validation\Rules\Password;
 
 class MemberForm
 {
@@ -43,7 +44,8 @@ class MemberForm
                             ->revealable()
                             ->required()
                             ->minLength(8)
-                            ->maxLength(255),
+                            ->maxLength(255)
+                            ->rules([fn () => Password::defaults() ?? 'min:8']),
                     ]),
 
                 Section::make('Profil utilisateur')
@@ -64,6 +66,7 @@ class MemberForm
                             ->revealable()
                             ->minLength(8)
                             ->maxLength(255)
+                            ->rules([fn () => Password::defaults() ?? 'min:8'])
                             ->helperText('Laisser vide pour conserver le mot de passe actuel.')
                             ->visible(function ($record): bool {
                                 $currentUser = Filament::auth()->user();
@@ -80,12 +83,20 @@ class MemberForm
                             ->label('Rôle')
                             ->options(function () {
                                 $tenant = Filament::getTenant();
+                                $actor = Filament::auth()->user()?->membershipIn($tenant);
 
+                                // Un membre ne peut attribuer qu'un rôle strictement inférieur au sien ;
+                                // seul un propriétaire peut nommer un autre propriétaire.
                                 return OrganisationRole::query()
                                     ->where('organisation_id', $tenant->id)
+                                    ->when(
+                                        $actor && ! $actor->isOwner(),
+                                        fn ($query) => $query->where('weight', '<', $actor->organisationRole?->weight ?? 0),
+                                    )
                                     ->orderByDesc('weight')
                                     ->pluck('name', 'id');
                             })
+                            ->helperText('Seuls les rôles de niveau inférieur au vôtre sont proposés.')
                             ->required()
                             ->native(false)
                             ->live()

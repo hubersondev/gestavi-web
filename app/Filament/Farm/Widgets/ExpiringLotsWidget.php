@@ -11,6 +11,10 @@ use Illuminate\Database\Eloquent\Builder;
 
 class ExpiringLotsWidget extends TableWidget
 {
+    use \App\Filament\Farm\Concerns\RequiresOrganisationPermission;
+
+    protected static string $requiredPermission = 'stock_lots.view';
+
     protected static ?string $heading = 'Lots qui vont périmer (30 jours)';
 
     protected static ?int $sort = 11;

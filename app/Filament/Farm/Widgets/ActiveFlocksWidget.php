@@ -11,9 +11,13 @@ use Illuminate\Database\Eloquent\Builder;
 
 class ActiveFlocksWidget extends TableWidget
 {
+    use \App\Filament\Farm\Concerns\RequiresOrganisationPermission;
+
+    protected static string $requiredPermission = 'flocks.view';
+
     protected static ?int $sort = 4;
 
-    protected int | string | array $columnSpan = 'full';
+    protected int|string|array $columnSpan = 'full';
 
     public function table(Table $table): Table
     {
@@ -67,11 +71,11 @@ class ActiveFlocksWidget extends TableWidget
 
                 TextColumn::make('effectif')
                     ->label('Effectif')
-                    ->state(fn (Flock $record): string => number_format($record->quantity_current) . ' / ' . number_format($record->quantity_started)),
+                    ->state(fn (Flock $record): string => number_format($record->quantity_current).' / '.number_format($record->quantity_started)),
 
                 TextColumn::make('mortality_rate')
                     ->label('Mortalité')
-                    ->state(fn (Flock $record): string => number_format($record->getMortalityRate(), 1) . '%')
+                    ->state(fn (Flock $record): string => number_format($record->getMortalityRate(), 1).'%')
                     ->color(fn (Flock $record): string => match (true) {
                         $record->getMortalityRate() >= 5 => 'danger',
                         $record->getMortalityRate() >= 2 => 'warning',

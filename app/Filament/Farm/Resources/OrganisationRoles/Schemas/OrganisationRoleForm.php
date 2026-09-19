@@ -3,6 +3,7 @@
 namespace App\Filament\Farm\Resources\OrganisationRoles\Schemas;
 
 use App\Models\OrganisationRole;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
@@ -18,43 +19,43 @@ class OrganisationRoleForm
      */
     public const PERMISSION_GROUPS = [
         'Organisation & structure' => [
-            'members'   => 'Utilisateurs',
-            'farms'     => 'Fermes',
+            'members' => 'Utilisateurs',
+            'farms' => 'Fermes',
             'buildings' => 'Bâtiments',
-            'roles'     => 'Rôles',
-            'settings'  => 'Paramètres',
+            'roles' => 'Rôles',
+            'settings' => 'Paramètres',
         ],
         'Élevage' => [
-            'flocks'            => 'Bandes',
-            'suppliers'         => 'Fournisseurs',
+            'flocks' => 'Bandes',
+            'suppliers' => 'Fournisseurs',
             'production_phases' => 'Phases de production',
         ],
         'Production & suivi' => [
             'daily_records' => 'Suivi quotidien',
-            'farm_logs'     => 'Journal de ferme',
+            'farm_logs' => 'Journal de ferme',
         ],
         'Santé' => [
-            'health_programs'  => 'Programmes de santé',
-            'vaccinations'     => 'Vaccinations',
+            'health_programs' => 'Programmes de santé',
+            'vaccinations' => 'Vaccinations',
             'health_incidents' => 'Incidents sanitaires',
-            'vet_visits'       => 'Visites vétérinaires',
-            'veterinarians'    => 'Vétérinaires',
+            'vet_visits' => 'Visites vétérinaires',
+            'veterinarians' => 'Vétérinaires',
         ],
         'Équipements' => [
             'equipments' => 'Équipements',
         ],
         'Ressources Humaines' => [
-            'employees'   => 'Employés',
-            'contracts'   => 'Contrats',
-            'leaves'      => 'Congés',
+            'employees' => 'Employés',
+            'contracts' => 'Contrats',
+            'leaves' => 'Congés',
             'attendances' => 'Pointages',
-            'payrolls'    => 'Bulletins de paie',
+            'payrolls' => 'Bulletins de paie',
         ],
     ];
 
     /** @var array<string, string> */
     private const ACTIONS = [
-        'view'   => 'Consulter',
+        'view' => 'Consulter',
         'create' => 'Créer',
         'update' => 'Modifier',
         'delete' => 'Supprimer',
@@ -67,40 +68,40 @@ class OrganisationRoleForm
      */
     public const EXTRA_ACTIONS = [
         'flocks' => [
-            'start'    => 'Démarrer',
+            'start' => 'Démarrer',
             'complete' => 'Clôturer',
-            'cancel'   => 'Annuler',
+            'cancel' => 'Annuler',
         ],
         'farm_logs' => [
             'resolve' => 'Résoudre',
-            'reopen'  => 'Rouvrir',
+            'reopen' => 'Rouvrir',
         ],
         'equipments' => [
-            'move'        => 'Déplacer',
+            'move' => 'Déplacer',
             'maintenance' => 'Maintenance',
-            'dispose'     => 'Réformer',
+            'dispose' => 'Réformer',
         ],
         'health_incidents' => [
-            'start_treatment'  => 'Démarrer traitement',
+            'start_treatment' => 'Démarrer traitement',
             'start_monitoring' => 'Surveillance',
-            'resolve'          => 'Résoudre',
+            'resolve' => 'Résoudre',
         ],
         'members' => [
             'reset_password' => 'Réinit. MDP',
-            'suspend'        => 'Suspendre',
+            'suspend' => 'Suspendre',
         ],
         'vaccinations' => [
-            'mark_done'  => 'Marquer effectuée',
+            'mark_done' => 'Marquer effectuée',
             'reschedule' => 'Reporter',
-            'skip'       => 'Ignorer',
+            'skip' => 'Ignorer',
         ],
         'vet_visits' => [
-            'mark_paid'        => 'Marquer payée',
+            'mark_paid' => 'Marquer payée',
             'create_follow_up' => 'Créer suivi',
         ],
         'employees' => [
-            'terminate'  => 'Résilier',
-            'suspend'    => 'Suspendre',
+            'terminate' => 'Résilier',
+            'suspend' => 'Suspendre',
             'reactivate' => 'Réactiver',
         ],
         'contracts' => [
@@ -108,12 +109,12 @@ class OrganisationRoleForm
         ],
         'leaves' => [
             'approve' => 'Approuver',
-            'reject'  => 'Refuser',
+            'reject' => 'Refuser',
         ],
         'payrolls' => [
-            'validate'  => 'Valider',
+            'validate' => 'Valider',
             'mark_paid' => 'Marquer payé',
-            'cancel'    => 'Annuler',
+            'cancel' => 'Annuler',
         ],
     ];
 
@@ -140,7 +141,7 @@ class OrganisationRoleForm
                         $actions = $record->permissions()
                             ->where('group', $groupSlug)
                             ->pluck('slug')
-                            ->map(fn(string $slug) => explode('.', $slug)[1])
+                            ->map(fn (string $slug) => explode('.', $slug)[1])
                             ->toArray();
 
                         $component->state($actions);
@@ -151,7 +152,7 @@ class OrganisationRoleForm
             $columns = match (true) {
                 count($groups) >= 3 => 3,
                 count($groups) === 2 => 2,
-                default             => 1,
+                default => 1,
             };
 
             $permissionSections[] = Section::make($categoryLabel)
@@ -171,7 +172,7 @@ class OrganisationRoleForm
                             ->required()
                             ->maxLength(100)
                             ->live(onBlur: true)
-                            ->afterStateUpdated(fn($set, ?string $state) => $set('slug', Str::slug($state ?? ''))),
+                            ->afterStateUpdated(fn ($set, ?string $state) => $set('slug', Str::slug($state ?? ''))),
 
                         TextInput::make('slug')
                             ->label('Identifiant')
@@ -185,8 +186,15 @@ class OrganisationRoleForm
                             ->required()
                             ->default(1)
                             ->minValue(1)
-                            ->maxValue(10)
-                            ->helperText('Plus le poids est élevé, plus le rôle a d\'autorité'),
+                            ->maxValue(function (): int {
+                                // Un rôle personnalisé reste strictement sous le rôle de son auteur,
+                                // et ne peut jamais atteindre le niveau propriétaire (4).
+                                $actor = Filament::auth()->user()?->membershipIn(Filament::getTenant());
+                                $actorWeight = $actor?->organisationRole?->weight ?? 1;
+
+                                return max(1, min(3, $actorWeight - 1));
+                            })
+                            ->helperText('Plus le poids est élevé, plus le rôle a d\'autorité (≥ 3 : accès à toutes les fermes).'),
 
                         TextInput::make('description')
                             ->label('Description')

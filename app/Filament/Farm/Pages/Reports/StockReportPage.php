@@ -7,12 +7,12 @@ use App\Models\Stock;
 use App\Models\StockCategory;
 use App\Models\StockMovement;
 use BackedEnum;
+use Filament\Actions\Action as TableAction;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Pages\Page;
 use Filament\Schemas\Schema;
-use Filament\Actions\Action as TableAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
@@ -26,6 +26,10 @@ use UnitEnum;
 
 class StockReportPage extends Page implements HasTable
 {
+    use \App\Filament\Farm\Concerns\RequiresOrganisationPermission;
+
+    protected static string $requiredPermission = 'stocks.view';
+
     use InteractsWithTable;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-cube-transparent';
@@ -209,7 +213,7 @@ class StockReportPage extends Page implements HasTable
         $filename = 'rapport-stocks-'.($this->filters['date_from'] ?? 'all').'.xlsx';
 
         return response()->streamDownload(function () use ($movements): void {
-            $writer = new Writer();
+            $writer = new Writer;
             $writer->openToFile('php://output');
 
             $writer->addRow(Row::fromValues([

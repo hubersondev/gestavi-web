@@ -11,6 +11,10 @@ use Illuminate\Database\Eloquent\Builder;
 
 class LowStockWidget extends TableWidget
 {
+    use \App\Filament\Farm\Concerns\RequiresOrganisationPermission;
+
+    protected static string $requiredPermission = 'stocks.view';
+
     protected static ?string $heading = 'Stocks sous le seuil d\'alerte';
 
     protected static ?int $sort = 10;

@@ -10,6 +10,10 @@ use Filament\Widgets\ChartWidget;
 
 class CashFlowWidget extends ChartWidget
 {
+    use \App\Filament\Farm\Concerns\RequiresOrganisationPermission;
+
+    protected static string $requiredPermission = 'transactions.view';
+
     protected ?string $heading = 'Flux de trésorerie (6 mois)';
 
     protected static ?int $sort = 7;
@@ -49,7 +53,7 @@ class CashFlowWidget extends ChartWidget
         $debits = [];
 
         foreach ($months as $month) {
-            $labels[] = self::FRENCH_MONTHS[$month->month] . ' ' . $month->format('y');
+            $labels[] = self::FRENCH_MONTHS[$month->month].' '.$month->format('y');
 
             $credits[] = (int) Transaction::query()
                 ->whereIn('account_id', $accountIds)

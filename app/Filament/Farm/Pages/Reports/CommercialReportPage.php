@@ -6,11 +6,11 @@ use App\Enums\SaleStatus;
 use App\Models\Customer;
 use App\Models\Sale;
 use BackedEnum;
+use Filament\Actions\Action as TableAction;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Pages\Page;
 use Filament\Schemas\Schema;
-use Filament\Actions\Action as TableAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
@@ -24,6 +24,10 @@ use UnitEnum;
 
 class CommercialReportPage extends Page implements HasTable
 {
+    use \App\Filament\Farm\Concerns\RequiresOrganisationPermission;
+
+    protected static string $requiredPermission = 'sales.view';
+
     use InteractsWithTable;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-shopping-bag';
@@ -175,7 +179,7 @@ class CommercialReportPage extends Page implements HasTable
         $filename = 'rapport-commercial-'.($this->filters['date_from'] ?? 'all').'.xlsx';
 
         return response()->streamDownload(function () use ($sales): void {
-            $writer = new Writer();
+            $writer = new Writer;
             $writer->openToFile('php://output');
 
             $writer->addRow(Row::fromValues([

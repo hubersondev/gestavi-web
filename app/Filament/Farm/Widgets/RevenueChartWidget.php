@@ -10,6 +10,10 @@ use Filament\Widgets\ChartWidget;
 
 class RevenueChartWidget extends ChartWidget
 {
+    use \App\Filament\Farm\Concerns\RequiresOrganisationPermission;
+
+    protected static string $requiredPermission = 'sales.view';
+
     protected ?string $heading = 'Chiffre d\'affaires & Dépenses (6 mois)';
 
     protected static ?int $sort = 3;
@@ -52,7 +56,7 @@ class RevenueChartWidget extends ChartWidget
             ->sum('amount')
         )->toArray();
 
-        $labels = $months->map(fn ($m) => self::FRENCH_MONTHS[$m->month - 1] . ' ' . $m->format('y'))->toArray();
+        $labels = $months->map(fn ($m) => self::FRENCH_MONTHS[$m->month - 1].' '.$m->format('y'))->toArray();
 
         return [
             'datasets' => [

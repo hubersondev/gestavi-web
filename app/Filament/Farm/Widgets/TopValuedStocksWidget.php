@@ -11,6 +11,10 @@ use Illuminate\Database\Eloquent\Builder;
 
 class TopValuedStocksWidget extends TableWidget
 {
+    use \App\Filament\Farm\Concerns\RequiresOrganisationPermission;
+
+    protected static string $requiredPermission = 'stocks.view';
+
     protected static ?string $heading = 'Top 10 produits en valeur';
 
     protected static ?int $sort = 12;

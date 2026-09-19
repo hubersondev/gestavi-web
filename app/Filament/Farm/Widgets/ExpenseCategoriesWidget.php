@@ -10,6 +10,10 @@ use Illuminate\Support\Facades\DB;
 
 class ExpenseCategoriesWidget extends ChartWidget
 {
+    use \App\Filament\Farm\Concerns\RequiresOrganisationPermission;
+
+    protected static string $requiredPermission = 'expenses.view';
+
     protected ?string $heading = 'Dépenses par catégorie (mois courant)';
 
     protected static ?int $sort = 8;

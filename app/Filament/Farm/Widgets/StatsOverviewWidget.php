@@ -2,7 +2,6 @@
 
 namespace App\Filament\Farm\Widgets;
 
-use App\Enums\FlockStatus;
 use App\Enums\SaleStatus;
 use App\Models\Account;
 use App\Models\DailyRecord;
@@ -16,6 +15,10 @@ use Illuminate\Database\Eloquent\Builder;
 
 class StatsOverviewWidget extends BaseWidget
 {
+    use \App\Filament\Farm\Concerns\RequiresOrganisationPermission;
+
+    protected static string $requiredPermission = 'flocks.view';
+
     protected static ?int $sort = 1;
 
     protected function getColumns(): int
@@ -32,17 +35,20 @@ class StatsOverviewWidget extends BaseWidget
         }
 
         $orgId = $tenant->getKey();
+        $user = Filament::auth()->user();
+        $can = fn (string $permission): bool => $user?->hasOrganisationPermission($tenant, $permission) ?? false;
 
-        return [
+        // Les tuiles financières et stock ne sont affichées qu'aux membres autorisés
+        return array_values(array_filter([
             $this->getActiveFlocksStat($orgId),
             $this->getBirdCountStat($orgId),
             $this->getProductionStat($orgId),
             $this->getMortalityStat($orgId),
-            $this->getMonthlyRevenueStat($orgId),
-            $this->getAccountBalanceStat($orgId),
-            $this->getUnpaidInvoicesStat($orgId),
-            $this->getLowStockStat($orgId),
-        ];
+            $can('sales.view') ? $this->getMonthlyRevenueStat($orgId) : null,
+            $can('accounts.view') ? $this->getAccountBalanceStat($orgId) : null,
+            $can('sales.view') ? $this->getUnpaidInvoicesStat($orgId) : null,
+            $can('stocks.view') ? $this->getLowStockStat($orgId) : null,
+        ]));
     }
 
     private function getActiveFlocksStat(int $orgId): Stat
@@ -140,7 +146,7 @@ class StatsOverviewWidget extends BaseWidget
         }
 
         if ($avgWeight) {
-            return Stat::make('Poids moyen', number_format($avgWeight / 1000, 2) . ' kg')
+            return Stat::make('Poids moyen', number_format($avgWeight / 1000, 2).' kg')
                 ->description("Relevé du {$dayLabel}")
                 ->descriptionIcon('heroicon-o-scale')
                 ->color('success');
@@ -184,7 +190,7 @@ class StatsOverviewWidget extends BaseWidget
             default => 'success',
         };
 
-        return Stat::make('Mortalité 7j', number_format($mortalityRate, 2) . '%')
+        return Stat::make('Mortalité 7j', number_format($mortalityRate, 2).'%')
             ->description("{$totalMortality} mort(s) sur 7 jours")
             ->descriptionIcon('heroicon-o-exclamation-triangle')
             ->color($color)
@@ -264,8 +270,8 @@ class StatsOverviewWidget extends BaseWidget
         $overdue = $unpaid->filter(fn (Sale $s) => $s->due_date?->isPast())->count();
 
         $description = $overdue > 0
-            ? "{$overdue} en retard · " . $this->formatXOF($unpaidAmount)
-            : $this->formatXOF($unpaidAmount) . ' à encaisser';
+            ? "{$overdue} en retard · ".$this->formatXOF($unpaidAmount)
+            : $this->formatXOF($unpaidAmount).' à encaisser';
 
         $color = match (true) {
             $overdue > 0 => 'danger',
@@ -296,13 +302,13 @@ class StatsOverviewWidget extends BaseWidget
     private function formatXOF(float $amount): string
     {
         if (abs($amount) >= 1_000_000) {
-            return number_format($amount / 1_000_000, 1) . 'M XOF';
+            return number_format($amount / 1_000_000, 1).'M XOF';
         }
 
         if (abs($amount) >= 1_000) {
-            return number_format($amount / 1_000, 0) . 'K XOF';
+            return number_format($amount / 1_000, 0).'K XOF';
         }
 
-        return number_format($amount, 0) . ' XOF';
+        return number_format($amount, 0).' XOF';
     }
 }

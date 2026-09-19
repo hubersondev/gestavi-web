@@ -3,9 +3,9 @@
 namespace App\Filament\Farm\Resources\Members\Pages;
 
 use App\Filament\Farm\Resources\Members\MemberResource;
+use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Facades\Filament;
-use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
 use Illuminate\Support\Facades\Password;
