@@ -39,26 +39,33 @@ class RevenueChartWidget extends ChartWidget
 
         $months = collect();
         for ($i = 5; $i >= 0; $i--) {
-            $months->push(now()->subMonths($i));
+            $months->push(now()->subMonths($i)->startOfMonth());
         }
 
-        $revenues = $months->map(fn ($month) => (float) Sale::query()
-            ->where('organisation_id', $orgId)
-            ->tap(fn (Builder $q) => app(CurrentFarm::class)->restrictForCurrentUser($q))
-            ->whereMonth('sale_date', $month->month)
-            ->whereYear('sale_date', $month->year)
-            ->whereNot('status', SaleStatus::Cancelled)
-            ->sum('total')
-        )->toArray();
+        $from = $months->first()->toDateString();
+        $to = now()->endOfMonth()->toDateString();
 
-        $expenses = $months->map(fn ($month) => (float) Expense::query()
+        // Deux requêtes agrégées par mois (ventes, dépenses) au lieu de 12
+        $salesByMonth = Sale::query()
             ->where('organisation_id', $orgId)
             ->tap(fn (Builder $q) => app(CurrentFarm::class)->restrictForCurrentUser($q))
-            ->whereMonth('expense_date', $month->month)
-            ->whereYear('expense_date', $month->year)
+            ->whereBetween('sale_date', [$from, $to])
+            ->whereNot('status', SaleStatus::Cancelled)
+            ->selectRaw("to_char(sale_date, 'YYYY-MM') AS ym, COALESCE(SUM(total), 0) AS total")
+            ->groupBy('ym')
+            ->pluck('total', 'ym');
+
+        $expensesByMonth = Expense::query()
+            ->where('organisation_id', $orgId)
+            ->tap(fn (Builder $q) => app(CurrentFarm::class)->restrictForCurrentUser($q))
+            ->whereBetween('expense_date', [$from, $to])
             ->whereNot('status', 'cancelled')
-            ->sum('amount')
-        )->toArray();
+            ->selectRaw("to_char(expense_date, 'YYYY-MM') AS ym, COALESCE(SUM(amount), 0) AS total")
+            ->groupBy('ym')
+            ->pluck('total', 'ym');
+
+        $revenues = $months->map(fn ($month) => (float) ($salesByMonth[$month->format('Y-m')] ?? 0))->toArray();
+        $expenses = $months->map(fn ($month) => (float) ($expensesByMonth[$month->format('Y-m')] ?? 0))->toArray();
 
         $labels = $months->map(fn ($m) => self::FRENCH_MONTHS[$m->month - 1].' '.$m->format('y'))->toArray();
 

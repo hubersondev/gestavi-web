@@ -67,21 +67,71 @@
 
         <table class="kpi-grid">
             <tr>
-                <td><div class="value">{{ $kpis['days'] }}</div><div class="label">Jours</div></td>
-                <td><div class="value" style="color: #c0392b;">{{ $fmt($kpis['mortality']) }}</div><div class="label">Mortalité</div></td>
-                <td><div class="value">{{ $fmt($kpis['avg_eggs'], 1) }}</div><div class="label">Oeufs moy./j</div></td>
-                <td><div class="value">{{ $fmt($kpis['avg_weight']) }} g</div><div class="label">Poids moyen</div></td>
-                <td><div class="value">{{ $fmt($kpis['total_feed'], 1) }} kg</div><div class="label">Aliment total</div></td>
+                <td><div class="value">{{ $kpis['days'] }}</div><div class="label">Relevés ({{ $kpis['flocks'] ?? 0 }} bandes)</div></td>
+                <td><div class="value" style="color: #c0392b;">{{ $fmt($kpis['mortality']) }}</div><div class="label">Mortalité ({{ $fmt($kpis['mortality_rate'] ?? 0, 2) }} %)</div></td>
+                <td><div class="value">{{ $fmt($kpis['culls'] ?? 0) }}</div><div class="label">Réformes</div></td>
+                <td><div class="value">{{ $fmt($kpis['eggs'] ?? 0) }}</div><div class="label">Œufs ({{ $fmt($kpis['laying_rate'] ?? 0, 2) }} % ponte)</div></td>
+                <td><div class="value">{{ $fmt($kpis['total_feed'], 1) }} kg</div><div class="label">Aliment ({{ $fmt($kpis['feed_per_bird_day'] ?? 0, 1) }} g/sujet/j)</div></td>
             </tr>
+            @if (($kpis['ic'] ?? null) !== null || ($kpis['gmq'] ?? null) !== null)
+                <tr>
+                    <td><div class="value">{{ $fmt($kpis['avg_weight']) }} g</div><div class="label">Poids moyen</div></td>
+                    <td><div class="value">{{ $kpis['ic'] !== null ? $fmt($kpis['ic'], 2) : '—' }}</div><div class="label">Indice de consommation</div></td>
+                    <td><div class="value">{{ $kpis['gmq'] !== null ? $fmt($kpis['gmq'], 1).' g/j' : '—' }}</div><div class="label">GMQ</div></td>
+                    <td><div class="value">{{ $kpis['ipe'] !== null ? $fmt($kpis['ipe'], 1) : '—' }}</div><div class="label">IPE / EPEF</div></td>
+                    <td></td>
+                </tr>
+            @endif
         </table>
+
+        @if (isset($farmComparison) && $farmComparison->count() > 1)
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th class="text-left">Ferme</th>
+                        <th>Bandes</th>
+                        <th>Relevés</th>
+                        <th>Mortalité</th>
+                        <th>Réformes</th>
+                        <th>Œufs</th>
+                        <th>Taux de ponte</th>
+                        <th>Aliment (kg)</th>
+                        <th>g/sujet/j</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($farmComparison as $row)
+                        <tr>
+                            <td class="text-left">{{ $row->farm_name }}</td>
+                            <td>{{ $row->flocks }}</td>
+                            <td>{{ $row->records }}</td>
+                            <td class="text-danger">{{ $fmt($row->mortality) }}</td>
+                            <td>{{ $fmt($row->culls) }}</td>
+                            <td>{{ $fmt($row->eggs) }}</td>
+                            <td>{{ $fmt($row->laying_rate, 2) }} %</td>
+                            <td>{{ $fmt($row->total_feed, 1) }}</td>
+                            <td>{{ $fmt($row->feed_per_bird_day, 1) }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        @endif
+
+        @if (! empty($truncated))
+            <p style="color: #c0392b; font-weight: bold; margin-bottom: 6px;">
+                Rapport tronqué aux {{ $maxRows ?? 2000 }} premières lignes : utilisez l'export Excel pour le détail complet.
+            </p>
+        @endif
 
         <table class="data-table">
             <thead>
                 <tr>
                     <th class="text-left">Date</th>
+                    <th>Ferme</th>
                     <th>Bande</th>
                     <th>Âge</th>
                     <th>Mortalité</th>
+                    <th>Réformes</th>
                     <th>Oeufs</th>
                     <th>Cassés</th>
                     <th>Poids (g)</th>
@@ -96,9 +146,11 @@
                 @foreach ($records as $r)
                     <tr>
                         <td class="text-left">{{ $r->record_date?->format('d/m') }}</td>
+                        <td>{{ $r->flock?->building?->farm?->name }}</td>
                         <td>{{ $r->flock?->code }}</td>
                         <td>{{ $r->age_days }}j</td>
                         <td class="{{ ($r->mortality ?? 0) > 0 ? 'text-danger' : '' }}">{{ $r->mortality ?? 0 }}</td>
+                        <td>{{ $r->culls ?? 0 }}</td>
                         <td>{{ $r->eggs_collected ?? 0 }}</td>
                         <td>{{ $r->eggs_broken ?? 0 }}</td>
                         <td>{{ $fmt($r->average_weight_g ?? 0) }}</td>

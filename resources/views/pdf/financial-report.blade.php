@@ -72,12 +72,74 @@
 
         <table class="kpi-grid">
             <tr>
+                <td><div class="value">{{ $fmt($kpis['opening_balance'] ?? 0) }}</div><div class="label">Solde d'ouverture</div></td>
                 <td><div class="value success">{{ $fmt($kpis['credits']) }}</div><div class="label">Entrées</div></td>
                 <td><div class="value danger">{{ $fmt($kpis['debits']) }}</div><div class="label">Sorties</div></td>
-                <td><div class="value {{ $kpis['net'] >= 0 ? 'success' : 'danger' }}">{{ $fmt($kpis['net']) }}</div><div class="label">Solde net</div></td>
+                <td><div class="value {{ $kpis['net'] >= 0 ? 'success' : 'danger' }}">{{ $fmt($kpis['net']) }}</div><div class="label">Flux net</div></td>
+            </tr>
+            <tr>
+                <td><div class="value {{ ($kpis['closing_balance'] ?? 0) >= 0 ? '' : 'danger' }}">{{ $fmt($kpis['closing_balance'] ?? 0) }}</div><div class="label">Solde de clôture</div></td>
                 <td><div class="value">{{ $kpis['count'] }}</div><div class="label">Transactions</div></td>
+                <td><div class="value">{{ $kpis['accounts'] ?? '—' }}</div><div class="label">Comptes</div></td>
+                <td></td>
             </tr>
         </table>
+
+        @if (isset($accountBalances) && $accountBalances->isNotEmpty())
+            <div class="section-title">Soldes par compte</div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th class="text-left">Ferme</th>
+                        <th class="text-left">Compte</th>
+                        <th class="text-right">Ouverture</th>
+                        <th class="text-right">Entrées</th>
+                        <th class="text-right">Sorties</th>
+                        <th class="text-right">Clôture</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($accountBalances as $balance)
+                        <tr>
+                            <td class="text-left">{{ $balance->farm_name }}</td>
+                            <td class="text-left bold">{{ $balance->account_name }}</td>
+                            <td class="text-right">{{ number_format($balance->opening, 0, ',', ' ') }}</td>
+                            <td class="text-right text-success">{{ number_format($balance->credits, 0, ',', ' ') }}</td>
+                            <td class="text-right text-danger">{{ number_format($balance->debits, 0, ',', ' ') }}</td>
+                            <td class="text-right bold">{{ number_format($balance->closing, 0, ',', ' ') }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        @endif
+
+        @if (isset($farmComparison) && $farmComparison->count() > 1)
+            <div class="section-title">Comparaison inter-fermes</div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th class="text-left">Ferme</th>
+                        <th>Comptes</th>
+                        <th>Transactions</th>
+                        <th class="text-right">Entrées</th>
+                        <th class="text-right">Sorties</th>
+                        <th class="text-right">Flux net</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($farmComparison as $row)
+                        <tr>
+                            <td class="text-left bold">{{ $row->farm_name }}</td>
+                            <td>{{ $row->accounts }}</td>
+                            <td>{{ $row->count }}</td>
+                            <td class="text-right text-success">{{ number_format($row->credits, 0, ',', ' ') }}</td>
+                            <td class="text-right text-danger">{{ number_format($row->debits, 0, ',', ' ') }}</td>
+                            <td class="text-right bold {{ $row->net >= 0 ? 'text-success' : 'text-danger' }}">{{ number_format($row->net, 0, ',', ' ') }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        @endif
 
         @if ($expensesByCategory->isNotEmpty())
             <div class="section-title">Dépenses par catégorie</div>
@@ -102,10 +164,16 @@
         @endif
 
         <div class="section-title">Détail des transactions</div>
+        @if (! empty($truncated))
+            <p style="color: #c0392b; font-weight: bold; margin-bottom: 6px;">
+                Rapport tronqué aux {{ $maxRows ?? 2000 }} premières lignes : utilisez l'export Excel pour le détail complet.
+            </p>
+        @endif
         <table class="data-table">
             <thead>
                 <tr>
                     <th class="text-left">Date</th>
+                    <th class="text-left">Ferme</th>
                     <th class="text-left">Compte</th>
                     <th>Type</th>
                     <th class="text-left">Catégorie</th>
@@ -117,6 +185,7 @@
                 @foreach ($transactions as $tx)
                     <tr>
                         <td class="text-left">{{ $tx->transaction_date?->format('d/m') }}</td>
+                        <td class="text-left">{{ $tx->account?->farm?->name ?? 'Organisation' }}</td>
                         <td class="text-left">{{ $tx->account?->name }}</td>
                         <td class="{{ $tx->isCredit() ? 'text-success' : 'text-danger' }} bold">{{ $tx->type?->getLabel() }}</td>
                         <td class="text-left">{{ $tx->category?->getLabel() }}</td>

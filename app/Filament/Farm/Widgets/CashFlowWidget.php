@@ -48,29 +48,32 @@ class CashFlowWidget extends ChartWidget
 
         $months = collect();
         for ($i = 5; $i >= 0; $i--) {
-            $months->push(now()->subMonths($i));
+            $months->push(now()->subMonths($i)->startOfMonth());
         }
+
+        // Une seule requête agrégée par mois et par type, au lieu de 12 requêtes
+        $credit = TransactionType::Credit->value;
+        $debit = TransactionType::Debit->value;
+
+        $totals = Transaction::query()
+            ->whereIn('account_id', $accountIds)
+            ->whereBetween('transaction_date', [$months->first()->toDateString(), now()->endOfMonth()->toDateString()])
+            ->selectRaw("to_char(transaction_date, 'YYYY-MM') AS ym")
+            ->selectRaw("COALESCE(SUM(CASE WHEN type = '{$credit}' THEN amount ELSE 0 END), 0) AS credits")
+            ->selectRaw("COALESCE(SUM(CASE WHEN type = '{$debit}' THEN amount ELSE 0 END), 0) AS debits")
+            ->groupBy('ym')
+            ->get()
+            ->keyBy('ym');
 
         $labels = [];
         $credits = [];
         $debits = [];
 
         foreach ($months as $month) {
+            $key = $month->format('Y-m');
             $labels[] = self::FRENCH_MONTHS[$month->month].' '.$month->format('y');
-
-            $credits[] = (int) Transaction::query()
-                ->whereIn('account_id', $accountIds)
-                ->where('type', TransactionType::Credit)
-                ->whereYear('transaction_date', $month->year)
-                ->whereMonth('transaction_date', $month->month)
-                ->sum('amount');
-
-            $debits[] = (int) Transaction::query()
-                ->whereIn('account_id', $accountIds)
-                ->where('type', TransactionType::Debit)
-                ->whereYear('transaction_date', $month->year)
-                ->whereMonth('transaction_date', $month->month)
-                ->sum('amount');
+            $credits[] = (int) ($totals->get($key)?->credits ?? 0);
+            $debits[] = (int) ($totals->get($key)?->debits ?? 0);
         }
 
         return [

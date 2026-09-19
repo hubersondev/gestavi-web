@@ -245,10 +245,11 @@ class StatsOverviewWidget extends BaseWidget
             ->where('organisation_id', $orgId)
             ->tap(fn (Builder $q) => app(CurrentFarm::class)->restrictForCurrentUser($q))
             ->where('is_active', true)
-            ->get();
+            ->selectRaw('COALESCE(SUM(current_balance), 0) AS total_balance, COUNT(*) AS account_count')
+            ->first();
 
-        $totalBalance = (float) $accounts->sum('current_balance');
-        $accountCount = $accounts->count();
+        $totalBalance = (float) $accounts->total_balance;
+        $accountCount = (int) $accounts->account_count;
 
         $color = match (true) {
             $totalBalance < 0 => 'danger',
@@ -264,15 +265,19 @@ class StatsOverviewWidget extends BaseWidget
 
     private function getUnpaidInvoicesStat(int $orgId): Stat
     {
+        $today = now()->toDateString();
+
         $unpaid = Sale::query()
             ->where('organisation_id', $orgId)
             ->tap(fn (Builder $q) => app(CurrentFarm::class)->restrictForCurrentUser($q))
             ->whereIn('status', [SaleStatus::Pending, SaleStatus::Partial])
-            ->get();
+            ->selectRaw('COUNT(*) AS unpaid_count, COALESCE(SUM(balance), 0) AS unpaid_amount')
+            ->selectRaw("COUNT(*) FILTER (WHERE due_date IS NOT NULL AND due_date < '{$today}') AS overdue_count")
+            ->first();
 
-        $unpaidCount = $unpaid->count();
-        $unpaidAmount = (float) $unpaid->sum('balance');
-        $overdue = $unpaid->filter(fn (Sale $s) => $s->due_date?->isPast())->count();
+        $unpaidCount = (int) $unpaid->unpaid_count;
+        $unpaidAmount = (float) $unpaid->unpaid_amount;
+        $overdue = (int) $unpaid->overdue_count;
 
         $description = $overdue > 0
             ? "{$overdue} en retard · ".$this->formatXOF($unpaidAmount)
