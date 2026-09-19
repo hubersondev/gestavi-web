@@ -135,7 +135,8 @@ class LeaveForm
                                     ->schema([
                                         FileUpload::make('attachment')
                                             ->label('Document')
-                                            ->disk('public')
+                                            ->disk('local')
+                                            ->visibility('private')
                                             ->acceptedFileTypes(['application/pdf', 'image/*'])
                                             ->directory('leaves/attachments')
                                             ->maxSize(5120)

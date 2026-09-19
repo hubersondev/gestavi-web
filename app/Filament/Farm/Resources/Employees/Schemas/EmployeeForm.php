@@ -18,6 +18,7 @@ use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Schema;
+use Illuminate\Database\Eloquent\Builder;
 
 class EmployeeForm
 {
@@ -94,6 +95,8 @@ class EmployeeForm
 
                                         FileUpload::make('id_document')
                                             ->label('Scan / Photo de la pièce')
+                                            ->disk('local')
+                                            ->visibility('private')
                                             ->acceptedFileTypes(['image/*', 'application/pdf'])
                                             ->directory('employees/documents')
                                             ->maxSize(5120)
@@ -107,6 +110,8 @@ class EmployeeForm
                                     ->schema([
                                         FileUpload::make('photo')
                                             ->label('Photo de profil')
+                                            ->disk('local')
+                                            ->visibility('private')
                                             ->image()
                                             ->imageEditor()
                                             ->directory('employees/photos')
@@ -257,7 +262,12 @@ class EmployeeForm
                                     ->schema([
                                         Select::make('user_id')
                                             ->label('Compte utilisateur associé')
-                                            ->relationship('user', 'name')
+                                            ->relationship(
+                                                'user',
+                                                'name',
+                                                modifyQueryUsing: fn (Builder $query): Builder => $query
+                                                    ->inOrganisation((int) Filament::getTenant()?->getKey()),
+                                            )
                                             ->searchable()
                                             ->preload()
                                             ->placeholder('Aucun compte')

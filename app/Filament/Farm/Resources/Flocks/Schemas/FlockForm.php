@@ -150,7 +150,9 @@ class FlockForm
                                             ->options(FlockStatus::class)
                                             ->default(FlockStatus::Planned)
                                             ->required()
-                                            ->native(false),
+                                            ->native(false)
+                                            ->disabledOn('edit')
+                                            ->helperText('Le statut évolue via les actions Démarrer / Clôturer / Annuler.'),
                                     ])
                                     ->columns(2),
                             ]),

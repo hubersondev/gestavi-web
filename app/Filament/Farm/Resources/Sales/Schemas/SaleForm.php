@@ -19,7 +19,6 @@ use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Utilities\Get;
-use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 
 class SaleForm
@@ -266,10 +265,15 @@ class SaleForm
                                     ->schema([
                                         Select::make('status')
                                             ->label('Statut')
-                                            ->options(SaleStatus::class)
+                                            ->options([
+                                                SaleStatus::Draft->value => SaleStatus::Draft->getLabel(),
+                                                SaleStatus::Pending->value => SaleStatus::Pending->getLabel(),
+                                            ])
                                             ->default(SaleStatus::Draft)
                                             ->required()
-                                            ->native(false),
+                                            ->native(false)
+                                            ->disabledOn('edit')
+                                            ->helperText('Partiel / Payée / Annulée sont pilotés par les paiements et l\'annulation.'),
 
                                         Select::make('payment_method')
                                             ->label('Mode de paiement principal')

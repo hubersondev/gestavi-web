@@ -107,7 +107,9 @@ class ExpenseInfolist
                         TextEntry::make('attachment')
                             ->label('Document')
                             ->formatStateUsing(fn ($state): string => basename((string) $state))
-                            ->url(fn ($state): ?string => $state ? Storage::url($state) : null, shouldOpenInNewTab: true)
+                            ->url(fn ($state): ?string => $state
+                                ? Storage::disk('local')->temporaryUrl($state, now()->addMinutes(15))
+                                : null, shouldOpenInNewTab: true)
                             ->icon('heroicon-o-paper-clip')
                             ->columnSpanFull(),
                     ]),

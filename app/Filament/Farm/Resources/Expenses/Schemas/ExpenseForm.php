@@ -155,7 +155,8 @@ class ExpenseForm
                                     ->schema([
                                         FileUpload::make('attachment')
                                             ->label('Document')
-                                            ->disk('public')
+                                            ->disk('local')
+                                            ->visibility('private')
                                             ->acceptedFileTypes(['application/pdf', 'image/*'])
                                             ->directory('expenses/attachments')
                                             ->maxSize(5120)
@@ -192,7 +193,10 @@ class ExpenseForm
                                             ->options(ExpenseStatus::class)
                                             ->default(ExpenseStatus::Unpaid)
                                             ->required()
-                                            ->native(false),
+                                            ->native(false)
+                                            ->disabled()
+                                            ->dehydrated(fn (string $operation): bool => $operation === 'create')
+                                            ->helperText('Calculé par les paiements enregistrés et l\'annulation.'),
 
                                         Toggle::make('pay_now')
                                             ->label('Payer immédiatement')

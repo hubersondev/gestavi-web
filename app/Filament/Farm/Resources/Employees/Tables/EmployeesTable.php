@@ -24,6 +24,8 @@ class EmployeesTable
             ->columns([
                 ImageColumn::make('photo')
                     ->label('')
+                    ->disk('local')
+                    ->visibility('private')
                     ->circular()
                     ->size(40)
                     ->defaultImageUrl(fn ($record) => 'https://ui-avatars.com/api/?name='.urlencode($record->full_name).'&background=random&size=40'),
