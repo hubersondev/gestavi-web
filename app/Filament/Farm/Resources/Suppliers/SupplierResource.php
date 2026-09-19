@@ -25,8 +25,8 @@ use UnitEnum;
 
 class SupplierResource extends Resource
 {
-    use RequiresPlanFeatures;
     use ChecksOrganisationPermissions;
+    use RequiresPlanFeatures;
     use ScopesToMemberFarms;
 
     protected static ?string $model = Supplier::class;

@@ -63,6 +63,21 @@ class HealthProgram extends Model
     }
 
     /**
+     * Programmes applicables à une organisation : ceux de l'organisation
+     * ET les programmes de référence livrés avec l'application (organisation_id NULL).
+     */
+    public function scopeForOrganisation(Builder $query, ?int $organisationId): Builder
+    {
+        return $query->where(function (Builder $q) use ($organisationId) {
+            $q->whereNull('organisation_id');
+
+            if ($organisationId !== null) {
+                $q->orWhere('organisation_id', $organisationId);
+            }
+        });
+    }
+
+    /**
      * Programmes applicables à une ferme donnée (les globaux + ceux de la ferme).
      */
     public function scopeForFarm(Builder $query, int $farmId): Builder
@@ -197,7 +212,7 @@ class HealthProgram extends Model
         $farm = $flock->building?->farm;
 
         return self::query()
-            ->where('organisation_id', $farm?->organisation_id)
+            ->forOrganisation($farm?->organisation_id)
             ->forFarm($farm?->id)
             ->forChickenType($flock->chicken_type_id)
             ->orderBy('scheduled_day')
@@ -213,7 +228,7 @@ class HealthProgram extends Model
         $farm = $flock->building?->farm;
 
         return self::query()
-            ->where('organisation_id', $farm?->organisation_id)
+            ->forOrganisation($farm?->organisation_id)
             ->forFarm($farm?->id)
             ->forChickenType($flock->chicken_type_id)
             ->forDayRange($currentAge, $currentAge + $daysAhead)

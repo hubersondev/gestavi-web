@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Enums\FarmLogCategory;
 use App\Enums\FarmLogPriority;
-use App\Enums\FlockStatus;
 use App\Enums\VaccinationStatus;
 use App\Models\DailyRecord;
 use App\Models\FarmLog;
@@ -49,21 +48,21 @@ class FlockService
             $vaccinationCount = $this->generateVaccinationCalendar($flock);
 
             $chickenType = $flock->chickenType?->name ?? 'volailles';
-            $farm        = $flock->building?->farm;
+            $farm = $flock->building?->farm;
 
             FarmLog::create([
-                'farm_id'      => $farm?->id,
-                'flock_id'     => $flock->id,
-                'building_id'  => $flock->building_id,
-                'recorded_by'  => Auth::id(),
-                'log_date'     => now(),
-                'title'        => "Nouvelle bande : {$flock->code}",
-                'category'     => FarmLogCategory::Production,
-                'priority'     => FarmLogPriority::Normal,
-                'description'  => "Mise en place de la bande {$flock->code} ({$chickenType})"
-                    . " — {$flock->quantity_started} sujets"
-                    . ($flock->breed ? ", race {$flock->breed}" : '')
-                    . ". {$vaccinationCount} vaccination(s) programmée(s).",
+                'farm_id' => $farm?->id,
+                'flock_id' => $flock->id,
+                'building_id' => $flock->building_id,
+                'recorded_by' => Auth::id(),
+                'log_date' => now(),
+                'title' => "Nouvelle bande : {$flock->code}",
+                'category' => FarmLogCategory::Production,
+                'priority' => FarmLogPriority::Normal,
+                'description' => "Mise en place de la bande {$flock->code} ({$chickenType})"
+                    ." — {$flock->quantity_started} sujets"
+                    .($flock->breed ? ", race {$flock->breed}" : '')
+                    .". {$vaccinationCount} vaccination(s) programmée(s).",
             ]);
 
             return $flock;
@@ -82,7 +81,7 @@ class FlockService
         }
 
         $programs = HealthProgram::getProgramForFlock($flock);
-        $count    = 0;
+        $count = 0;
 
         foreach ($programs as $program) {
             // Ignorer les traitements antérieurs à l'âge d'arrivée
@@ -92,20 +91,20 @@ class FlockService
 
             $scheduledDate = null;
             if ($flock->start_date) {
-                $daysOffset    = $program->scheduled_day - ($flock->age_at_arrival ?? 0);
+                $daysOffset = $program->scheduled_day - ($flock->age_at_arrival ?? 0);
                 $scheduledDate = $flock->start_date->copy()->addDays(max(0, $daysOffset));
             }
 
             Vaccination::create([
-                'flock_id'            => $flock->id,
-                'health_program_id'   => $program->id,
-                'treatment_name'      => $program->treatment_name,
-                'treatment_type'      => $program->treatment_type,
-                'administration_route'=> $program->administration_route,
-                'dosage'              => $program->dosage,
-                'scheduled_date'      => $scheduledDate,
-                'age_at_treatment'    => $program->scheduled_day,
-                'status'              => VaccinationStatus::Pending,
+                'flock_id' => $flock->id,
+                'health_program_id' => $program->id,
+                'treatment_name' => $program->treatment_name,
+                'treatment_type' => $program->treatment_type,
+                'administration_route' => $program->administration_route,
+                'dosage' => $program->dosage,
+                'scheduled_date' => $scheduledDate,
+                'age_at_treatment' => $program->scheduled_day,
+                'status' => VaccinationStatus::Pending,
             ]);
 
             $count++;
@@ -121,7 +120,7 @@ class FlockService
     public function startFlock(Flock $flock): void
     {
         if (! $flock->isPlanned()) {
-            throw new \LogicException("Seule une bande planifiée peut être démarrée.");
+            throw new \LogicException('Seule une bande planifiée peut être démarrée.');
         }
 
         DB::transaction(function () use ($flock) {
@@ -129,17 +128,17 @@ class FlockService
             $flock->refresh();
 
             FarmLog::create([
-                'farm_id'     => $flock->building?->farm?->id,
-                'flock_id'    => $flock->id,
+                'farm_id' => $flock->building?->farm?->id,
+                'flock_id' => $flock->id,
                 'building_id' => $flock->building_id,
                 'recorded_by' => Auth::id(),
-                'log_date'    => now(),
-                'title'       => "Démarrage bande : {$flock->code}",
-                'category'    => FarmLogCategory::Production,
-                'priority'    => FarmLogPriority::Normal,
+                'log_date' => now(),
+                'title' => "Démarrage bande : {$flock->code}",
+                'category' => FarmLogCategory::Production,
+                'priority' => FarmLogPriority::Normal,
                 'description' => "La bande {$flock->code} est passée en statut « En cours »."
-                    . " Effectif : {$flock->quantity_current} sujets."
-                    . " Date de mise en place : {$flock->start_date?->format('d/m/Y')}.",
+                    ." Effectif : {$flock->quantity_current} sujets."
+                    ." Date de mise en place : {$flock->start_date?->format('d/m/Y')}.",
             ]);
         });
     }
@@ -152,7 +151,7 @@ class FlockService
     public function completeFlock(Flock $flock, ?string $notes = null): array
     {
         if (! $flock->isActive()) {
-            throw new \LogicException("Seule une bande en cours peut être clôturée.");
+            throw new \LogicException('Seule une bande en cours peut être clôturée.');
         }
 
         return DB::transaction(function () use ($flock, $notes) {
@@ -167,21 +166,21 @@ class FlockService
                 ->whereIn('status', [VaccinationStatus::Pending, VaccinationStatus::Delayed])
                 ->update([
                     'status' => VaccinationStatus::Skipped->value,
-                    'notes'  => 'Bande clôturée',
+                    'notes' => 'Bande clôturée',
                 ]);
 
             $flock->refresh();
             $report = $this->buildCompletionReport($flock);
 
             FarmLog::create([
-                'farm_id'     => $flock->building?->farm?->id,
-                'flock_id'    => $flock->id,
+                'farm_id' => $flock->building?->farm?->id,
+                'flock_id' => $flock->id,
                 'building_id' => $flock->building_id,
                 'recorded_by' => Auth::id(),
-                'log_date'    => now(),
-                'title'       => "Clôture bande : {$flock->code}",
-                'category'    => FarmLogCategory::Production,
-                'priority'    => FarmLogPriority::High,
+                'log_date' => now(),
+                'title' => "Clôture bande : {$flock->code}",
+                'category' => FarmLogCategory::Production,
+                'priority' => FarmLogPriority::High,
                 'description' => $this->formatCompletionDescription($flock, $report),
             ]);
 
@@ -196,7 +195,7 @@ class FlockService
     public function cancelFlock(Flock $flock, string $reason): void
     {
         if ($flock->isCompleted() || $flock->isCancelled()) {
-            throw new \LogicException("Cette bande ne peut plus être annulée.");
+            throw new \LogicException('Cette bande ne peut plus être annulée.');
         }
 
         DB::transaction(function () use ($flock, $reason) {
@@ -207,21 +206,21 @@ class FlockService
                 ->whereIn('status', [VaccinationStatus::Pending, VaccinationStatus::Delayed])
                 ->update([
                     'status' => VaccinationStatus::Skipped->value,
-                    'notes'  => 'Bande annulée',
+                    'notes' => 'Bande annulée',
                 ]);
 
             FarmLog::create([
-                'farm_id'     => $flock->building?->farm?->id,
-                'flock_id'    => $flock->id,
+                'farm_id' => $flock->building?->farm?->id,
+                'flock_id' => $flock->id,
                 'building_id' => $flock->building_id,
                 'recorded_by' => Auth::id(),
-                'log_date'    => now(),
-                'title'       => "Annulation bande : {$flock->code}",
-                'category'    => FarmLogCategory::Incident,
-                'priority'    => FarmLogPriority::Urgent,
+                'log_date' => now(),
+                'title' => "Annulation bande : {$flock->code}",
+                'category' => FarmLogCategory::Incident,
+                'priority' => FarmLogPriority::Urgent,
                 'description' => "Bande {$flock->code} annulée."
-                    . " Motif : {$reason}."
-                    . " Effectif au moment de l'annulation : {$flock->quantity_current} sujets.",
+                    ." Motif : {$reason}."
+                    ." Effectif au moment de l'annulation : {$flock->quantity_current} sujets.",
             ]);
         });
     }
@@ -229,34 +228,35 @@ class FlockService
     /**
      * Enregistrer les données quotidiennes avec effets automatiques :
      * - Calcul de l'âge en jours
-     * - Mise à jour de l'effectif si mortalité
+     * - Mise à jour de l'effectif si mortalité (via l'événement `created` de DailyRecord)
      */
     public function recordDailyData(Flock $flock, array $data): DailyRecord
     {
         if (! isset($data['age_days'])) {
-            $recordDate     = isset($data['record_date'])
+            $recordDate = isset($data['record_date'])
                 ? \Carbon\Carbon::parse($data['record_date'])
                 : now();
-            $daysFromStart  = $flock->start_date
+            $daysFromStart = $flock->start_date
                 ? (int) $flock->start_date->diffInDays($recordDate)
                 : 0;
             $data['age_days'] = ($flock->age_at_arrival ?? 0) + $daysFromStart;
         }
 
-        $data['flock_id']    = $flock->id;
+        $mortality = (int) ($data['mortality'] ?? 0);
+
+        if ($mortality > (int) $flock->quantity_current) {
+            throw new \InvalidArgumentException(sprintf(
+                'La mortalité saisie (%d) dépasse l\'effectif présent de la bande %s (%d).',
+                $mortality,
+                $flock->code,
+                (int) $flock->quantity_current,
+            ));
+        }
+
+        $data['flock_id'] = $flock->id;
         $data['recorded_by'] = $data['recorded_by'] ?? Auth::id();
 
-        return DB::transaction(function () use ($flock, $data) {
-            $record = DailyRecord::create($data);
-
-            $mortality = (int) ($data['mortality'] ?? 0);
-            if ($mortality > 0) {
-                $newQuantity = max(0, $flock->quantity_current - $mortality);
-                $flock->update(['quantity_current' => $newQuantity]);
-            }
-
-            return $record;
-        });
+        return DB::transaction(fn (): DailyRecord => DailyRecord::create($data));
     }
 
     /**
@@ -267,43 +267,43 @@ class FlockService
         $lastRecord = $flock->dailyRecords()->orderByDesc('record_date')->first();
 
         $indicators = [
-            'age_jours'         => $flock->getCurrentAgeInDays(),
-            'age_semaines'      => $flock->getCurrentAgeInWeeks(),
-            'phase_actuelle'    => $flock->getCurrentPhase()?->name,
+            'age_jours' => $flock->getCurrentAgeInDays(),
+            'age_semaines' => $flock->getCurrentAgeInWeeks(),
+            'phase_actuelle' => $flock->getCurrentPhase()?->name,
 
-            'effectif_initial'  => $flock->quantity_started,
-            'effectif_actuel'   => $flock->quantity_current,
-            'pertes_totales'    => $flock->getLossCount(),
-            'taux_mortalite'    => round($flock->getMortalityRate(), 2),
+            'effectif_initial' => $flock->quantity_started,
+            'effectif_actuel' => $flock->quantity_current,
+            'pertes_totales' => $flock->getLossCount(),
+            'taux_mortalite' => round($flock->getMortalityRate(), 2),
 
-            'cout_par_sujet'    => $flock->getCostPerCurrentUnit(),
+            'cout_par_sujet' => $flock->getCostPerCurrentUnit(),
 
-            'vaccinations_a_jour'     => $flock->vaccinations()->overdue()->doesntExist(),
-            'vaccinations_en_retard'  => $flock->vaccinations()->overdue()->count(),
-            'prochaine_vaccination'   => $this->getNextVaccinationInfo($flock),
+            'vaccinations_a_jour' => $flock->vaccinations()->overdue()->doesntExist(),
+            'vaccinations_en_retard' => $flock->vaccinations()->overdue()->count(),
+            'prochaine_vaccination' => $this->getNextVaccinationInfo($flock),
         ];
 
         // Indicateurs depuis le dernier relevé quotidien
         if ($lastRecord) {
-            $indicators['derniere_saisie']       = $lastRecord->record_date?->format('d/m/Y');
-            $indicators['aliment_par_sujet_g']   = $lastRecord->getFeedPerBird();
+            $indicators['derniere_saisie'] = $lastRecord->record_date?->format('d/m/Y');
+            $indicators['aliment_par_sujet_g'] = $lastRecord->getFeedPerBird();
             $indicators['mortalite_dernier_jour'] = $lastRecord->mortality;
         }
 
         // Indicateurs pondeuse
         $chickenTypeName = strtolower($flock->chickenType?->name ?? '');
         if (str_contains($chickenTypeName, 'ponde')) {
-            $indicators['oeufs_jour']          = $lastRecord?->eggs_collected;
-            $indicators['taux_ponte_jour']     = $lastRecord?->getLayingRate();
-            $indicators['taux_ponte_moyen']    = $this->getAverageLayingRate($flock);
-            $indicators['oeufs_total']         = $this->getTotalEggsCollected($flock);
+            $indicators['oeufs_jour'] = $lastRecord?->eggs_collected;
+            $indicators['taux_ponte_jour'] = $lastRecord?->getLayingRate();
+            $indicators['taux_ponte_moyen'] = $this->getAverageLayingRate($flock);
+            $indicators['oeufs_total'] = $this->getTotalEggsCollected($flock);
         }
 
         // Indicateurs chair
         if (str_contains($chickenTypeName, 'chair')) {
-            $indicators['poids_moyen']  = $lastRecord?->average_weight_g;
-            $indicators['gmq']          = $this->calculateGMQ($flock);
-            $indicators['ic']           = $this->getFeedConversionRatio($flock);
+            $indicators['poids_moyen'] = $lastRecord?->average_weight_g;
+            $indicators['gmq'] = $this->calculateGMQ($flock);
+            $indicators['ic'] = $this->getFeedConversionRatio($flock);
         }
 
         return $indicators;
@@ -337,7 +337,7 @@ class FlockService
      */
     private function generateFlockCode(int $buildingId): string
     {
-        $year   = date('Y');
+        $year = date('Y');
         $prefix = "BND-{$year}-";
 
         // Chercher dans tous les bâtiments de la même ferme
@@ -352,7 +352,7 @@ class FlockService
         $next = 1;
         if ($last) {
             $parts = explode('-', $last->code);
-            $next  = ((int) end($parts)) + 1;
+            $next = ((int) end($parts)) + 1;
         }
 
         return sprintf('BND-%s-%03d', $year, $next);
@@ -394,7 +394,7 @@ class FlockService
         $totalFeed = $flock->dailyRecords()->sum('feed_consumed_kg');
 
         $firstRecord = $flock->dailyRecords()->whereNotNull('average_weight_g')->orderBy('record_date')->first();
-        $lastRecord  = $flock->dailyRecords()->whereNotNull('average_weight_g')->orderByDesc('record_date')->first();
+        $lastRecord = $flock->dailyRecords()->whereNotNull('average_weight_g')->orderByDesc('record_date')->first();
 
         if (! $firstRecord || ! $lastRecord || $firstRecord->id === $lastRecord->id || $totalFeed <= 0) {
             return null;
@@ -456,10 +456,10 @@ class FlockService
         }
 
         return [
-            'nom'       => $next->treatment_name,
-            'type'      => $next->treatment_type,
-            'date'      => $next->scheduled_date?->toDateString(),
-            'dans_jours'=> (int) now()->startOfDay()->diffInDays($next->scheduled_date, false),
+            'nom' => $next->treatment_name,
+            'type' => $next->treatment_type,
+            'date' => $next->scheduled_date?->toDateString(),
+            'dans_jours' => (int) now()->startOfDay()->diffInDays($next->scheduled_date, false),
         ];
     }
 
@@ -471,14 +471,14 @@ class FlockService
     private function buildCompletionReport(Flock $flock): array
     {
         $report = [
-            'duree_jours'     => $flock->getActualDurationInDays(),
-            'effectif_initial'=> $flock->quantity_started,
-            'effectif_final'  => $flock->quantity_current,
-            'pertes_totales'  => $flock->getLossCount(),
-            'taux_mortalite'  => round($flock->getMortalityRate(), 2),
-            'cout_par_sujet'  => $flock->getCostPerCurrentUnit(),
+            'duree_jours' => $flock->getActualDurationInDays(),
+            'effectif_initial' => $flock->quantity_started,
+            'effectif_final' => $flock->quantity_current,
+            'pertes_totales' => $flock->getLossCount(),
+            'taux_mortalite' => round($flock->getMortalityRate(), 2),
+            'cout_par_sujet' => $flock->getCostPerCurrentUnit(),
 
-            'vaccinations_faites'   => $flock->vaccinations()->where('status', VaccinationStatus::Done->value)->count(),
+            'vaccinations_faites' => $flock->vaccinations()->where('status', VaccinationStatus::Done->value)->count(),
             'vaccinations_manquees' => $flock->vaccinations()
                 ->whereIn('status', [VaccinationStatus::Skipped->value, VaccinationStatus::Delayed->value])
                 ->count(),
@@ -487,13 +487,13 @@ class FlockService
         $chickenTypeName = strtolower($flock->chickenType?->name ?? '');
 
         if (str_contains($chickenTypeName, 'ponde')) {
-            $report['oeufs_total']       = $this->getTotalEggsCollected($flock);
-            $report['taux_ponte_moyen']  = $this->getAverageLayingRate($flock);
+            $report['oeufs_total'] = $this->getTotalEggsCollected($flock);
+            $report['taux_ponte_moyen'] = $this->getAverageLayingRate($flock);
         }
 
         if (str_contains($chickenTypeName, 'chair')) {
             $report['gmq'] = $this->calculateGMQ($flock);
-            $report['ic']  = $this->getFeedConversionRatio($flock);
+            $report['ic'] = $this->getFeedConversionRatio($flock);
         }
 
         return $report;
@@ -505,7 +505,7 @@ class FlockService
     private function formatCompletionDescription(Flock $flock, array $report): string
     {
         $duree = $report['duree_jours'] ?? '?';
-        $desc  = "Clôture de la bande {$flock->code} après {$duree} jours. ";
+        $desc = "Clôture de la bande {$flock->code} après {$duree} jours. ";
         $desc .= "Effectif final : {$report['effectif_final']}/{$report['effectif_initial']} sujets. ";
         $desc .= "Mortalité : {$report['taux_mortalite']}%. ";
 
@@ -518,7 +518,7 @@ class FlockService
 
         if (isset($report['gmq'])) {
             $gmq = $report['gmq'] ? "{$report['gmq']} g/j" : 'N/A';
-            $ic  = $report['ic']  ? "{$report['ic']}"      : 'N/A';
+            $ic = $report['ic'] ? "{$report['ic']}" : 'N/A';
             $desc .= "GMQ : {$gmq}. IC : {$ic}. ";
         }
 

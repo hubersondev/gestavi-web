@@ -127,9 +127,18 @@ class ProductionPhase extends Model
         return ($daysInPhase / $this->getDuration()) * 100;
     }
 
-    public static function getPhaseForAge(int $chickenTypeId, int $ageDays): ?self
+    /**
+     * Phase applicable à un âge donné, pour l'organisation indiquée uniquement
+     * (chaque organisation possède son propre paramétrage de phases).
+     */
+    public static function getPhaseForAge(int $chickenTypeId, int $ageDays, ?int $organisationId = null): ?self
     {
         return self::where('chicken_type_id', $chickenTypeId)
+            ->when(
+                $organisationId !== null,
+                fn ($query) => $query->where('organisation_id', $organisationId),
+                fn ($query) => $query->whereNull('organisation_id'),
+            )
             ->where('start_day', '<=', $ageDays)
             ->where('end_day', '>=', $ageDays)
             ->where('is_active', true)

@@ -254,6 +254,54 @@ class Organisation extends Model implements HasCurrentTenantLabel
                 'stock_inventories.validate', 'stock_inventories.adjust',
             ],
         ],
+        // Responsable de ferme : pilote la production et les stocks des fermes qui lui sont affectées
+        // (weight < FULL_ACCESS_WEIGHT → uniquement les fermes assignées).
+        'manager' => [
+            'name' => 'Responsable de ferme',
+            'weight' => 2,
+            'permissions' => [
+                'farms.view', 'buildings.view', 'buildings.create', 'buildings.update',
+                'suppliers.view', 'suppliers.create', 'suppliers.update',
+                'flocks.view', 'flocks.create', 'flocks.update', 'flocks.start', 'flocks.complete',
+                'production_phases.view',
+                'daily_records.view', 'daily_records.create', 'daily_records.update',
+                'farm_logs.view', 'farm_logs.create', 'farm_logs.update', 'farm_logs.resolve', 'farm_logs.reopen',
+                'health_programs.view',
+                'vaccinations.view', 'vaccinations.create', 'vaccinations.update',
+                'vaccinations.mark_done', 'vaccinations.reschedule', 'vaccinations.skip',
+                'health_incidents.view', 'health_incidents.create', 'health_incidents.update',
+                'health_incidents.start_treatment', 'health_incidents.start_monitoring', 'health_incidents.resolve',
+                'vet_visits.view', 'vet_visits.create', 'vet_visits.update', 'vet_visits.create_follow_up',
+                'veterinarians.view',
+                'equipments.view', 'equipments.create', 'equipments.update', 'equipments.move', 'equipments.maintenance',
+                'employees.view', 'attendances.view', 'attendances.create', 'attendances.update',
+                'leaves.view', 'leaves.create',
+                'stock_categories.view',
+                'stocks.view', 'stocks.create', 'stocks.update', 'stocks.record_movement',
+                'stock_lots.view', 'stock_lots.create', 'stock_lots.update',
+                'stock_movements.view', 'stock_movements.create',
+                'purchase_orders.view', 'purchase_orders.create', 'purchase_orders.update', 'purchase_orders.receive',
+                'stock_inventories.view', 'stock_inventories.create', 'stock_inventories.update',
+                'customers.view', 'sales.view', 'quotes.view',
+            ],
+        ],
+        // Technicien / employé : saisie terrain sur ses fermes affectées, lecture seule ailleurs.
+        'employee' => [
+            'name' => 'Employé',
+            'weight' => 1,
+            'permissions' => [
+                'farms.view', 'buildings.view',
+                'flocks.view',
+                'daily_records.view', 'daily_records.create',
+                'farm_logs.view', 'farm_logs.create',
+                'vaccinations.view', 'vaccinations.mark_done',
+                'health_incidents.view', 'health_incidents.create',
+                'equipments.view',
+                'stocks.view', 'stock_lots.view', 'stock_movements.view',
+                'attendances.view',
+                'leaves.view', 'leaves.create',
+            ],
+        ],
     ];
 
     protected $fillable = [
@@ -287,7 +335,7 @@ class Organisation extends Model implements HasCurrentTenantLabel
                 $originalSlug = $organisation->slug;
                 $counter = 1;
                 while (static::where('slug', $organisation->slug)->exists()) {
-                    $organisation->slug = $originalSlug . '-' . $counter++;
+                    $organisation->slug = $originalSlug.'-'.$counter++;
                 }
             }
         });

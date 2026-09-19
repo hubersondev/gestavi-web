@@ -38,11 +38,9 @@ class FlockFactory extends Factory
             'expected_end_date' => fake()->dateTimeBetween('+1 month', '+6 months'),
             'actual_end_date' => null,
             'status' => FlockStatus::Active,
-            'supplier_name' => fake()->optional()->company(),
             'purchase_price_per_unit' => $pricePerUnit,
             'total_purchase_price' => round($quantityStarted * $pricePerUnit, 2),
             'notes' => fake()->optional()->sentence(),
-            'is_active' => true,
         ];
     }
 
@@ -76,13 +74,6 @@ class FlockFactory extends Factory
             'status' => FlockStatus::Cancelled,
             'actual_end_date' => fake()->dateTimeBetween('-1 month', 'now'),
             'quantity_current' => 0,
-        ]);
-    }
-
-    public function inactive(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'is_active' => false,
         ]);
     }
 }

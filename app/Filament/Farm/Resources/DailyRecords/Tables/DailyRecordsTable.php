@@ -2,6 +2,7 @@
 
 namespace App\Filament\Farm\Resources\DailyRecords\Tables;
 
+use App\Filament\Farm\Resources\DailyRecords\DailyRecordResource;
 use App\Models\Farm;
 use App\Models\Flock;
 use App\Services\CurrentFarm;
@@ -10,15 +11,13 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Facades\Filament;
-use Filament\Tables\Columns\IconColumn;
+use Filament\Forms\Components\DatePicker;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use App\Filament\Farm\Resources\DailyRecords\DailyRecordResource;
-use Filament\Forms\Components\DatePicker;
 
 class DailyRecordsTable
 {

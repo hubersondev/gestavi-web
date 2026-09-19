@@ -39,6 +39,17 @@ class Farm extends Model
         ];
     }
 
+    /**
+     * Une ferme supprimée (même logiquement) ne doit plus apparaître dans les
+     * affectations des membres : les lignes du pivot sont retirées.
+     */
+    protected static function booted(): void
+    {
+        static::deleting(function (Farm $farm): void {
+            $farm->assignedMembers()->detach();
+        });
+    }
+
     public function organisation(): BelongsTo
     {
         return $this->belongsTo(Organisation::class);

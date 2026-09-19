@@ -182,9 +182,25 @@ it('valide les champs requis à la création', function (array $data, array $err
         ->assertHasFormErrors($errors);
 })->with([
     'name requis' => [['name' => null], ['name' => 'required']],
-    'farm_id requis' => [['farm_id' => null], ['farm_id' => 'required']],
     'type requis' => [['type' => null], ['type' => 'required']],
 ]);
+
+it('rattache le fournisseur à la ferme courante quand le champ ferme est masqué (mono-ferme)', function () {
+    Livewire::test(CreateSupplier::class)
+        ->fillForm([
+            'name' => 'Fournisseur Mono-ferme',
+            'type' => 'aliment',
+            'is_active' => true,
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    assertDatabaseHas(Supplier::class, [
+        'name' => 'Fournisseur Mono-ferme',
+        'farm_id' => $this->farm->id,
+        'organisation_id' => $this->organisation->id,
+    ]);
+});
 
 it('valide l\'unicité du code fournisseur', function () {
     Supplier::factory()->create([

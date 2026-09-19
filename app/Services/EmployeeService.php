@@ -2,10 +2,13 @@
 
 namespace App\Services;
 
+use App\Enums\FarmLogCategory;
+use App\Enums\FarmLogPriority;
 use App\Models\Employee;
 use App\Models\FarmLog;
 use App\Models\Organisation;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 
 class EmployeeService
 {
@@ -59,10 +62,13 @@ class EmployeeService
         }
 
         FarmLog::create([
-            'farm_id'  => $employee->farm_id,
+            'farm_id' => $employee->farm_id,
             'flock_id' => null,
-            'category' => 'rh',
-            'title'    => $title,
+            'recorded_by' => Auth::id(),
+            'category' => FarmLogCategory::Hr,
+            'priority' => FarmLogPriority::Normal,
+            'title' => $title,
+            'description' => $message,
             'log_date' => now()->toDateString(),
             'log_time' => now()->toTimeString(),
         ]);

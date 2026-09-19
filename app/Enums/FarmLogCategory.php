@@ -20,6 +20,7 @@ enum FarmLogCategory: string implements HasColor, HasIcon, HasLabel
     case Observation = 'observation';
     case Decision = 'decision';
     case Reminder = 'reminder';
+    case Hr = 'rh';
     case Other = 'other';
 
     public function getLabel(): string
@@ -37,6 +38,7 @@ enum FarmLogCategory: string implements HasColor, HasIcon, HasLabel
             self::Observation => 'Observation',
             self::Decision => 'Décision',
             self::Reminder => 'Rappel',
+            self::Hr => 'Ressources humaines',
             self::Other => 'Autre',
         };
     }
@@ -56,6 +58,7 @@ enum FarmLogCategory: string implements HasColor, HasIcon, HasLabel
             self::Observation => 'gray',
             self::Decision => 'primary',
             self::Reminder => 'warning',
+            self::Hr => 'primary',
             self::Other => 'gray',
         };
     }
@@ -75,6 +78,7 @@ enum FarmLogCategory: string implements HasColor, HasIcon, HasLabel
             self::Observation => 'heroicon-o-eye',
             self::Decision => 'heroicon-o-check-badge',
             self::Reminder => 'heroicon-o-bell',
+            self::Hr => 'heroicon-o-users',
             self::Other => 'heroicon-o-document-text',
         };
     }

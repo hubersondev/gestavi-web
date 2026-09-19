@@ -2,6 +2,7 @@
 
 namespace App\Filament\Farm\Resources\Suppliers\Tables;
 
+use App\Filament\Farm\Resources\Suppliers\SupplierResource;
 use App\Models\Farm;
 use App\Models\Supplier;
 use App\Services\CurrentFarm;
@@ -15,7 +16,6 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
-use App\Filament\Farm\Resources\Suppliers\SupplierResource;
 use Illuminate\Database\Eloquent\Builder;
 
 class SuppliersTable

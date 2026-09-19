@@ -2,6 +2,7 @@
 
 namespace App\Filament\Farm\Resources\DailyRecords\Schemas;
 
+use App\Models\DailyRecord;
 use App\Models\Farm;
 use App\Models\Flock;
 use App\Services\CurrentFarm;
@@ -111,6 +112,12 @@ class DailyRecordForm
                                             ->displayFormat('d/m/Y')
                                             ->default(now())
                                             ->maxDate(now())
+                                            ->rule(fn (Get $get, ?DailyRecord $record) => Rule::unique('daily_records', 'record_date')
+                                                ->where('flock_id', $get('flock_id'))
+                                                ->ignore($record?->getKey()))
+                                            ->validationMessages([
+                                                'unique' => 'Un relevé existe déjà pour cette bande à cette date.',
+                                            ])
                                             ->live()
                                             ->afterStateUpdated(function (Get $get, Set $set, ?string $state) {
                                                 self::recalculateAgeDays($get, $set, $get('flock_id'), $state);
@@ -139,6 +146,17 @@ class DailyRecordForm
                                             ->numeric()
                                             ->default(0)
                                             ->minValue(0)
+                                            ->maxValue(function (Get $get, ?DailyRecord $record): ?int {
+                                                $flock = Flock::query()->find($get('flock_id'));
+
+                                                if (! $flock) {
+                                                    return null;
+                                                }
+
+                                                // En édition, la mortalité déjà comptée reste disponible
+                                                return (int) $flock->quantity_current + (int) ($record?->mortality ?? 0);
+                                            })
+                                            ->helperText('Ne peut pas dépasser l\'effectif présent de la bande')
                                             ->suffix('sujets'),
 
                                         Textarea::make('mortality_cause')
@@ -199,7 +217,7 @@ class DailyRecordForm
                                     ->columns(2)
                                     ->schema([
                                         TextInput::make('feed_consumed_kg')
-                                            ->label("Aliment consommé")
+                                            ->label('Aliment consommé')
                                             ->required()
                                             ->numeric()
                                             ->default(0)

@@ -237,11 +237,11 @@ class Flock extends Model
             return null;
         }
 
-        return ProductionPhase::where('chicken_type_id', $this->chicken_type_id)
-            ->where('start_day', '<=', $age)
-            ->where('end_day', '>=', $age)
-            ->where('is_active', true)
-            ->first();
+        return ProductionPhase::getPhaseForAge(
+            $this->chicken_type_id,
+            $age,
+            $this->building?->farm?->organisation_id,
+        );
     }
 
     /**
