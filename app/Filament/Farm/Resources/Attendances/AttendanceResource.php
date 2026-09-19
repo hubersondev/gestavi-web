@@ -25,8 +25,8 @@ use UnitEnum;
 
 class AttendanceResource extends Resource
 {
-    use RequiresPlanFeatures;
     use ChecksOrganisationPermissions;
+    use RequiresPlanFeatures;
 
     protected static ?string $model = Attendance::class;
 
@@ -72,10 +72,10 @@ class AttendanceResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index'  => ListAttendances::route('/'),
+            'index' => ListAttendances::route('/'),
             'create' => CreateAttendance::route('/create'),
-            'view'   => ViewAttendance::route('/{record}'),
-            'edit'   => EditAttendance::route('/{record}/edit'),
+            'view' => ViewAttendance::route('/{record}'),
+            'edit' => EditAttendance::route('/{record}/edit'),
         ];
     }
 

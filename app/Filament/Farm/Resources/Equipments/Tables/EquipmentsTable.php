@@ -2,6 +2,7 @@
 
 namespace App\Filament\Farm\Resources\Equipments\Tables;
 
+use App\Filament\Farm\Resources\Equipments\EquipmentResource;
 use App\Models\Farm;
 use App\Services\CurrentFarm;
 use Filament\Actions\BulkActionGroup;
@@ -13,7 +14,6 @@ use Filament\Facades\Filament;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
-use App\Filament\Farm\Resources\Equipments\EquipmentResource;
 use Illuminate\Database\Eloquent\Builder;
 
 class EquipmentsTable

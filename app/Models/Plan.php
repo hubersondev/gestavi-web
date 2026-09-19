@@ -47,7 +47,7 @@ class Plan extends Model
                 $originalSlug = $plan->slug;
                 $counter = 1;
                 while (static::where('slug', $plan->slug)->exists()) {
-                    $plan->slug = $originalSlug . '-' . $counter++;
+                    $plan->slug = $originalSlug.'-'.$counter++;
                 }
             }
         });

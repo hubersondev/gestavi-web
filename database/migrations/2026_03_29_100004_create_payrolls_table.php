@@ -44,7 +44,7 @@ return new class extends Migration
         });
 
         DB::statement("ALTER TABLE payrolls ADD CONSTRAINT payrolls_status_check CHECK (status IN ('draft','validated','paid','cancelled'))");
-        DB::statement("ALTER TABLE payrolls ADD CONSTRAINT payrolls_period_month_check CHECK (period_month BETWEEN 1 AND 12)");
+        DB::statement('ALTER TABLE payrolls ADD CONSTRAINT payrolls_period_month_check CHECK (period_month BETWEEN 1 AND 12)');
     }
 
     public function down(): void

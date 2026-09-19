@@ -2,7 +2,6 @@
 
 namespace App\Filament\Farm\Resources\Contracts\Schemas;
 
-use App\Enums\ContractType;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;

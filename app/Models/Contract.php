@@ -27,15 +27,15 @@ class Contract extends Model
     protected function casts(): array
     {
         return [
-            'type'                => ContractType::class,
-            'status'              => ContractStatus::class,
-            'start_date'          => 'date',
-            'end_date'            => 'date',
-            'termination_date'    => 'date',
-            'base_salary'         => 'decimal:2',
+            'type' => ContractType::class,
+            'status' => ContractStatus::class,
+            'start_date' => 'date',
+            'end_date' => 'date',
+            'termination_date' => 'date',
+            'base_salary' => 'decimal:2',
             'transport_allowance' => 'decimal:2',
-            'housing_allowance'   => 'decimal:2',
-            'food_allowance'      => 'decimal:2',
+            'housing_allowance' => 'decimal:2',
+            'food_allowance' => 'decimal:2',
         ];
     }
 
@@ -131,6 +131,6 @@ class Contract extends Model
         $year = now()->year;
         $count = static::where('employee_id', $employeeId)->whereYear('created_at', $year)->count();
 
-        return 'CTR-' . $year . '-' . str_pad($count + 1, 3, '0', STR_PAD_LEFT);
+        return 'CTR-'.$year.'-'.str_pad($count + 1, 3, '0', STR_PAD_LEFT);
     }
 }

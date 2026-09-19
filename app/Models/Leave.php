@@ -23,10 +23,10 @@ class Leave extends Model
     protected function casts(): array
     {
         return [
-            'type'        => LeaveType::class,
-            'status'      => LeaveStatus::class,
-            'start_date'  => 'date',
-            'end_date'    => 'date',
+            'type' => LeaveType::class,
+            'status' => LeaveStatus::class,
+            'start_date' => 'date',
+            'end_date' => 'date',
             'approved_at' => 'datetime',
         ];
     }
@@ -101,7 +101,7 @@ class Leave extends Model
     public function approve(int $approverId): void
     {
         $this->update([
-            'status'      => LeaveStatus::Approved,
+            'status' => LeaveStatus::Approved,
             'approved_by' => $approverId,
             'approved_at' => now(),
         ]);
@@ -110,10 +110,10 @@ class Leave extends Model
     public function reject(string $reason, int $rejectorId): void
     {
         $this->update([
-            'status'           => LeaveStatus::Rejected,
+            'status' => LeaveStatus::Rejected,
             'rejection_reason' => $reason,
-            'approved_by'      => $rejectorId,
-            'approved_at'      => now(),
+            'approved_by' => $rejectorId,
+            'approved_at' => now(),
         ]);
     }
 

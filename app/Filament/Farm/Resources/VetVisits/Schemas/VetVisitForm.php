@@ -7,16 +7,16 @@ use App\Models\Farm;
 use App\Models\Flock;
 use App\Models\Veterinarian;
 use App\Services\CurrentFarm;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\TimePicker;
 use Filament\Forms\Components\Toggle;
-use Filament\Facades\Filament;
-use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -164,7 +164,7 @@ class VetVisitForm
                                         Textarea::make('diagnosis')
                                             ->label('Diagnostic')
                                             ->rows(4)
-                                            ->placeholder("Diagnostic établi par le vétérinaire...")
+                                            ->placeholder('Diagnostic établi par le vétérinaire...')
                                             ->columnSpanFull(),
                                     ]),
 

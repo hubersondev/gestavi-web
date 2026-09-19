@@ -24,7 +24,7 @@ class OrganisationRoleFactory extends Factory
         return [
             'organisation_id' => Organisation::factory(),
             'name' => $name,
-            'slug' => Str::slug($name) . '-' . fake()->unique()->randomNumber(4),
+            'slug' => Str::slug($name).'-'.fake()->unique()->randomNumber(4),
             'weight' => fake()->numberBetween(1, 4),
             'is_system' => false,
             'description' => fake()->sentence(),

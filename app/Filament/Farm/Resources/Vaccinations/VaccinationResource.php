@@ -26,8 +26,8 @@ use UnitEnum;
 
 class VaccinationResource extends Resource
 {
-    use RequiresPlanFeatures;
     use ChecksOrganisationPermissions;
+    use RequiresPlanFeatures;
     use ScopesToMemberFarms;
 
     protected static ?string $model = Vaccination::class;

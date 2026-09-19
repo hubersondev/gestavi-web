@@ -7,7 +7,6 @@ use App\Enums\IncidentSeverity;
 use App\Enums\IncidentStatus;
 use App\Services\CurrentFarm;
 use Filament\Facades\Filament;
-use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;

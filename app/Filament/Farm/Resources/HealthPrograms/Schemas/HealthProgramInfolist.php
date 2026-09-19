@@ -2,7 +2,6 @@
 
 namespace App\Filament\Farm\Resources\HealthPrograms\Schemas;
 
-use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
@@ -32,9 +31,9 @@ class HealthProgramInfolist
                                             ->placeholder('Tous types'),
                                         TextEntry::make('is_mandatory')
                                             ->label('Statut')
-                                            ->formatStateUsing(fn(bool $state): string => $state ? 'Obligatoire' : 'Recommandé')
+                                            ->formatStateUsing(fn (bool $state): string => $state ? 'Obligatoire' : 'Recommandé')
                                             ->badge()
-                                            ->color(fn(bool $state): string => $state ? 'danger' : 'info'),
+                                            ->color(fn (bool $state): string => $state ? 'danger' : 'info'),
                                     ])
                                     ->columns(3),
 
@@ -47,8 +46,8 @@ class HealthProgramInfolist
                                         TextEntry::make('treatment_type')
                                             ->label('Type')
                                             ->badge()
-                                            ->formatStateUsing(fn($record) => $record->getTreatmentTypeLabel())
-                                            ->color(fn($state) => match ($state) {
+                                            ->formatStateUsing(fn ($record) => $record->getTreatmentTypeLabel())
+                                            ->color(fn ($state) => match ($state) {
                                                 'vaccin' => 'success',
                                                 'antibiotique' => 'danger',
                                                 'vitamine' => 'info',
@@ -58,7 +57,7 @@ class HealthProgramInfolist
 
                                         TextEntry::make('scheduled_day')
                                             ->label('Jour prévu')
-                                            ->formatStateUsing(fn($record) => 'J' . $record->scheduled_day . ' (semaine ' . $record->getScheduledWeek() . ')'),
+                                            ->formatStateUsing(fn ($record) => 'J'.$record->scheduled_day.' (semaine '.$record->getScheduledWeek().')'),
 
                                     ])
                                     ->columns(3),
@@ -71,7 +70,7 @@ class HealthProgramInfolist
                                     ->schema([
                                         TextEntry::make('administration_route')
                                             ->label('Voie d\'administration')
-                                            ->formatStateUsing(fn($record) => $record->getAdministrationRouteLabel())
+                                            ->formatStateUsing(fn ($record) => $record->getAdministrationRouteLabel())
                                             ->placeholder('-'),
 
                                         TextEntry::make('dosage')
@@ -84,11 +83,11 @@ class HealthProgramInfolist
                                     ->schema([
                                         TextEntry::make('withdrawal_days')
                                             ->label('Délai d\'attente')
-                                            ->formatStateUsing(fn($record) => $record->withdrawal_days > 0
-                                                ? $record->withdrawal_days . ' jours'
+                                            ->formatStateUsing(fn ($record) => $record->withdrawal_days > 0
+                                                ? $record->withdrawal_days.' jours'
                                                 : 'Aucun')
                                             ->badge()
-                                            ->color(fn($record) => $record->withdrawal_days > 0 ? 'warning' : 'success'),
+                                            ->color(fn ($record) => $record->withdrawal_days > 0 ? 'warning' : 'success'),
                                     ]),
                             ]),
 

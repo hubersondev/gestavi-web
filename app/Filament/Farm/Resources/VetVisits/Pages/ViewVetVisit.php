@@ -3,13 +3,10 @@
 namespace App\Filament\Farm\Resources\VetVisits\Pages;
 
 use App\Filament\Farm\Resources\VetVisits\VetVisitResource;
+use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
-use Filament\Facades\Filament;
-use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\Textarea;
 use Filament\Resources\Pages\ViewRecord;
-use Filament\Actions\Action;
 
 class ViewVetVisit extends ViewRecord
 {

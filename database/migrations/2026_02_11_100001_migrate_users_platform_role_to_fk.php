@@ -69,10 +69,10 @@ return new class extends Migration
             foreach ($actions as $action) {
                 $slug = "{$group}.{$action}";
                 $permissionIds[$slug] = DB::table('platform_permissions')->insertGetId([
-                    'name' => $actionLabels[$action] . ' ' . $groupLabels[$group],
+                    'name' => $actionLabels[$action].' '.$groupLabels[$group],
                     'slug' => $slug,
                     'group' => $group,
-                    'description' => $actionLabels[$action] . ' ' . $groupLabels[$group],
+                    'description' => $actionLabels[$action].' '.$groupLabels[$group],
                     'created_at' => $now,
                     'updated_at' => $now,
                 ]);

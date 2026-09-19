@@ -4,7 +4,6 @@ use App\Enums\MemberStatus;
 use App\Filament\Farm\Resources\Sales\SaleResource;
 use App\Models\Organisation;
 use App\Models\OrganisationPermission;
-use App\Models\OrganisationRole;
 use App\Models\User;
 use Database\Seeders\OrganisationPermissionSeeder;
 use Filament\Facades\Filament;

@@ -26,8 +26,8 @@ use UnitEnum;
 
 class FarmLogResource extends Resource
 {
-    use RequiresPlanFeatures;
     use ChecksOrganisationPermissions;
+    use RequiresPlanFeatures;
     use ScopesToMemberFarms;
 
     protected static ?string $model = FarmLog::class;
@@ -91,7 +91,7 @@ class FarmLogResource extends Resource
 
     public static function scopeEloquentQueryToTenant(Builder $query, ?Model $tenant): Builder
     {
-        $membership  = static::currentMembership();
+        $membership = static::currentMembership();
         $currentFarm = static::currentFarm();
 
         return $query->whereHas('farm', function (Builder $q) use ($tenant, $membership, $currentFarm) {

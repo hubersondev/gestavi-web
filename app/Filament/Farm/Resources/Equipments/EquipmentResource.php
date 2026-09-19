@@ -28,8 +28,8 @@ use UnitEnum;
 
 class EquipmentResource extends Resource
 {
-    use RequiresPlanFeatures;
     use ChecksOrganisationPermissions;
+    use RequiresPlanFeatures;
     use ScopesToMemberFarms;
 
     protected static ?string $model = Equipment::class;

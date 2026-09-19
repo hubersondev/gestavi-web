@@ -84,7 +84,7 @@ class FlockInfolist
                                             ->placeholder('-'),
 
                                         TextEntry::make('age_at_arrival')
-                                            ->label("Âge à la réception")
+                                            ->label('Âge à la réception')
                                             ->suffix(' jours'),
 
                                         TextEntry::make('quantity_started')
@@ -126,7 +126,7 @@ class FlockInfolist
                                                 $days = $record->getCurrentAgeInDays();
 
                                                 return $days !== null
-                                                    ? "{$days} j (" . $record->getCurrentAgeInWeeks() . ' sem.)'
+                                                    ? "{$days} j (".$record->getCurrentAgeInWeeks().' sem.)'
                                                     : null;
                                             })
                                             ->placeholder('—'),
@@ -162,21 +162,21 @@ class FlockInfolist
                                             ->badge()
                                             ->color('info')
                                             ->formatStateUsing(fn ($state) => match ($state) {
-                                                'vaccin'          => 'Vaccin',
-                                                'vermifuge'       => 'Vermifuge',
-                                                'anticoccidien'   => 'Anticoccidien',
-                                                'vitamine'        => 'Vitamine',
-                                                'antibiotique'    => 'Antibiotique',
+                                                'vaccin' => 'Vaccin',
+                                                'vermifuge' => 'Vermifuge',
+                                                'anticoccidien' => 'Anticoccidien',
+                                                'vitamine' => 'Vitamine',
+                                                'antibiotique' => 'Antibiotique',
                                                 'antiparasitaire' => 'Antiparasitaire',
-                                                'desinfectant'    => 'Désinfectant',
-                                                default           => $state ?? '—',
+                                                'desinfectant' => 'Désinfectant',
+                                                default => $state ?? '—',
                                             })
                                             ->placeholder('—'),
                                         TextEntry::make('day_label')
                                             ->label('Jour')
                                             ->state(function ($record) {
                                                 if ($record->age_at_treatment !== null) {
-                                                    return 'J' . $record->age_at_treatment;
+                                                    return 'J'.$record->age_at_treatment;
                                                 }
 
                                                 $flock = $record->flock;
@@ -184,7 +184,7 @@ class FlockInfolist
                                                 if ($flock?->start_date && $record->scheduled_date) {
                                                     $days = (int) $flock->start_date->diffInDays($record->scheduled_date, false);
 
-                                                    return 'J' . ($flock->age_at_arrival + $days);
+                                                    return 'J'.($flock->age_at_arrival + $days);
                                                 }
 
                                                 return '—';

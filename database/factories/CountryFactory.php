@@ -21,7 +21,7 @@ class CountryFactory extends Factory
             'name' => fake()->unique()->country(),
             'code' => fake()->unique()->countryCode(),
             'code_iso3' => fake()->unique()->countryISOAlpha3(),
-            'phone_code' => '+' . fake()->numberBetween(1, 999),
+            'phone_code' => '+'.fake()->numberBetween(1, 999),
             'currency_id' => null,
             'default_language' => 'fr',
             'is_active' => true,

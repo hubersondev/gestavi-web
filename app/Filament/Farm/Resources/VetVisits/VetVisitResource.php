@@ -25,8 +25,8 @@ use UnitEnum;
 
 class VetVisitResource extends Resource
 {
-    use RequiresPlanFeatures;
     use ChecksOrganisationPermissions;
+    use RequiresPlanFeatures;
 
     protected static ?string $model = VetVisit::class;
 

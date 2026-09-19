@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\Countries\Schemas;
 
-use App\Models\Currency;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;

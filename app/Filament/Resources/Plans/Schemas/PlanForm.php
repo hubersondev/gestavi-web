@@ -89,7 +89,7 @@ class PlanForm
         $allFeatureKeys = array_keys(PlanFeature::options());
 
         return collect(PlanFeature::groupedOptions())
-            ->map(fn(array $options, string $group) => Section::make($group)
+            ->map(fn (array $options, string $group) => Section::make($group)
                 ->schema([
                     CheckboxList::make('features')
                         ->label('Features')

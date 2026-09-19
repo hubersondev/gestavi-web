@@ -3,6 +3,7 @@
 namespace App\Filament\Farm\Resources\VetVisits\Tables;
 
 use App\Enums\VetVisitType;
+use App\Filament\Farm\Resources\VetVisits\VetVisitResource;
 use App\Models\Farm;
 use App\Models\Flock;
 use App\Models\Veterinarian;
@@ -12,6 +13,7 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Facades\Filament;
+use Filament\Forms\Components\DatePicker;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
@@ -19,8 +21,6 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use App\Filament\Farm\Resources\VetVisits\VetVisitResource;
-use Filament\Forms\Components\DatePicker;
 
 class VetVisitsTable
 {

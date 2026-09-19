@@ -4,6 +4,7 @@ namespace App\Filament\Farm\Resources\FarmLogs\Tables;
 
 use App\Enums\FarmLogCategory;
 use App\Enums\FarmLogPriority;
+use App\Filament\Farm\Resources\FarmLogs\FarmLogResource;
 use App\Models\Farm;
 use App\Models\Flock;
 use App\Services\CurrentFarm;
@@ -19,7 +20,6 @@ use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
-use App\Filament\Farm\Resources\FarmLogs\FarmLogResource;
 use Illuminate\Database\Eloquent\Builder;
 
 class FarmLogsTable

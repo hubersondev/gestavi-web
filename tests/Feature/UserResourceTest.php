@@ -8,7 +8,6 @@ use App\Filament\Resources\Users\Pages\ViewUser;
 use App\Filament\Resources\Users\RelationManagers\OrganisationsRelationManager;
 use App\Models\PlatformRole;
 use App\Models\User;
-
 use Livewire\Livewire;
 
 use function Pest\Laravel\actingAs;

@@ -24,7 +24,7 @@ class OrganisationFactory extends Factory
 
         return [
             'name' => $name,
-            'slug' => Str::slug($name) . '-' . fake()->unique()->randomNumber(4),
+            'slug' => Str::slug($name).'-'.fake()->unique()->randomNumber(4),
             'email' => fake()->companyEmail(),
             'phone' => fake()->phoneNumber(),
             'address' => fake()->address(),

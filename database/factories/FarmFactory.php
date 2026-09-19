@@ -23,7 +23,7 @@ class FarmFactory extends Factory
         return [
             'organisation_id' => Organisation::factory(),
             'code' => strtoupper(fake()->unique()->bothify('FARM-###')),
-            'name' => 'Ferme ' . fake()->word(),
+            'name' => 'Ferme '.fake()->word(),
             'capacity' => fake()->numberBetween(500, 20000),
             'address' => fake()->address(),
             'city_id' => City::factory(),

@@ -20,9 +20,9 @@ class ContractAmendment extends Model
     protected function casts(): array
     {
         return [
-            'effective_date'  => 'date',
+            'effective_date' => 'date',
             'previous_values' => 'array',
-            'new_values'      => 'array',
+            'new_values' => 'array',
         ];
     }
 
@@ -33,9 +33,9 @@ class ContractAmendment extends Model
 
     public static function generateNumber(int $contractId): string
     {
-        $year  = now()->year;
+        $year = now()->year;
         $count = static::where('contract_id', $contractId)->whereYear('created_at', $year)->count();
 
-        return 'AVN-' . $year . '-' . str_pad($count + 1, 3, '0', STR_PAD_LEFT);
+        return 'AVN-'.$year.'-'.str_pad($count + 1, 3, '0', STR_PAD_LEFT);
     }
 }

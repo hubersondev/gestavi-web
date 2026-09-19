@@ -24,8 +24,8 @@ use UnitEnum;
 
 class ProductionPhaseResource extends Resource
 {
-    use RequiresPlanFeatures;
     use ChecksOrganisationPermissions;
+    use RequiresPlanFeatures;
 
     protected static ?string $model = ProductionPhase::class;
 

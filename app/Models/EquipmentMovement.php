@@ -101,7 +101,7 @@ class EquipmentMovement extends Model
 
     public function getTypeLabel(): string
     {
-        return match($this->movement_type) {
+        return match ($this->movement_type) {
             'transfer' => 'Transfert',
             'entry' => 'Entrée',
             'exit' => 'Sortie',
@@ -116,7 +116,7 @@ class EquipmentMovement extends Model
         $from = $this->fromBuilding?->name ?? 'Stock';
         $to = $this->toBuilding?->name ?? 'Stock';
 
-        return match($this->movement_type) {
+        return match ($this->movement_type) {
             'transfer' => "Transfert de {$from} vers {$to}",
             'entry' => "Entrée dans {$to}",
             'exit' => "Sortie de {$from}",

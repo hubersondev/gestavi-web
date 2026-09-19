@@ -25,8 +25,8 @@ use UnitEnum;
 
 class PayrollResource extends Resource
 {
-    use RequiresPlanFeatures;
     use ChecksOrganisationPermissions;
+    use RequiresPlanFeatures;
 
     protected static ?string $model = Payroll::class;
 
@@ -72,10 +72,10 @@ class PayrollResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index'  => ListPayrolls::route('/'),
+            'index' => ListPayrolls::route('/'),
             'create' => CreatePayroll::route('/create'),
-            'view'   => ViewPayroll::route('/{record}'),
-            'edit'   => EditPayroll::route('/{record}/edit'),
+            'view' => ViewPayroll::route('/{record}'),
+            'edit' => EditPayroll::route('/{record}/edit'),
         ];
     }
 

@@ -11,7 +11,6 @@ use App\Models\ContractAmendment;
 use App\Services\PayrollService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Actions\Action;
-use Filament\Forms\Components\TextInput;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -19,6 +18,7 @@ use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -95,28 +95,28 @@ class ContractsTable
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('gray')
                     ->action(function ($record): \Symfony\Component\HttpFoundation\StreamedResponse {
-                        $contract     = $record->load('employee');
-                        $employee     = $contract->employee;
+                        $contract = $record->load('employee');
+                        $employee = $contract->employee;
                         $organisation = \Filament\Facades\Filament::getTenant();
 
-                        $service     = app(PayrollService::class);
+                        $service = app(PayrollService::class);
                         $grossSalary = (float) $contract->base_salary
                             + (float) $contract->transport_allowance
                             + (float) $contract->housing_allowance
                             + (float) $contract->food_allowance;
-                        $cnps        = $service->calculateCnpsEmployee($grossSalary);
-                        $its         = $service->calculateIts($grossSalary - $cnps);
-                        $netSalary   = $grossSalary - $cnps - $its;
+                        $cnps = $service->calculateCnpsEmployee($grossSalary);
+                        $its = $service->calculateIts($grossSalary - $cnps);
+                        $netSalary = $grossSalary - $cnps - $its;
 
-                        $pdf      = Pdf::loadView('pdf.contract', compact(
+                        $pdf = Pdf::loadView('pdf.contract', compact(
                             'contract', 'employee', 'organisation',
                             'grossSalary', 'cnps', 'its', 'netSalary'
                         ))->setPaper('a4', 'portrait');
 
-                        $filename = 'contrat-' . ($contract->contract_number ?? $contract->id) . '.pdf';
+                        $filename = 'contrat-'.($contract->contract_number ?? $contract->id).'.pdf';
 
                         return response()->streamDownload(
-                            fn () => print($pdf->output()),
+                            fn () => print ($pdf->output()),
                             $filename,
                             ['Content-Type' => 'application/pdf']
                         );
@@ -159,20 +159,20 @@ class ContractsTable
 
                         // Créer le nouveau contrat en copiant les données clés
                         Contract::create([
-                            'employee_id'            => $record->employee_id,
+                            'employee_id' => $record->employee_id,
                             'renewed_by_contract_id' => $record->id,
-                            'type'                   => $data['type'],
-                            'status'                 => ContractStatus::Active,
-                            'start_date'             => $data['start_date'],
-                            'end_date'               => $data['end_date'] ?? null,
-                            'base_salary'            => $record->base_salary,
-                            'transport_allowance'    => $record->transport_allowance,
-                            'housing_allowance'      => $record->housing_allowance,
-                            'food_allowance'         => $record->food_allowance,
+                            'type' => $data['type'],
+                            'status' => ContractStatus::Active,
+                            'start_date' => $data['start_date'],
+                            'end_date' => $data['end_date'] ?? null,
+                            'base_salary' => $record->base_salary,
+                            'transport_allowance' => $record->transport_allowance,
+                            'housing_allowance' => $record->housing_allowance,
+                            'food_allowance' => $record->food_allowance,
                             'working_hours_per_week' => $record->working_hours_per_week,
-                            'annual_leave_days'      => $record->annual_leave_days,
-                            'position'               => $record->position,
-                            'work_location'          => $record->work_location,
+                            'annual_leave_days' => $record->annual_leave_days,
+                            'position' => $record->position,
+                            'work_location' => $record->work_location,
                         ]);
 
                         Notification::make()
@@ -199,13 +199,13 @@ class ContractsTable
                         Select::make('reason')
                             ->label('Motif')
                             ->options([
-                                'salary_increase'   => 'Augmentation de salaire',
-                                'salary_decrease'   => 'Réduction de salaire',
-                                'position_change'   => 'Changement de poste',
-                                'location_change'   => 'Changement de lieu de travail',
-                                'hours_change'      => 'Modification des horaires',
-                                'allowance_change'  => 'Modification des indemnités',
-                                'other'             => 'Autre',
+                                'salary_increase' => 'Augmentation de salaire',
+                                'salary_decrease' => 'Réduction de salaire',
+                                'position_change' => 'Changement de poste',
+                                'location_change' => 'Changement de lieu de travail',
+                                'hours_change' => 'Modification des horaires',
+                                'allowance_change' => 'Modification des indemnités',
+                                'other' => 'Autre',
                             ])
                             ->required()
                             ->native(false),
@@ -264,7 +264,7 @@ class ContractsTable
 
                         // Capturer uniquement les champs qui ont changé
                         $previousValues = [];
-                        $newValues      = [];
+                        $newValues = [];
 
                         foreach ($amendableFields as $field) {
                             $oldVal = (string) ($record->$field ?? '');
@@ -272,7 +272,7 @@ class ContractsTable
 
                             if ($oldVal !== $newVal) {
                                 $previousValues[$field] = $record->$field;
-                                $newValues[$field]      = $data[$field];
+                                $newValues[$field] = $data[$field];
                             }
                         }
 
@@ -283,18 +283,18 @@ class ContractsTable
 
                         // Enregistrer l'avenant
                         ContractAmendment::create([
-                            'contract_id'      => $record->id,
+                            'contract_id' => $record->id,
                             'amendment_number' => ContractAmendment::generateNumber($record->id),
-                            'effective_date'   => $data['effective_date'],
-                            'reason'           => $data['reason'],
-                            'previous_values'  => $previousValues ?: ['aucun_changement' => true],
-                            'new_values'       => $newValues ?: ['aucun_changement' => true],
-                            'notes'            => $data['notes'] ?? null,
+                            'effective_date' => $data['effective_date'],
+                            'reason' => $data['reason'],
+                            'previous_values' => $previousValues ?: ['aucun_changement' => true],
+                            'new_values' => $newValues ?: ['aucun_changement' => true],
+                            'notes' => $data['notes'] ?? null,
                         ]);
 
                         Notification::make()
                             ->title('Avenant créé')
-                            ->body('Le contrat a été mis à jour et l\'avenant ' . ContractAmendment::where('contract_id', $record->id)->latest()->first()?->amendment_number . ' a été enregistré.')
+                            ->body('Le contrat a été mis à jour et l\'avenant '.ContractAmendment::where('contract_id', $record->id)->latest()->first()?->amendment_number.' a été enregistré.')
                             ->success()
                             ->send();
                     }),
@@ -347,8 +347,8 @@ class ContractsTable
                         && ContractResource::canPerformAction('terminate'))
                     ->action(function ($record, array $data): void {
                         $record->update([
-                            'status'             => ContractStatus::Cancelled,
-                            'termination_date'   => $data['termination_date'],
+                            'status' => ContractStatus::Cancelled,
+                            'termination_date' => $data['termination_date'],
                             'termination_reason' => $data['termination_reason'],
                         ]);
 

@@ -39,7 +39,7 @@ class FarmLogInfolist
 
                         TextEntry::make('flock.code')
                             ->label('Bande')
-                            ->formatStateUsing(fn ($state, $record) => $state ? "{$state}" . ($record->flock?->name ? " — {$record->flock->name}" : '') : null)
+                            ->formatStateUsing(fn ($state, $record) => $state ? "{$state}".($record->flock?->name ? " — {$record->flock->name}" : '') : null)
                             ->placeholder('Ferme entière'),
 
                         TextEntry::make('building.name')

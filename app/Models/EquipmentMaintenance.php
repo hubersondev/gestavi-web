@@ -181,15 +181,16 @@ class EquipmentMaintenance extends Model
 
     public function getDaysUntilScheduled(): ?int
     {
-        if (!$this->scheduled_date) {
+        if (! $this->scheduled_date) {
             return null;
         }
+
         return now()->diffInDays($this->scheduled_date, false);
     }
 
     public function getTypeLabel(): string
     {
-        return match($this->maintenance_type) {
+        return match ($this->maintenance_type) {
             'preventive' => 'Préventive',
             'corrective' => 'Corrective',
             'inspection' => 'Inspection',
@@ -202,7 +203,7 @@ class EquipmentMaintenance extends Model
 
     public function getStatusLabel(): string
     {
-        return match($this->status) {
+        return match ($this->status) {
             'scheduled' => 'Planifiée',
             'in_progress' => 'En cours',
             'completed' => 'Terminée',
@@ -213,7 +214,7 @@ class EquipmentMaintenance extends Model
 
     public function getStatusColor(): string
     {
-        return match($this->status) {
+        return match ($this->status) {
             'scheduled' => $this->isOverdue() ? 'danger' : 'warning',
             'in_progress' => 'info',
             'completed' => 'success',

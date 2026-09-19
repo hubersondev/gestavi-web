@@ -26,8 +26,8 @@ use UnitEnum;
 
 class FlockResource extends Resource
 {
-    use RequiresPlanFeatures;
     use ChecksOrganisationPermissions;
+    use RequiresPlanFeatures;
     use ScopesToMemberFarms;
 
     protected static ?string $model = Flock::class;
@@ -39,6 +39,7 @@ class FlockResource extends Resource
     protected static ?string $modelLabel = 'Bande';
 
     protected static ?string $pluralModelLabel = 'Bandes';
+
     protected static ?string $recordTitleAttribute = 'name';
 
     protected static ?int $navigationSort = 4;

@@ -21,7 +21,7 @@ class BuildingFactory extends Factory
         return [
             'farm_id' => Farm::factory(),
             'code' => strtoupper(fake()->unique()->bothify('BAT-###')),
-            'name' => 'Bâtiment ' . fake()->randomLetter() . fake()->randomDigit(),
+            'name' => 'Bâtiment '.fake()->randomLetter().fake()->randomDigit(),
             'type' => fake()->randomElement(['poulailler', 'hangar', 'entrepôt', 'bureau']),
             'capacity' => fake()->numberBetween(500, 10000),
             'area_sqm' => fake()->randomFloat(2, 50, 2000),

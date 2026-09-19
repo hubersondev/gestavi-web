@@ -62,4 +62,3 @@ test('account transfer reports total amount and state helpers', function () {
     expect($completed->isCompleted())->toBeTrue()
         ->and($completed->canBeCancelled())->toBeFalse();
 });
-

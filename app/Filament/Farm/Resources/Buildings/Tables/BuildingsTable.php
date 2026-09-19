@@ -2,6 +2,7 @@
 
 namespace App\Filament\Farm\Resources\Buildings\Tables;
 
+use App\Filament\Farm\Resources\Buildings\BuildingResource;
 use App\Models\Farm;
 use App\Services\CurrentFarm;
 use Filament\Actions\BulkActionGroup;
@@ -13,7 +14,6 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
-use App\Filament\Farm\Resources\Buildings\BuildingResource;
 use Illuminate\Database\Eloquent\Builder;
 
 class BuildingsTable

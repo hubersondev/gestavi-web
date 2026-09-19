@@ -3,13 +3,11 @@
 namespace App\Filament\Farm\Resources\HealthIncidents\Pages;
 
 use App\Filament\Farm\Resources\HealthIncidents\HealthIncidentResource;
-use App\Enums\IncidentStatus;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Textarea;
-use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
 
@@ -89,7 +87,7 @@ class ViewHealthIncident extends ViewRecord
                 ->color('success')
                 ->requiresConfirmation()
                 ->modalHeading("Résoudre l'incident")
-                ->modalDescription("Marquer cet incident comme résolu.")
+                ->modalDescription('Marquer cet incident comme résolu.')
                 ->form([
                     DatePicker::make('resolution_date')
                         ->label('Date de résolution')

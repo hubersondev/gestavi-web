@@ -41,9 +41,9 @@ class User extends Authenticatable implements FilamentUser, HasTenants
     {
         return [
             'email_verified_at' => 'datetime',
-            'password'          => 'hashed',
-            'is_active'         => 'boolean',
-            'type'              => UserType::class,
+            'password' => 'hashed',
+            'is_active' => 'boolean',
+            'type' => UserType::class,
         ];
     }
 
@@ -131,7 +131,7 @@ class User extends Authenticatable implements FilamentUser, HasTenants
 
         return match ($panel->getId()) {
             'admin' => $this->isPlatformUser(),
-            'farm'  => ! $this->isPlatformUser(),
+            'farm' => ! $this->isPlatformUser(),
             default => false,
         };
     }
@@ -223,8 +223,7 @@ class User extends Authenticatable implements FilamentUser, HasTenants
     {
         return $query->whereHas(
             'organisations',
-            fn (Builder $q) =>
-            $q->where('organisation_users.organisation_id', $organisationId)
+            fn (Builder $q) => $q->where('organisation_users.organisation_id', $organisationId)
                 ->where('organisation_users.status', MemberStatus::Active)
         );
     }

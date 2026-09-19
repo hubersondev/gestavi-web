@@ -33,8 +33,8 @@ class ContractForm
         $service = app(PayrollService::class);
 
         $cnps = $service->calculateCnpsEmployee($gross);
-        $its  = $service->calculateIts($gross - $cnps);
-        $net  = $gross - $cnps - $its;
+        $its = $service->calculateIts($gross - $cnps);
+        $net = $gross - $cnps - $its;
 
         $set('gross_salary_preview', number_format($gross, 0, ',', ' '));
         $set('cnps_preview', number_format($cnps, 0, ',', ' '));
@@ -51,7 +51,7 @@ class ContractForm
         }
 
         $service = app(PayrollService::class);
-        $gross   = $service->grossFromNet($targetNet);
+        $gross = $service->grossFromNet($targetNet);
 
         $set('base_salary', $gross);
 
@@ -62,8 +62,8 @@ class ContractForm
             + floatval($get('food_allowance') ?? 0);
 
         $cnps = $service->calculateCnpsEmployee($totalGross);
-        $its  = $service->calculateIts($totalGross - $cnps);
-        $net  = $totalGross - $cnps - $its;
+        $its = $service->calculateIts($totalGross - $cnps);
+        $net = $totalGross - $cnps - $its;
 
         $set('gross_salary_preview', number_format($totalGross, 0, ',', ' '));
         $set('cnps_preview', number_format($cnps, 0, ',', ' '));
@@ -216,7 +216,7 @@ class ContractForm
                                             ->label('Mode de saisie')
                                             ->options([
                                                 'gross' => 'Saisir le salaire brut',
-                                                'net'   => 'Saisir le salaire net souhaité',
+                                                'net' => 'Saisir le salaire net souhaité',
                                             ])
                                             ->default('gross')
                                             ->inline()

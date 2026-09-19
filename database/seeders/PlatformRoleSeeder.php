@@ -37,9 +37,9 @@ class PlatformRoleSeeder extends Seeder
                 $permissions[$slug] = PlatformPermission::firstOrCreate(
                     ['slug' => $slug],
                     [
-                        'name' => $actionLabels[$action] . ' ' . $groupLabels[$group],
+                        'name' => $actionLabels[$action].' '.$groupLabels[$group],
                         'group' => $group,
-                        'description' => $actionLabels[$action] . ' ' . $groupLabels[$group],
+                        'description' => $actionLabels[$action].' '.$groupLabels[$group],
                     ],
                 );
             }

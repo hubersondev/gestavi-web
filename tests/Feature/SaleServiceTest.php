@@ -4,9 +4,7 @@ use App\Enums\PaymentMethod;
 use App\Enums\SaleStatus;
 use App\Exceptions\CommercialException;
 use App\Models\Account;
-use App\Models\Customer;
 use App\Models\Organisation;
-use App\Models\Sale;
 use App\Services\SaleService;
 
 beforeEach(function () {

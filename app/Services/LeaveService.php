@@ -11,11 +11,11 @@ class LeaveService
     public function createLeave(Employee $employee, array $data): Leave
     {
         $start = Carbon::parse($data['start_date']);
-        $end   = Carbon::parse($data['end_date']);
+        $end = Carbon::parse($data['end_date']);
 
         $data['employee_id'] = $employee->id;
-        $data['days_count']  = $this->calculateDays($start, $end);
-        $data['status']      = 'pending';
+        $data['days_count'] = $this->calculateDays($start, $end);
+        $data['status'] = 'pending';
 
         return Leave::create($data);
     }
@@ -40,7 +40,7 @@ class LeaveService
         return (int) $start->diffInDays($end) + 1;
     }
 
-    public function getRemainingDays(Employee $employee, string $type = 'annual', int $year = null): int
+    public function getRemainingDays(Employee $employee, string $type = 'annual', ?int $year = null): int
     {
         $year ??= now()->year;
 

@@ -14,7 +14,6 @@ use App\Filament\Farm\Resources\HealthPrograms\Schemas\HealthProgramInfolist;
 use App\Filament\Farm\Resources\HealthPrograms\Tables\HealthProgramsTable;
 use App\Models\HealthProgram;
 use BackedEnum;
-use Filament\Facades\Filament;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -25,8 +24,8 @@ use UnitEnum;
 
 class HealthProgramResource extends Resource
 {
-    use RequiresPlanFeatures;
     use ChecksOrganisationPermissions;
+    use RequiresPlanFeatures;
 
     protected static ?string $model = HealthProgram::class;
 
@@ -37,6 +36,7 @@ class HealthProgramResource extends Resource
     protected static ?string $modelLabel = 'Programme sanitaire';
 
     protected static ?string $pluralModelLabel = 'Programmes sanitaires';
+
     protected static ?string $recordTitleAttribute = 'treatment_name';
 
     protected static ?int $navigationSort = 3;

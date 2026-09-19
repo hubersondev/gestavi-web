@@ -25,14 +25,16 @@ use UnitEnum;
 
 class FarmResource extends Resource
 {
-    use RequiresPlanFeatures;
     use ChecksOrganisationPermissions;
+    use RequiresPlanFeatures;
     use ScopesToMemberFarms;
 
     protected static ?string $model = Farm::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBuildingOffice2;
-    protected static string | UnitEnum | null $navigationGroup = 'Exploitation';
+
+    protected static string|UnitEnum|null $navigationGroup = 'Exploitation';
+
     protected static ?string $modelLabel = 'Ferme';
 
     protected static ?string $pluralModelLabel = 'Fermes';

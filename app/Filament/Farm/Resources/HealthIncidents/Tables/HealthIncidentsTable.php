@@ -5,6 +5,7 @@ namespace App\Filament\Farm\Resources\HealthIncidents\Tables;
 use App\Enums\IncidentCategory;
 use App\Enums\IncidentSeverity;
 use App\Enums\IncidentStatus;
+use App\Filament\Farm\Resources\HealthIncidents\HealthIncidentResource;
 use App\Models\Farm;
 use App\Models\Flock;
 use App\Services\CurrentFarm;
@@ -17,7 +18,6 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
-use App\Filament\Farm\Resources\HealthIncidents\HealthIncidentResource;
 use Illuminate\Database\Eloquent\Builder;
 
 class HealthIncidentsTable
@@ -49,7 +49,7 @@ class HealthIncidentsTable
                     }),
 
                 TextColumn::make('incident_date')
-                    ->label("Date incident")
+                    ->label('Date incident')
                     ->date('d/m/Y')
                     ->sortable(),
 

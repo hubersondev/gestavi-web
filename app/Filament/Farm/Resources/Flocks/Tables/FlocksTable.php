@@ -3,6 +3,7 @@
 namespace App\Filament\Farm\Resources\Flocks\Tables;
 
 use App\Enums\FlockStatus;
+use App\Filament\Farm\Resources\Flocks\FlockResource;
 use App\Models\Farm;
 use App\Services\CurrentFarm;
 use Filament\Actions\Action;
@@ -14,7 +15,6 @@ use Filament\Facades\Filament;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
-use App\Filament\Farm\Resources\Flocks\FlockResource;
 use Illuminate\Database\Eloquent\Builder;
 
 class FlocksTable

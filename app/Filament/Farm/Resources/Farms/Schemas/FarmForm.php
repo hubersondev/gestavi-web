@@ -3,13 +3,13 @@
 namespace App\Filament\Farm\Resources\Farms\Schemas;
 
 use Filament\Facades\Filament;
-use Filament\Forms\Components\Textarea;
-use Filament\Forms\Components\Toggle;
-use Filament\Schemas\Schema;
-use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
+use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Builder;
 
 class FarmForm
@@ -129,7 +129,7 @@ class FarmForm
                                     ->columns(2),
                             ]),
                     ])
-                    ->columnSpanFull()
+                    ->columnSpanFull(),
             ]);
     }
 }

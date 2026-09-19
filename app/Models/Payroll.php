@@ -24,17 +24,17 @@ class Payroll extends Model
     protected function casts(): array
     {
         return [
-            'status'           => PayrollStatus::class,
-            'gross_salary'     => 'decimal:2',
-            'cnps_employee'    => 'decimal:2',
-            'cnps_employer'    => 'decimal:2',
-            'its'              => 'decimal:2',
+            'status' => PayrollStatus::class,
+            'gross_salary' => 'decimal:2',
+            'cnps_employee' => 'decimal:2',
+            'cnps_employer' => 'decimal:2',
+            'its' => 'decimal:2',
             'other_deductions' => 'decimal:2',
             'total_deductions' => 'decimal:2',
-            'net_salary'       => 'decimal:2',
-            'overtime_hours'   => 'decimal:2',
-            'validated_at'     => 'datetime',
-            'paid_at'          => 'date',
+            'net_salary' => 'decimal:2',
+            'overtime_hours' => 'decimal:2',
+            'validated_at' => 'datetime',
+            'paid_at' => 'date',
         ];
     }
 
@@ -123,7 +123,7 @@ class Payroll extends Model
     {
         $months = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 
-        return $months[$this->period_month] . ' ' . $this->period_year;
+        return $months[$this->period_month].' '.$this->period_year;
     }
 
     public function recalculate(): void
@@ -131,9 +131,9 @@ class Payroll extends Model
         $gross = $this->items()->where('is_deduction', false)->sum('amount');
         $deductions = $this->items()->where('is_deduction', true)->sum('amount');
         $this->update([
-            'gross_salary'     => $gross,
+            'gross_salary' => $gross,
             'total_deductions' => $deductions,
-            'net_salary'       => max(0, $gross - $deductions),
+            'net_salary' => max(0, $gross - $deductions),
         ]);
     }
 
@@ -142,7 +142,7 @@ class Payroll extends Model
     public function validate(int $userId): void
     {
         $this->update([
-            'status'       => PayrollStatus::Validated,
+            'status' => PayrollStatus::Validated,
             'validated_by' => $userId,
             'validated_at' => now(),
         ]);
@@ -151,7 +151,7 @@ class Payroll extends Model
     public function markAsPaid(int $userId, ?\Carbon\Carbon $date = null): void
     {
         $this->update([
-            'status'  => PayrollStatus::Paid,
+            'status' => PayrollStatus::Paid,
             'paid_by' => $userId,
             'paid_at' => $date ?? now(),
         ]);

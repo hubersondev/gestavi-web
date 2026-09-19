@@ -275,7 +275,7 @@ class HealthIncidentForm
                                         Textarea::make('lessons_learned')
                                             ->label('Leçons apprises')
                                             ->rows(3)
-                                            ->placeholder("Ce que cet incident nous a appris...")
+                                            ->placeholder('Ce que cet incident nous a appris...')
                                             ->columnSpanFull(),
 
                                         Textarea::make('preventive_measures')

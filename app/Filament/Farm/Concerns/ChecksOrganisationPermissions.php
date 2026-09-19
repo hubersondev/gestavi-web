@@ -77,10 +77,10 @@ trait ChecksOrganisationPermissions
             return false;
         }
 
-        $slug = $group . '.' . $action;
+        $slug = $group.'.'.$action;
 
         return cache()->driver('array')->rememberForever(
-            'org_perm|' . $user->getKey() . '|' . $tenant->getKey() . '|' . $slug,
+            'org_perm|'.$user->getKey().'|'.$tenant->getKey().'|'.$slug,
             fn (): bool => $user->hasOrganisationPermission($tenant, $slug),
         );
     }

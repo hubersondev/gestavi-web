@@ -10,8 +10,10 @@ class PayrollService
 {
     // Plafond mensuel CNPS Côte d'Ivoire (1 647 315 FCFA / 12 mois)
     const CNPS_CEILING_MONTHLY = 137_276;
-    const CNPS_EMPLOYEE_RATE   = 0.063;  // 6.3%
-    const CNPS_EMPLOYER_RATE   = 0.077;  // 7.7%
+
+    const CNPS_EMPLOYEE_RATE = 0.063;  // 6.3%
+
+    const CNPS_EMPLOYER_RATE = 0.077;  // 7.7%
 
     public function generatePayroll(Employee $employee, int $year, int $month): Payroll
     {
@@ -32,7 +34,7 @@ class PayrollService
             'contract_id' => $contract?->id,
             'period_year' => $year,
             'period_month' => $month,
-            'status'      => 'draft',
+            'status' => 'draft',
         ]);
 
         if ($contract) {
@@ -48,47 +50,47 @@ class PayrollService
 
         // Salaire de base
         PayrollItem::create([
-            'payroll_id'   => $payroll->id,
-            'type'         => 'base_salary',
-            'label'        => 'Salaire de base',
-            'amount'       => $contract->base_salary,
+            'payroll_id' => $payroll->id,
+            'type' => 'base_salary',
+            'label' => 'Salaire de base',
+            'amount' => $contract->base_salary,
             'is_deduction' => false,
-            'sort_order'   => $order++,
+            'sort_order' => $order++,
         ]);
 
         // Indemnité transport
         if ($contract->transport_allowance > 0) {
             PayrollItem::create([
-                'payroll_id'   => $payroll->id,
-                'type'         => 'allowance',
-                'label'        => 'Indemnité de transport',
-                'amount'       => $contract->transport_allowance,
+                'payroll_id' => $payroll->id,
+                'type' => 'allowance',
+                'label' => 'Indemnité de transport',
+                'amount' => $contract->transport_allowance,
                 'is_deduction' => false,
-                'sort_order'   => $order++,
+                'sort_order' => $order++,
             ]);
         }
 
         // Indemnité logement
         if ($contract->housing_allowance > 0) {
             PayrollItem::create([
-                'payroll_id'   => $payroll->id,
-                'type'         => 'allowance',
-                'label'        => 'Indemnité de logement',
-                'amount'       => $contract->housing_allowance,
+                'payroll_id' => $payroll->id,
+                'type' => 'allowance',
+                'label' => 'Indemnité de logement',
+                'amount' => $contract->housing_allowance,
                 'is_deduction' => false,
-                'sort_order'   => $order++,
+                'sort_order' => $order++,
             ]);
         }
 
         // Indemnité panier
         if ($contract->food_allowance > 0) {
             PayrollItem::create([
-                'payroll_id'   => $payroll->id,
-                'type'         => 'allowance',
-                'label'        => 'Indemnité de panier',
-                'amount'       => $contract->food_allowance,
+                'payroll_id' => $payroll->id,
+                'type' => 'allowance',
+                'label' => 'Indemnité de panier',
+                'amount' => $contract->food_allowance,
                 'is_deduction' => false,
-                'sort_order'   => $order++,
+                'sort_order' => $order++,
             ]);
         }
 
@@ -101,34 +103,34 @@ class PayrollService
         // CNPS salarié
         $cnpsEmployee = $this->calculateCnpsEmployee($gross);
         PayrollItem::create([
-            'payroll_id'   => $payroll->id,
-            'type'         => 'cnps_employee',
-            'label'        => 'Cotisation CNPS (salarié 6.3%)',
-            'amount'       => $cnpsEmployee,
+            'payroll_id' => $payroll->id,
+            'type' => 'cnps_employee',
+            'label' => 'Cotisation CNPS (salarié 6.3%)',
+            'amount' => $cnpsEmployee,
             'is_deduction' => true,
-            'sort_order'   => $order++,
+            'sort_order' => $order++,
         ]);
 
         // ITS
         $its = $this->calculateIts($gross - $cnpsEmployee);
         if ($its > 0) {
             PayrollItem::create([
-                'payroll_id'   => $payroll->id,
-                'type'         => 'its',
-                'label'        => 'ITS (Impôt sur Traitements et Salaires)',
-                'amount'       => $its,
+                'payroll_id' => $payroll->id,
+                'type' => 'its',
+                'label' => 'ITS (Impôt sur Traitements et Salaires)',
+                'amount' => $its,
                 'is_deduction' => true,
-                'sort_order'   => $order++,
+                'sort_order' => $order++,
             ]);
         }
 
         // Recalculer les totaux du bulletin
         $payroll->recalculate();
         $payroll->update([
-            'gross_salary'  => $gross,
+            'gross_salary' => $gross,
             'cnps_employee' => $cnpsEmployee,
             'cnps_employer' => $this->calculateCnpsEmployer($gross),
-            'its'           => $its,
+            'its' => $its,
         ]);
     }
 
@@ -161,14 +163,14 @@ class PayrollService
         $assiette = $taxableBase * 0.8;
 
         return round(match (true) {
-            $assiette <= 0         => 0,
-            $assiette <= 75_000    => 0,
-            $assiette <= 240_000   => ($assiette - 75_000) * 0.16,
-            $assiette <= 500_000   => 26_400 + ($assiette - 240_000) * 0.21,
+            $assiette <= 0 => 0,
+            $assiette <= 75_000 => 0,
+            $assiette <= 240_000 => ($assiette - 75_000) * 0.16,
+            $assiette <= 500_000 => 26_400 + ($assiette - 240_000) * 0.21,
             $assiette <= 1_000_000 => 81_000 + ($assiette - 500_000) * 0.24,
             $assiette <= 2_000_000 => 201_000 + ($assiette - 1_000_000) * 0.28,
             $assiette <= 3_500_000 => 481_000 + ($assiette - 2_000_000) * 0.32,
-            default                => 961_000 + ($assiette - 3_500_000) * 0.36,
+            default => 961_000 + ($assiette - 3_500_000) * 0.36,
         }, 2);
     }
 
@@ -182,14 +184,14 @@ class PayrollService
             return 0;
         }
 
-        $low  = $targetNet;
+        $low = $targetNet;
         $high = $targetNet * 1.6; // borne haute large (taux marginal max ~36%)
 
         for ($i = 0; $i < 100; $i++) {
-            $mid  = ($low + $high) / 2;
+            $mid = ($low + $high) / 2;
             $cnps = $this->calculateCnpsEmployee($mid);
-            $its  = $this->calculateIts($mid - $cnps);
-            $net  = $mid - $cnps - $its;
+            $its = $this->calculateIts($mid - $cnps);
+            $net = $mid - $cnps - $its;
 
             if (abs($net - $targetNet) < 0.5) {
                 break;

@@ -38,7 +38,7 @@ class HealthProgramForm
 
                                                 return Farm::query()
                                                     ->where('organisation_id', $tenant?->getKey())
-                                                    ->when($membership, fn($q) => $q->accessibleBy($membership))
+                                                    ->when($membership, fn ($q) => $q->accessibleBy($membership))
                                                     ->where('is_active', true)
                                                     ->orderBy('name')
                                                     ->pluck('name', 'id');
@@ -58,7 +58,7 @@ class HealthProgramForm
 
                                         Select::make('chicken_type_id')
                                             ->label('Type de volaille')
-                                            ->options(fn() => ChickenType::where('is_active', true)->orderBy('name')->pluck('name', 'id'))
+                                            ->options(fn () => ChickenType::where('is_active', true)->orderBy('name')->pluck('name', 'id'))
                                             ->searchable()
                                             ->nullable()
                                             ->placeholder('Tous types (applicable à tous)')
@@ -153,8 +153,7 @@ class HealthProgramForm
                                             ->rows(6)
                                             ->placeholder('Instructions spécifiques, précautions, observations...')
                                             ->columnSpanFull(),
-                                    ])
-                                    ,
+                                    ]),
                             ]),
                     ])
                     ->columnSpanFull(),

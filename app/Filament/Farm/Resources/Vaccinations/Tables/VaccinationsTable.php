@@ -4,6 +4,7 @@ namespace App\Filament\Farm\Resources\Vaccinations\Tables;
 
 use App\Enums\VaccinationStatus;
 use App\Filament\Farm\Resources\Vaccinations\Schemas\VaccinationForm;
+use App\Filament\Farm\Resources\Vaccinations\VaccinationResource;
 use App\Models\Farm;
 use App\Models\Flock;
 use App\Services\CurrentFarm;
@@ -12,13 +13,12 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Facades\Filament;
+use Filament\Forms\Components\DatePicker;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use App\Filament\Farm\Resources\Vaccinations\VaccinationResource;
-use Filament\Forms\Components\DatePicker;
 
 class VaccinationsTable
 {

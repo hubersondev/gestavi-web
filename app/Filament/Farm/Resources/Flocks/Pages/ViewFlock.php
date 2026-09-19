@@ -56,9 +56,9 @@ class ViewFlock extends ViewRecord
                         $data['notes'] ?? null,
                     );
 
-                    $duration  = $report['duree_jours'] ?? '—';
+                    $duration = $report['duree_jours'] ?? '—';
                     $mortality = number_format($report['taux_mortalite'] ?? 0, 1);
-                    $losses    = $report['pertes_totales'] ?? 0;
+                    $losses = $report['pertes_totales'] ?? 0;
 
                     $body = "Durée : {$duration} jours | Mortalité : {$mortality}% ({$losses} sujets perdus)";
 

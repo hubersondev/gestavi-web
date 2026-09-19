@@ -10,12 +10,12 @@ use App\Models\Payroll;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
-use Filament\Schemas\Components\Utilities\Set;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 
 class PayrollForm
@@ -142,7 +142,7 @@ class PayrollForm
                                             ->rules([
                                                 fn (Get $get, $record): \Closure => function (string $attribute, mixed $value, \Closure $fail) use ($get, $record): void {
                                                     $employeeId = $get('employee_id');
-                                                    $year       = $get('period_year');
+                                                    $year = $get('period_year');
 
                                                     if (! $employeeId || ! $year || ! $value) {
                                                         return;

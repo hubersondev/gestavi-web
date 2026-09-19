@@ -24,8 +24,8 @@ use UnitEnum;
 
 class VeterinarianResource extends Resource
 {
-    use RequiresPlanFeatures;
     use ChecksOrganisationPermissions;
+    use RequiresPlanFeatures;
 
     protected static ?string $model = Veterinarian::class;
 

@@ -62,6 +62,7 @@ class Equipment extends Model
     {
         return $this->belongsTo(Farm::class);
     }
+
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
@@ -163,31 +164,34 @@ class Equipment extends Model
 
     public function getDaysUntilMaintenance(): ?int
     {
-        if (!$this->next_maintenance_date) {
+        if (! $this->next_maintenance_date) {
             return null;
         }
+
         return now()->diffInDays($this->next_maintenance_date, false);
     }
 
     public function getDaysUntilWarrantyExpiry(): ?int
     {
-        if (!$this->warranty_expiry_date) {
+        if (! $this->warranty_expiry_date) {
             return null;
         }
+
         return now()->diffInDays($this->warranty_expiry_date, false);
     }
 
     public function getAge(): ?int
     {
-        if (!$this->purchase_date) {
+        if (! $this->purchase_date) {
             return null;
         }
+
         return $this->purchase_date->diffInYears(now());
     }
 
     public function getDepreciation(): float
     {
-        if (!$this->purchase_price || !$this->lifespan_years || $this->lifespan_years <= 0) {
+        if (! $this->purchase_price || ! $this->lifespan_years || $this->lifespan_years <= 0) {
             return 0;
         }
 

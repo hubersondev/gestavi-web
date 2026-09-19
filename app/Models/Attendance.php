@@ -22,9 +22,9 @@ class Attendance extends Model
     protected function casts(): array
     {
         return [
-            'status'          => AttendanceStatus::class,
+            'status' => AttendanceStatus::class,
             'attendance_date' => 'date',
-            'overtime_hours'  => 'decimal:2',
+            'overtime_hours' => 'decimal:2',
         ];
     }
 

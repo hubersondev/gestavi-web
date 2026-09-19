@@ -21,7 +21,7 @@ class EquipmentFactory extends Factory
         return [
             'building_id' => Building::factory(),
             'inventory_number' => strtoupper(fake()->unique()->bothify('EQP-#####')),
-            'name' => 'Équipement ' . fake()->randomLetter() . fake()->randomDigit(),
+            'name' => 'Équipement '.fake()->randomLetter().fake()->randomDigit(),
             'serial_number' => fake()->optional()->bothify('SN-####-????'),
             'category' => fake()->randomElement([
                 'alimentation', 'abreuvement', 'ventilation', 'chauffage',

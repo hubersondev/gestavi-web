@@ -2,6 +2,7 @@
 
 namespace App\Filament\Farm\Resources\HealthPrograms\Tables;
 
+use App\Filament\Farm\Resources\HealthPrograms\HealthProgramResource;
 use App\Models\ChickenType;
 use App\Models\Farm;
 use App\Services\CurrentFarm;
@@ -14,7 +15,6 @@ use Filament\Facades\Filament;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
-use App\Filament\Farm\Resources\HealthPrograms\HealthProgramResource;
 use Illuminate\Database\Eloquent\Builder;
 
 class HealthProgramsTable
