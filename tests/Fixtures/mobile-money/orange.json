@@ -1,0 +1,11 @@
+{
+    "status": "SUCCESS",
+    "txnid": "MP260920.1015.A12345",
+    "amount": 25000,
+    "currency": "XOF",
+    "customer_msisdn": "2250707070707",
+    "customer_name": "Kouamé Jean",
+    "merchant_msisdn": "2250505050505",
+    "order_id": "Paiement poulets",
+    "txn_date": "2026-09-20T10:15:00Z"
+}

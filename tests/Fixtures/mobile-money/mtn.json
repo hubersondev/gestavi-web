@@ -1,0 +1,12 @@
+{
+    "financialTransactionId": "MTN-9876543210",
+    "externalId": "FAC-2026-00012",
+    "amount": "25000",
+    "currency": "XOF",
+    "payer": { "partyIdType": "MSISDN", "partyId": "2250505050505" },
+    "payerMessage": "Paiement facture",
+    "payeeNote": "GESTAVI",
+    "status": "SUCCESSFUL",
+    "payee": { "partyIdType": "MSISDN", "partyId": "2250501010101" },
+    "createdAt": "2026-09-20T10:15:00Z"
+}

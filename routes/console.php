@@ -70,3 +70,11 @@ Schedule::command('gestavi:aggregate-farm-metrics')
     ->dailyAt('23:30')
     ->runInBackground()
     ->withoutOverlapping();
+
+// ─── Mobile money ────────────────────────────────────────────────────────────
+
+// Retente le rapprochement automatique des encaissements mobile money non rapprochés.
+Schedule::command('gestavi:reconcile-mobile-money')
+    ->everyThirtyMinutes()
+    ->runInBackground()
+    ->withoutOverlapping();

@@ -45,6 +45,7 @@ class OrganisationPermissionSeeder extends Seeder
             'transactions' => 'les transactions',
             'account_transfers' => 'les transferts entre comptes',
             'expenses' => 'les dépenses',
+            'fiscal_years' => 'les exercices comptables',
             // Commercial
             'customers' => 'les clients',
             'sales' => 'les factures',
@@ -58,6 +59,12 @@ class OrganisationPermissionSeeder extends Seeder
             'stock_movements' => 'les mouvements de stock',
             'purchase_orders' => 'les bons de commande',
             'stock_inventories' => 'les inventaires physiques',
+            // Encaissements mobile money (webhooks opérateurs)
+            'mobile_money' => 'les encaissements mobile money',
+            // Catalogue, abattages, livraisons
+            'products' => 'le catalogue produits',
+            'slaughters' => 'les abattages',
+            'deliveries' => 'les livraisons',
         ];
 
         $actions = ['view', 'create', 'update', 'delete'];
@@ -153,6 +160,9 @@ class OrganisationPermissionSeeder extends Seeder
             'quotes' => [
                 'convert' => 'Convertir un devis en facture',
             ],
+            'deliveries' => [
+                'mark_delivered' => 'Marquer une livraison comme livrée',
+            ],
             'credit_notes' => [
                 'apply' => 'Imputer un avoir sur la facture liée',
                 'cancel' => 'Annuler un avoir non imputé',
@@ -160,6 +170,9 @@ class OrganisationPermissionSeeder extends Seeder
             'expenses' => [
                 'mark_paid' => 'Enregistrer un paiement sur une dépense',
                 'cancel' => 'Annuler une dépense',
+            ],
+            'fiscal_years' => [
+                'close' => 'Clôturer un exercice comptable',
             ],
             'stocks' => [
                 'record_movement' => 'Enregistrer un mouvement (entrée/sortie) de stock',
@@ -172,6 +185,10 @@ class OrganisationPermissionSeeder extends Seeder
             'stock_inventories' => [
                 'validate' => 'Valider un inventaire',
                 'adjust' => 'Appliquer l\'ajustement de stock',
+            ],
+            'mobile_money' => [
+                'match' => 'Rapprocher un encaissement mobile money avec une facture',
+                'ignore' => 'Ignorer un encaissement mobile money',
             ],
         ];
 

@@ -32,7 +32,16 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
         'type',
         'is_active',
         'avatar_url',
+        'sms_alerts_enabled',
     ];
+
+    /**
+     * Numéro de destination des notifications SMS (format E.164), null si absent ou invalide.
+     */
+    public function routeNotificationForSms(): ?string
+    {
+        return \App\Services\Sms\PhoneNumber::normalize($this->phone);
+    }
 
     protected $hidden = [
         'password',
@@ -45,6 +54,7 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'sms_alerts_enabled' => 'boolean',
             'type' => UserType::class,
             'app_authentication_secret' => 'encrypted',
             'app_authentication_recovery_codes' => 'encrypted:array',

@@ -1,0 +1,15 @@
+{
+    "id": "EV_abc123",
+    "type": "checkout.session.completed",
+    "data": {
+        "id": "cos-18qq25rgr100a",
+        "transaction_id": "T_WAVE_0001",
+        "amount": "25000",
+        "currency": "XOF",
+        "payment_status": "succeeded",
+        "client_reference": "FAC-2026-00012",
+        "sender_mobile": "+2250707070707",
+        "business_id": "M_GESTAVI_DEMO",
+        "when_completed": "2026-09-20T10:15:00Z"
+    }
+}

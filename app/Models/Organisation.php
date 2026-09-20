@@ -233,6 +233,7 @@ class Organisation extends Model implements HasCurrentTenantLabel
                 'account_transfers.complete', 'account_transfers.cancel', 'account_transfers.reverse',
                 'expenses.view', 'expenses.create', 'expenses.update', 'expenses.delete',
                 'expenses.mark_paid', 'expenses.cancel',
+                'fiscal_years.view', 'fiscal_years.create', 'fiscal_years.update', 'fiscal_years.close',
                 // Commercial
                 'customers.view', 'customers.create', 'customers.update', 'customers.delete',
                 'sales.view', 'sales.create', 'sales.update', 'sales.delete',
@@ -240,8 +241,12 @@ class Organisation extends Model implements HasCurrentTenantLabel
                 'quotes.view', 'quotes.create', 'quotes.update', 'quotes.delete',
                 'quotes.convert',
                 'payments.view', 'payments.create', 'payments.update', 'payments.delete',
+                'mobile_money.view', 'mobile_money.match', 'mobile_money.ignore',
                 'credit_notes.view', 'credit_notes.create', 'credit_notes.update', 'credit_notes.delete',
                 'credit_notes.apply', 'credit_notes.cancel',
+                'products.view', 'products.create', 'products.update', 'products.delete',
+                'deliveries.view', 'deliveries.create', 'deliveries.update', 'deliveries.delete', 'deliveries.mark_delivered',
+                'slaughters.view', 'slaughters.create', 'slaughters.update', 'slaughters.delete',
                 // Stocks
                 'stock_categories.view', 'stock_categories.create', 'stock_categories.update', 'stock_categories.delete',
                 'stocks.view', 'stocks.create', 'stocks.update', 'stocks.delete',
@@ -282,7 +287,9 @@ class Organisation extends Model implements HasCurrentTenantLabel
                 'stock_movements.view', 'stock_movements.create',
                 'purchase_orders.view', 'purchase_orders.create', 'purchase_orders.update', 'purchase_orders.receive',
                 'stock_inventories.view', 'stock_inventories.create', 'stock_inventories.update',
-                'customers.view', 'sales.view', 'quotes.view',
+                'customers.view', 'sales.view', 'quotes.view', 'products.view', 'mobile_money.view',
+                'slaughters.view', 'slaughters.create', 'slaughters.update',
+                'deliveries.view', 'deliveries.create', 'deliveries.update', 'deliveries.mark_delivered',
             ],
         ],
         // Technicien / employé : saisie terrain sur ses fermes affectées, lecture seule ailleurs.
@@ -298,6 +305,7 @@ class Organisation extends Model implements HasCurrentTenantLabel
                 'health_incidents.view', 'health_incidents.create',
                 'equipments.view',
                 'stocks.view', 'stock_lots.view', 'stock_movements.view',
+                'slaughters.view', 'deliveries.view',
                 'attendances.view',
                 'leaves.view', 'leaves.create',
             ],
@@ -344,6 +352,7 @@ class Organisation extends Model implements HasCurrentTenantLabel
         static::created(function (Organisation $organisation) {
             $organisation->createSystemRoles();
             $organisation->seedDefaultProductionPhases();
+            $organisation->seedDefaultProducts();
         });
 
         // Soft-delete en cascade sur les fermes
@@ -464,6 +473,20 @@ class Organisation extends Model implements HasCurrentTenantLabel
      * Créer les phases de production par défaut pour cette organisation.
      * Appelé automatiquement après la création de l'organisation.
      */
+    /**
+     * Créer le catalogue produits par défaut (plateau d'œufs, poulet vif, poulet abattu…).
+     * Idempotent : un produit existant du même nom n'est pas dupliqué.
+     */
+    public function seedDefaultProducts(): void
+    {
+        foreach (Product::DEFAULT_PRODUCTS as $product) {
+            Product::firstOrCreate(
+                ['organisation_id' => $this->id, 'name' => $product['name']],
+                array_merge($product, ['organisation_id' => $this->id, 'is_active' => true]),
+            );
+        }
+    }
+
     public function seedDefaultProductionPhases(): void
     {
         $chickenTypes = ChickenType::whereIn('name', array_keys(self::DEFAULT_PRODUCTION_PHASES))

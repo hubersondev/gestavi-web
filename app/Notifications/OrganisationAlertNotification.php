@@ -2,6 +2,9 @@
 
 namespace App\Notifications;
 
+use App\Notifications\Channels\SmsChannel;
+use App\Services\Sms\PhoneNumber;
+use App\Services\Sms\SmsManager;
 use Filament\Notifications\Actions\Action;
 use Filament\Notifications\DatabaseNotification;
 use Filament\Notifications\Notification as FilamentNotification;
@@ -46,12 +49,30 @@ class OrganisationAlertNotification extends Notification
             $channels[] = 'mail';
         }
 
+        // SMS : pilote réel configuré (ou tests), destinataire opt-in avec un numéro valide
+        if (SmsManager::enabled()
+            && (bool) ($notifiable->sms_alerts_enabled ?? false)
+            && PhoneNumber::normalize($notifiable->phone ?? null) !== null) {
+            $channels[] = SmsChannel::class;
+        }
+
         return $channels;
     }
 
     public static function mailEnabled(): bool
     {
         return ! in_array(config('mail.default'), ['log', 'array', null], true);
+    }
+
+    /**
+     * Texte SMS : titre + première ligne de résumé, tronqué à 160 caractères.
+     */
+    public function toSms(object $notifiable): string
+    {
+        $summary = $this->lines[0] ?? '';
+        $text = trim('GESTAVI - '.$this->title.($summary !== '' ? ' : '.ltrim($summary, '• ') : ''));
+
+        return mb_strimwidth($text, 0, 160, '…');
     }
 
     /**
