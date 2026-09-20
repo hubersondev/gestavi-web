@@ -206,6 +206,43 @@ class FlockInfolist
                                             ->money('XOF')
                                             ->placeholder('Non renseigné'),
                                     ]),
+
+                                Section::make('Coût de revient et marge')
+                                    ->description('Coûts directs imputés à la bande + paie et charges de la ferme réparties au prorata des sujets-jours')
+                                    ->columns(4)
+                                    ->schema([
+                                        TextEntry::make('cost_chicks')->label('Poussins')
+                                            ->state(fn ($record) => self::cost($record, 'couts.poussins')),
+                                        TextEntry::make('cost_feed')->label('Aliment')
+                                            ->state(fn ($record) => self::cost($record, 'couts.aliment')),
+                                        TextEntry::make('cost_health')->label('Santé')
+                                            ->state(fn ($record) => self::cost($record, 'couts.sante')),
+                                        TextEntry::make('cost_labour')->label('Main-d\'œuvre')
+                                            ->state(fn ($record) => self::cost($record, 'couts.main_oeuvre')),
+                                        TextEntry::make('cost_other')->label('Autres dépenses directes')
+                                            ->state(fn ($record) => self::cost($record, 'couts.autres_directs')),
+                                        TextEntry::make('cost_overheads')->label('Charges de ferme réparties')
+                                            ->state(fn ($record) => self::cost($record, 'couts.charges_ferme_reparties'))
+                                            ->helperText(fn ($record) => 'Clé : '.number_format((float) data_get(self::breakdown($record), 'cle_repartition'), 1, ',', ' ').' % des sujets-jours de la ferme'),
+                                        TextEntry::make('cost_total')->label('Coût total')
+                                            ->state(fn ($record) => self::cost($record, 'couts.total'))
+                                            ->weight('bold'),
+                                        TextEntry::make('cost_revenue')->label('Ventes liées')
+                                            ->state(fn ($record) => self::cost($record, 'produits.ventes')),
+                                        TextEntry::make('cost_margin')->label('Marge brute')
+                                            ->state(fn ($record) => self::cost($record, 'marge.brute'))
+                                            ->color(fn ($record) => (float) data_get(self::breakdown($record), 'marge.brute') < 0 ? 'danger' : 'success')
+                                            ->weight('bold')
+                                            ->badge(),
+                                        TextEntry::make('cost_per_bird')->label('Coût / sujet mis en place')
+                                            ->state(fn ($record) => self::cost($record, 'unitaires.cout_par_sujet_mis_en_place')),
+                                        TextEntry::make('cost_per_kg')->label('Coût / kg vif')
+                                            ->state(fn ($record) => self::cost($record, 'unitaires.cout_par_kg_vif'))
+                                            ->visible(fn ($record) => $record->productionKind()->tracksWeight()),
+                                        TextEntry::make('cost_per_egg')->label('Coût / œuf')
+                                            ->state(fn ($record) => self::cost($record, 'unitaires.cout_par_oeuf', 1))
+                                            ->visible(fn ($record) => $record->productionKind()->tracksEggs()),
+                                    ]),
                             ]),
 
                         Tabs\Tab::make('Programme sanitaire')
@@ -293,5 +330,24 @@ class FlockInfolist
         $value = $cache[$flock->getKey()][$key] ?? null;
 
         return $value === null ? '—' : number_format((float) $value, 2, ',', ' ').$suffix;
+    }
+
+    /**
+     * Décomposition du coût de revient (mise en cache par bande pour la durée de la requête).
+     *
+     * @return array<string, mixed>
+     */
+    private static function breakdown(\App\Models\Flock $flock): array
+    {
+        static $cache = [];
+
+        return $cache[$flock->getKey()] ??= app(\App\Services\FlockCostService::class)->breakdown($flock);
+    }
+
+    private static function cost(\App\Models\Flock $flock, string $path, int $decimals = 0): string
+    {
+        $value = data_get(self::breakdown($flock), $path);
+
+        return $value === null ? '—' : number_format((float) $value, $decimals, ',', ' ').' XOF';
     }
 }
