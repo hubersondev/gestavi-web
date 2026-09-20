@@ -67,6 +67,24 @@ Sauvegardes : `spatie/laravel-backup` (`php artisan backup:run --only-db`), disq
 
 Supervision : `sentry/sentry-laravel`, activé dès que `SENTRY_LARAVEL_DSN` est renseigné.
 
+## Modules livrés par la refonte (septembre 2026)
+
+- **Discriminant unique** : chaque table de faits porte `organisation_id` et `farm_id` (trait `BelongsToOrganisation`,
+  clé étrangère composite vers `farms`) ; scopes Filament directs ; règles serveur sur les clés étrangères.
+- **Coût de revient par bande** (`FlockCostService`, page « Coût de revient ») et **tableau de bord groupe**
+  sur agrégats quotidiens (`farm_daily_metrics`, commande `gestavi:aggregate-farm-metrics`).
+- **Chaîne stock ↔ élevage ↔ ventes** : catalogue produits, déstockage de l'aliment depuis le relevé,
+  des médicaments à l'administration, abattages, livraisons avec bon PDF.
+- **Comptabilité SYSCOHADA minimale** : plan de comptes, écritures en partie double générées par écouteurs,
+  exercices et clôture, journal / grand livre / balance / résultat, export « journal Sage »,
+  `gestavi:accounting-rebuild` pour initialiser une base existante.
+- **Saisie terrain hors-ligne** : page `/farm/{organisation}/terrain` (PWA, IndexedDB, synchronisation idempotente).
+- **SMS et mobile money** : pilotes SMS (log, Africa's Talking, Orange), webhooks signés Orange/MTN/Moov/Wave,
+  rapprochement automatique et manuel des encaissements (`config/sms.php`, `config/mobilemoney.php`).
+
+Les valeurs légales (paie, plan comptable, imputations) sont des défauts documentés à valider par un expert-comptable ;
+les formats de webhooks opérateurs sont des contrats à confirmer avec de vrais identifiants.
+
 ## Architecture
 
 - **Tenant Filament** = `Organisation` ; **ferme** = second niveau de cloisonnement (`CurrentFarm`, trait `ScopesToMemberFarms`).
