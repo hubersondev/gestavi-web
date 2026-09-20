@@ -4,7 +4,6 @@ use App\Enums\PlanFeature;
 use App\Enums\SaleStatus;
 use App\Enums\StockMovementReason;
 use App\Enums\TransactionCategory;
-use App\Enums\TransactionType;
 use App\Filament\Farm\Pages\Reports\CommercialReportPage;
 use App\Filament\Farm\Pages\Reports\FinancialReportPage;
 use App\Filament\Farm\Pages\Reports\ProductionReportPage;
@@ -62,7 +61,8 @@ it('calcule les KPI financiers sur 250 transactions sans troncature, avec soldes
     $accountB = Account::factory()->create(['organisation_id' => $this->organisation->id, 'farm_id' => $this->farmB->id, 'initial_balance' => 500, 'current_balance' => 500]);
 
     // Antérieur à la période : +200 sur A
-    Transaction::create(['account_id' => $accountA->id, 'type' => TransactionType::Credit, 'category' => TransactionCategory::Other, 'amount' => 200, 'balance_before' => 1000, 'balance_after' => 1200, 'description' => 'avant', 'transaction_date' => now()->subDays(20)->toDateString()]);
+    // Les soldes sont hors assignation de masse : on passe par le compte (verrou + solde calculé)
+    $accountA->credit(200, 'avant', TransactionCategory::Other, date: now()->subDays(20)->toDateString());
 
     // 250 transactions dans la période : 200 crédits de 10 sur A, 50 débits de 4 sur B
     $rows = [];

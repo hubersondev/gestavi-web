@@ -7,6 +7,7 @@ use App\Enums\StockLotStatus;
 use App\Enums\StockMovementReason;
 use App\Exceptions\StockException;
 use App\Models\PurchaseOrder;
+use App\Models\PurchaseOrderItem;
 use App\Models\Stock;
 use App\Models\StockLot;
 use Illuminate\Support\Collection;
@@ -29,9 +30,11 @@ class StockService
         return DB::transaction(function () use ($data, $items): PurchaseOrder {
             $order = PurchaseOrder::create($data);
 
-            foreach ($items as $index => $item) {
-                $order->items()->create(array_merge($item, ['sort_order' => $index]));
-            }
+            PurchaseOrderItem::withoutParentRecalculation(function () use ($order, $items): void {
+                foreach ($items as $index => $item) {
+                    $order->items()->create(array_merge($item, ['sort_order' => $index]));
+                }
+            });
 
             $order->refresh()->calculateTotals();
 
@@ -57,21 +60,23 @@ class StockService
         $columns = ['stock_id', 'product_name', 'description', 'unit', 'quantity_ordered', 'unit_price'];
 
         return DB::transaction(function () use ($order, $items, $columns): PurchaseOrder {
-            $keptIds = [];
+            PurchaseOrderItem::withoutParentRecalculation(function () use ($order, $items, $columns): void {
+                $keptIds = [];
 
-            foreach (array_values($items) as $index => $item) {
-                $attributes = array_merge(array_intersect_key($item, array_flip($columns)), ['sort_order' => $index]);
-                $existing = ! empty($item['id']) ? $order->items()->find($item['id']) : null;
+                foreach (array_values($items) as $index => $item) {
+                    $attributes = array_merge(array_intersect_key($item, array_flip($columns)), ['sort_order' => $index]);
+                    $existing = ! empty($item['id']) ? $order->items()->find($item['id']) : null;
 
-                if ($existing) {
-                    $existing->update($attributes);
-                    $keptIds[] = $existing->getKey();
-                } else {
-                    $keptIds[] = $order->items()->create($attributes)->getKey();
+                    if ($existing) {
+                        $existing->update($attributes);
+                        $keptIds[] = $existing->getKey();
+                    } else {
+                        $keptIds[] = $order->items()->create($attributes)->getKey();
+                    }
                 }
-            }
 
-            $order->items()->whereNotIn('id', $keptIds)->get()->each->delete();
+                $order->items()->whereNotIn('id', $keptIds)->get()->each->delete();
+            });
 
             $order->refresh()->calculateTotals();
 

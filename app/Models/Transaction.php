@@ -23,7 +23,8 @@ class Transaction extends Model
         'organisation_id', 'farm_id',
         'account_id', 'user_id',
         'type', 'category',
-        'amount', 'balance_before', 'balance_after',
+        // balance_before / balance_after sont calculés par Account::recordMovement (forceFill), jamais assignés en masse
+        'amount',
         'reference_type', 'reference_id', 'reference_number',
         'description', 'notes',
         'transaction_date', 'is_reconciled', 'reconciled_at',

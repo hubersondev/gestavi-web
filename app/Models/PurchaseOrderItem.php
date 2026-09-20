@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\RecalculatesParentTotals;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PurchaseOrderItem extends Model
 {
-    use HasFactory;
+    use HasFactory, RecalculatesParentTotals;
 
     protected $fillable = [
         'purchase_order_id', 'stock_id', 'stock_lot_id',
@@ -43,11 +44,15 @@ class PurchaseOrderItem extends Model
         });
 
         static::saved(function (PurchaseOrderItem $item): void {
-            $item->purchaseOrder?->calculateTotals();
+            if (! static::isParentRecalculationSuspended()) {
+                $item->purchaseOrder?->calculateTotals();
+            }
         });
 
         static::deleted(function (PurchaseOrderItem $item): void {
-            $item->purchaseOrder?->calculateTotals();
+            if (! static::isParentRecalculationSuspended()) {
+                $item->purchaseOrder?->calculateTotals();
+            }
         });
     }
 

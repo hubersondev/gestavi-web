@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\QuoteStatus;
 use App\Models\Concerns\BelongsToOrganisation;
+use App\Models\Concerns\CalculatesDocumentTotals;
 use App\Models\Concerns\LogsAuditTrail;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -14,7 +15,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Quote extends Model
 {
-    use BelongsToOrganisation, HasFactory, LogsAuditTrail, SoftDeletes;
+    use BelongsToOrganisation, CalculatesDocumentTotals, HasFactory, LogsAuditTrail, SoftDeletes;
 
     protected $fillable = [
         'organisation_id', 'farm_id',
@@ -145,21 +146,7 @@ class Quote extends Model
 
     public function calculateTotals(): void
     {
-        $subtotal = (float) $this->items()->sum('total');
-        $discountAmount = (float) $this->discount_percent > 0
-            ? $subtotal * ((float) $this->discount_percent / 100)
-            : (float) ($this->discount_amount ?? 0);
-        $afterDiscount = $subtotal - $discountAmount;
-        $taxAmount = (float) $this->tax_percent > 0
-            ? $afterDiscount * ((float) $this->tax_percent / 100)
-            : 0;
-
-        $this->update([
-            'subtotal' => $subtotal,
-            'discount_amount' => $discountAmount,
-            'tax_amount' => $taxAmount,
-            'total' => $afterDiscount + $taxAmount,
-        ]);
+        $this->update($this->computeTotalsFromLines());
     }
 
     public static function generateQuoteNumber(int $organisationId): string

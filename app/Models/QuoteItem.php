@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\RecalculatesParentTotals;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class QuoteItem extends Model
 {
-    use HasFactory;
+    use HasFactory, RecalculatesParentTotals;
 
     protected $fillable = [
         'quote_id', 'flock_id', 'product_id',
@@ -36,11 +37,15 @@ class QuoteItem extends Model
         });
 
         static::saved(function (QuoteItem $item): void {
-            $item->quote?->calculateTotals();
+            if (! static::isParentRecalculationSuspended()) {
+                $item->quote?->calculateTotals();
+            }
         });
 
         static::deleted(function (QuoteItem $item): void {
-            $item->quote?->calculateTotals();
+            if (! static::isParentRecalculationSuspended()) {
+                $item->quote?->calculateTotals();
+            }
         });
     }
 

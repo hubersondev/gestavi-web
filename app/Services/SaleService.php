@@ -10,7 +10,9 @@ use App\Models\Customer;
 use App\Models\Flock;
 use App\Models\Payment;
 use App\Models\Quote;
+use App\Models\QuoteItem;
 use App\Models\Sale;
+use App\Models\SaleItem;
 use Illuminate\Support\Facades\DB;
 
 class SaleService
@@ -33,11 +35,13 @@ class SaleService
         return DB::transaction(function () use ($data, $items): Sale {
             $sale = Sale::create($data);
 
-            foreach ($items as $index => $item) {
-                $sale->items()->create(array_merge($item, ['sort_order' => $index]));
-            }
+            // Les lignes sont persistées sans recalcul intermédiaire ; un seul recalcul à la fin
+            SaleItem::withoutParentRecalculation(function () use ($sale, $items): void {
+                foreach ($items as $index => $item) {
+                    $sale->items()->create(array_merge($item, ['sort_order' => $index]));
+                }
+            });
 
-            // Recalculer les totaux à partir des items créés
             $sale->refresh()->calculateTotals();
 
             // Vérifier le crédit client après calcul du total
@@ -110,9 +114,11 @@ class SaleService
         return DB::transaction(function () use ($data, $items): Quote {
             $quote = Quote::create($data);
 
-            foreach ($items as $index => $item) {
-                $quote->items()->create(array_merge($this->only($item, ['product_name', 'description', 'unit', 'quantity', 'unit_price', 'discount_percent', 'flock_id', 'product_id']), ['sort_order' => $index]));
-            }
+            QuoteItem::withoutParentRecalculation(function () use ($quote, $items): void {
+                foreach ($items as $index => $item) {
+                    $quote->items()->create(array_merge($this->only($item, ['product_name', 'description', 'unit', 'quantity', 'unit_price', 'discount_percent', 'flock_id', 'product_id']), ['sort_order' => $index]));
+                }
+            });
 
             $quote->refresh()->calculateTotals();
 
@@ -153,21 +159,26 @@ class SaleService
      */
     private function syncLines(\Illuminate\Database\Eloquent\Relations\HasMany $relation, array $items, array $columns): void
     {
-        $keptIds = [];
+        /** @var class-string<SaleItem|QuoteItem> $lineModel */
+        $lineModel = get_class($relation->getRelated());
 
-        foreach (array_values($items) as $index => $item) {
-            $attributes = array_merge($this->only($item, $columns), ['sort_order' => $index]);
-            $existing = ! empty($item['id']) ? $relation->getQuery()->clone()->find($item['id']) : null;
+        $lineModel::withoutParentRecalculation(function () use ($relation, $items, $columns): void {
+            $keptIds = [];
 
-            if ($existing) {
-                $existing->update($attributes);
-                $keptIds[] = $existing->getKey();
-            } else {
-                $keptIds[] = $relation->create($attributes)->getKey();
+            foreach (array_values($items) as $index => $item) {
+                $attributes = array_merge($this->only($item, $columns), ['sort_order' => $index]);
+                $existing = ! empty($item['id']) ? $relation->getQuery()->clone()->find($item['id']) : null;
+
+                if ($existing) {
+                    $existing->update($attributes);
+                    $keptIds[] = $existing->getKey();
+                } else {
+                    $keptIds[] = $relation->create($attributes)->getKey();
+                }
             }
-        }
 
-        $relation->getQuery()->clone()->whereNotIn('id', $keptIds)->get()->each->delete();
+            $relation->getQuery()->clone()->whereNotIn('id', $keptIds)->get()->each->delete();
+        });
     }
 
     /**

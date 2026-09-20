@@ -42,16 +42,17 @@ class AccountService
             }
 
             if ((float) $account->initial_balance > 0) {
-                $account->transactions()->create([
+                $account->transactions()->make([
                     'user_id' => auth()->id(),
                     'type' => TransactionType::Credit,
                     'category' => TransactionCategory::Opening,
                     'amount' => $account->initial_balance,
-                    'balance_before' => 0,
-                    'balance_after' => $account->initial_balance,
                     'description' => "Solde d'ouverture du compte {$account->name}",
                     'transaction_date' => now()->toDateString(),
-                ]);
+                ])->forceFill([
+                    'balance_before' => 0,
+                    'balance_after' => $account->initial_balance,
+                ])->save();
             }
 
             return $account->fresh();

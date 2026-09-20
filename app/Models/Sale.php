@@ -7,6 +7,7 @@ use App\Enums\SaleStatus;
 use App\Enums\TransactionCategory;
 use App\Exceptions\CommercialException;
 use App\Models\Concerns\BelongsToOrganisation;
+use App\Models\Concerns\CalculatesDocumentTotals;
 use App\Models\Concerns\LogsAuditTrail;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -18,7 +19,7 @@ use Illuminate\Support\Facades\DB;
 
 class Sale extends Model
 {
-    use BelongsToOrganisation, HasFactory, LogsAuditTrail, SoftDeletes;
+    use BelongsToOrganisation, CalculatesDocumentTotals, HasFactory, LogsAuditTrail, SoftDeletes;
 
     protected $fillable = [
         'organisation_id', 'farm_id',
@@ -195,22 +196,10 @@ class Sale extends Model
 
     public function calculateTotals(): void
     {
-        $subtotal = (float) $this->items()->sum('total');
-        $discountAmount = (float) $this->discount_percent > 0
-            ? $subtotal * ((float) $this->discount_percent / 100)
-            : (float) ($this->discount_amount ?? 0);
-        $afterDiscount = $subtotal - $discountAmount;
-        $taxAmount = (float) $this->tax_percent > 0
-            ? $afterDiscount * ((float) $this->tax_percent / 100)
-            : 0;
-        $total = $afterDiscount + $taxAmount;
+        $totals = $this->computeTotalsFromLines();
 
-        $this->update([
-            'subtotal' => $subtotal,
-            'discount_amount' => $discountAmount,
-            'tax_amount' => $taxAmount,
-            'total' => $total,
-            'balance' => $total - (float) $this->paid,
+        $this->update($totals + [
+            'balance' => $totals['total'] - (float) $this->paid,
         ]);
     }
 

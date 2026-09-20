@@ -201,13 +201,11 @@ class Account extends Model
                 ? $balanceBefore + $amount
                 : $balanceBefore - $amount;
 
-            $transaction = $locked->transactions()->create([
+            $transaction = $locked->transactions()->make([
                 'user_id' => auth()->id(),
                 'type' => $type,
                 'category' => $category,
                 'amount' => $amount,
-                'balance_before' => $balanceBefore,
-                'balance_after' => $balanceAfter,
                 'reference_type' => $referenceType,
                 'reference_id' => $referenceId,
                 'reference_number' => $referenceNumber,
@@ -215,7 +213,13 @@ class Account extends Model
                 'transaction_date' => $date ? Carbon::parse($date)->toDateString() : now()->toDateString(),
             ]);
 
-            $locked->update(['current_balance' => $balanceAfter]);
+            // Colonnes dérivées, hors assignation de masse
+            $transaction->forceFill([
+                'balance_before' => $balanceBefore,
+                'balance_after' => $balanceAfter,
+            ])->save();
+
+            $locked->forceFill(['current_balance' => $balanceAfter])->save();
 
             // Synchroniser l'instance appelante avec la valeur réellement persistée
             $this->current_balance = $balanceAfter;
@@ -252,7 +256,7 @@ class Account extends Model
     {
         $credits = (float) $this->transactions()->where('type', TransactionType::Credit)->sum('amount');
         $debits = (float) $this->transactions()->where('type', TransactionType::Debit)->sum('amount');
-        $this->update(['current_balance' => (float) $this->initial_balance + $credits - $debits]);
+        $this->forceFill(['current_balance' => (float) $this->initial_balance + $credits - $debits])->save();
     }
 
     public function setAsDefault(): void

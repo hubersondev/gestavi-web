@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\RecalculatesParentTotals;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class SaleItem extends Model
 {
-    use HasFactory;
+    use HasFactory, RecalculatesParentTotals;
 
     protected $fillable = [
         'sale_id', 'flock_id', 'product_id', 'is_live_birds',
@@ -36,12 +37,18 @@ class SaleItem extends Model
         });
 
         static::saved(function (SaleItem $item): void {
-            $item->sale?->calculateTotals();
+            if (! static::isParentRecalculationSuspended()) {
+                $item->sale?->calculateTotals();
+            }
+
             $item->syncFlockQuantities();
         });
 
         static::deleted(function (SaleItem $item): void {
-            $item->sale?->calculateTotals();
+            if (! static::isParentRecalculationSuspended()) {
+                $item->sale?->calculateTotals();
+            }
+
             $item->syncFlockQuantities();
         });
     }
