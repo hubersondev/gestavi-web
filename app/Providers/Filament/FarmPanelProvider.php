@@ -88,6 +88,16 @@ class FarmPanelProvider extends PanelProvider
             ->renderHook(
                 PanelsRenderHook::USER_MENU_BEFORE,
                 fn (): \Illuminate\View\View => view('partials.farm-selector-hook'),
+            )
+            // Lien vers la page mobile « Saisie terrain » (PWA hors-ligne)
+            ->renderHook(
+                PanelsRenderHook::USER_MENU_BEFORE,
+                fn (): \Illuminate\View\View => view('offline.terrain-link'),
+            )
+            // Manifest PWA + enregistrement du service worker
+            ->renderHook(
+                PanelsRenderHook::HEAD_END,
+                fn (): \Illuminate\View\View => view('offline.pwa-head'),
             );
     }
 }
