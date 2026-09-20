@@ -105,7 +105,9 @@ class PayrollPaymentAction
             'contract' => $payroll->contract,
             'organisation' => $organisation,
             'parameter' => $params,
-            'employerBreakdown' => $service->employerContributionsBreakdown((float) $payroll->gross_salary, $params),
+            // L'instantané figé au calcul prime sur un recalcul (le paramétrage a pu changer depuis)
+            'employerBreakdown' => $payroll->employer_contributions
+                ?? $service->employerContributionsBreakdown((float) ($payroll->taxable_gross ?: $payroll->gross_salary), $params),
         ])->setPaper('a4', 'portrait');
 
         $filename = sprintf(

@@ -23,9 +23,9 @@ class Contract extends Model
         'employee_id', 'renewed_by_contract_id',
         'contract_number', 'type', 'status',
         'start_date', 'end_date',
-        'base_salary', 'transport_allowance', 'housing_allowance', 'food_allowance',
+        'base_salary', 'category_salary', 'transport_allowance', 'housing_allowance', 'food_allowance',
         'working_hours_per_week', 'annual_leave_days',
-        'position', 'work_location', 'description',
+        'position', 'professional_category', 'work_location', 'description',
         'termination_reason', 'termination_date',
         'notes',
     ];
@@ -39,6 +39,7 @@ class Contract extends Model
             'end_date' => 'date',
             'termination_date' => 'date',
             'base_salary' => 'decimal:2',
+            'category_salary' => 'decimal:2',
             'transport_allowance' => 'decimal:2',
             'housing_allowance' => 'decimal:2',
             'food_allowance' => 'decimal:2',
@@ -121,6 +122,24 @@ class Contract extends Model
     public function getTotalPackage(): float
     {
         return (float) ($this->base_salary + $this->transport_allowance + $this->housing_allowance + $this->food_allowance);
+    }
+
+    /**
+     * Le salaire de base se décompose en salaire catégoriel (grille de la convention
+     * collective) et sursalaire : le bulletin les affiche sur deux lignes.
+     */
+    public function hasCategorySalarySplit(): bool
+    {
+        return $this->category_salary !== null
+            && (float) $this->category_salary > 0
+            && (float) $this->category_salary < (float) $this->base_salary;
+    }
+
+    public function getOverSalary(): float
+    {
+        return $this->hasCategorySalarySplit()
+            ? (float) $this->base_salary - (float) $this->category_salary
+            : 0.0;
     }
 
     public function getDaysUntilExpiry(): ?int

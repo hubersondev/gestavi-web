@@ -52,6 +52,9 @@ class AccountingMapper
         'payroll.net' => '421',
         'payroll.cnps' => '431',
         'payroll.its' => '447',
+        'payroll.cmu' => '433',
+        'payroll.fdfp_expense' => '6413',
+        'payroll.fdfp_payable' => '4423',
         // Trésorerie par type de compte financier
         'treasury.account.cash' => '571',
         'treasury.account.bank' => '521',

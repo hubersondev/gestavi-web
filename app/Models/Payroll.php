@@ -27,7 +27,7 @@ class Payroll extends Model
         'organisation_id', 'farm_id',
         'employee_id', 'contract_id', 'payroll_parameter_id', 'validated_by', 'paid_by', 'expense_id',
         'period_year', 'period_month', 'status',
-        'gross_salary', 'cnps_employee', 'cnps_employer', 'its',
+        'gross_salary', 'taxable_gross', 'cnps_employee', 'cnps_employer', 'employer_contributions', 'its', 'cmu_employee',
         'cnps_ceiling_applied', 'fiscal_parts_applied',
         'other_deductions', 'total_deductions', 'net_salary',
         'worked_days', 'leave_days', 'overtime_hours',
@@ -39,9 +39,12 @@ class Payroll extends Model
         return [
             'status' => PayrollStatus::class,
             'gross_salary' => 'decimal:2',
+            'taxable_gross' => 'decimal:2',
             'cnps_employee' => 'decimal:2',
             'cnps_employer' => 'decimal:2',
+            'employer_contributions' => 'array',
             'its' => 'decimal:2',
+            'cmu_employee' => 'decimal:2',
             'cnps_ceiling_applied' => 'decimal:2',
             'fiscal_parts_applied' => 'decimal:1',
             'other_deductions' => 'decimal:2',
@@ -142,6 +145,16 @@ class Payroll extends Model
     public function isCancelled(): bool
     {
         return $this->status === PayrollStatus::Cancelled;
+    }
+
+    public function getPeriodStart(): \Carbon\CarbonImmutable
+    {
+        return \Carbon\CarbonImmutable::create($this->period_year, $this->period_month, 1)->startOfDay();
+    }
+
+    public function getPeriodEnd(): \Carbon\CarbonImmutable
+    {
+        return $this->getPeriodStart()->endOfMonth();
     }
 
     public function getPeriodLabel(): string

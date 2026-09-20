@@ -85,6 +85,12 @@ Supervision : `sentry/sentry-laravel`, activé dès que `SENTRY_LARAVEL_DSN` est
   le disque `LEDGER_ANCHOR_DISK` ; `gestavi:ledger-verify` rejoue la chaîne et désigne la première écriture
   altérée. La reconstruction (`gestavi:accounting-rebuild`) est la seule opération qui désarme les triggers,
   via `SET LOCAL gestavi.ledger_unlock`, et elle laisse un ancrage daté.
+- **Paie alignée sur le bulletin ivoirien** (recoupée sur un bulletin réel de juillet 2026) : ITS assis
+  directement sur le brut imposable (réforme 2024), prime de transport exonérée jusqu'à 30 000 FCFA,
+  CMU 500 + 500, FDFP 0,4 % + 0,6 %, salaire catégoriel / sursalaire et catégorie professionnelle sur
+  le contrat, N° CNPS employeur, instantané des charges patronales figé sur chaque bulletin, écriture
+  de paie complétée (433 CMU, 6413/4423 FDFP). Le taux accident du travail (2 à 5 % selon le secteur)
+  se règle dans le paramétrage de paie de l'organisation.
 - **Saisie terrain hors-ligne** : page `/farm/{organisation}/terrain` (PWA, IndexedDB, synchronisation idempotente).
 - **SMS et mobile money** : pilotes SMS (log, Africa's Talking, Orange), webhooks signés Orange/MTN/Moov/Wave,
   rapprochement automatique et manuel des encaissements (`config/sms.php`, `config/mobilemoney.php`).

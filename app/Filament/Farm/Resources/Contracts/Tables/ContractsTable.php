@@ -166,6 +166,8 @@ class ContractsTable
                             'start_date' => $data['start_date'],
                             'end_date' => $data['end_date'] ?? null,
                             'base_salary' => $record->base_salary,
+                            'category_salary' => $record->category_salary,
+                            'professional_category' => $record->professional_category,
                             'transport_allowance' => $record->transport_allowance,
                             'housing_allowance' => $record->housing_allowance,
                             'food_allowance' => $record->food_allowance,

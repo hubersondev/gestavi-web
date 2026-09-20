@@ -37,6 +37,10 @@ class ContractInfolist
                             ->label('Poste')
                             ->placeholder('—'),
 
+                        TextEntry::make('professional_category')
+                            ->label('Catégorie')
+                            ->placeholder('—'),
+
                         TextEntry::make('work_location')
                             ->label('Lieu de travail')
                             ->placeholder('—'),

@@ -30,6 +30,9 @@ class OrganisationForm
                 TextInput::make('phone')
                     ->label('Numéro de téléphone')
                     ->tel(),
+                TextInput::make('cnps_employer_number')
+                    ->label('N° CNPS employeur')
+                    ->maxLength(30),
                 Textarea::make('address')
                     ->label('Adresse')
                     ->columnSpanFull(),

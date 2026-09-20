@@ -317,6 +317,7 @@ class Organisation extends Model implements HasCurrentTenantLabel
         'slug',
         'email',
         'phone',
+        'cnps_employer_number',
         'address',
         'country_id',
         'city_id',

@@ -32,8 +32,13 @@ class PayrollInfolist
                 Section::make('Rémunération')
                     ->schema([
                         TextEntry::make('gross_salary')
-                            ->label('Salaire brut')
+                            ->label('Total des gains')
                             ->money('XOF'),
+
+                        TextEntry::make('taxable_gross')
+                            ->label('Brut imposable')
+                            ->money('XOF')
+                            ->helperText('Gains hors prime de transport exonérée'),
 
                         TextEntry::make('cnps_employee')
                             ->label('CNPS salarié')
@@ -42,10 +47,16 @@ class PayrollInfolist
                         TextEntry::make('cnps_employer')
                             ->label('CNPS employeur')
                             ->money('XOF')
-                            ->helperText('Charge patronale (informatif)'),
+                            ->helperText(fn ($record): string => $record->employer_contributions
+                                ? 'Total charges patronales (CNPS, FDFP, CMU) : '.number_format((float) ($record->employer_contributions['total'] ?? 0), 0, ',', ' ').' XOF'
+                                : 'Charge patronale (informatif)'),
 
                         TextEntry::make('its')
                             ->label('ITS')
+                            ->money('XOF'),
+
+                        TextEntry::make('cmu_employee')
+                            ->label('CMU salarié')
                             ->money('XOF'),
 
                         TextEntry::make('other_deductions')

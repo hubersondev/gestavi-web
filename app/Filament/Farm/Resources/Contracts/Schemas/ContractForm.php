@@ -25,23 +25,29 @@ use Illuminate\Validation\Rule;
 
 class ContractForm
 {
+    /**
+     * Récapitulatif estimé avec le paramétrage de paie de l'organisation courante :
+     * prime de transport exonérée jusqu'au plafond, CNPS et ITS sur le brut imposable, CMU.
+     */
     private static function updateGross(Get $get, Set $set): void
     {
-        $gross = floatval($get('base_salary') ?? 0)
-            + floatval($get('transport_allowance') ?? 0)
-            + floatval($get('housing_allowance') ?? 0)
-            + floatval($get('food_allowance') ?? 0);
-
         $service = app(PayrollService::class);
+        $params = $service->parametersFor(Filament::getTenant()?->getKey());
 
-        $cnps = $service->calculateCnpsEmployee($gross);
-        $its = $service->calculateIts($gross - $cnps);
-        $net = $gross - $cnps - $its;
+        $computed = $service->computeFromAmounts(
+            floatval($get('base_salary') ?? 0),
+            floatval($get('transport_allowance') ?? 0),
+            floatval($get('housing_allowance') ?? 0),
+            floatval($get('food_allowance') ?? 0),
+            $params,
+        );
 
-        $set('gross_salary_preview', number_format($gross, 0, ',', ' '));
-        $set('cnps_preview', number_format($cnps, 0, ',', ' '));
-        $set('its_preview', number_format($its, 0, ',', ' '));
-        $set('net_salary_preview', number_format($net, 0, ',', ' '));
+        $set('gross_salary_preview', number_format($computed['gross'], 0, ',', ' '));
+        $set('taxable_gross_preview', number_format($computed['taxable_gross'], 0, ',', ' '));
+        $set('cnps_preview', number_format($computed['cnps_employee'], 0, ',', ' '));
+        $set('its_preview', number_format($computed['its'], 0, ',', ' '));
+        $set('cmu_preview', number_format($computed['cmu_employee'], 0, ',', ' '));
+        $set('net_salary_preview', number_format($computed['net'], 0, ',', ' '));
     }
 
     private static function updateFromNet(Get $get, Set $set): void
@@ -53,24 +59,12 @@ class ContractForm
         }
 
         $service = app(PayrollService::class);
-        $gross = $service->grossFromNet($targetNet);
+        $params = $service->parametersFor(Filament::getTenant()?->getKey());
 
-        $set('base_salary', $gross);
+        $set('base_salary', $service->grossFromNet($targetNet, $params));
 
         // Recalculer le récapitulatif avec le brut dérivé + les indemnités existantes
-        $totalGross = $gross
-            + floatval($get('transport_allowance') ?? 0)
-            + floatval($get('housing_allowance') ?? 0)
-            + floatval($get('food_allowance') ?? 0);
-
-        $cnps = $service->calculateCnpsEmployee($totalGross);
-        $its = $service->calculateIts($totalGross - $cnps);
-        $net = $totalGross - $cnps - $its;
-
-        $set('gross_salary_preview', number_format($totalGross, 0, ',', ' '));
-        $set('cnps_preview', number_format($cnps, 0, ',', ' '));
-        $set('its_preview', number_format($its, 0, ',', ' '));
-        $set('net_salary_preview', number_format($net, 0, ',', ' '));
+        self::updateGross($get, $set);
     }
 
     public static function configure(Schema $schema): Schema
@@ -204,11 +198,17 @@ class ContractForm
                                             ->label('Poste')
                                             ->maxLength(255),
 
+                                        TextInput::make('professional_category')
+                                            ->label('Catégorie professionnelle')
+                                            ->placeholder('ex. 7B')
+                                            ->maxLength(10)
+                                            ->helperText('Classification de la convention collective, imprimée sur le bulletin.'),
+
                                         TextInput::make('work_location')
                                             ->label('Lieu de travail')
                                             ->maxLength(255),
                                     ])
-                                    ->columns(2),
+                                    ->columns(3),
                             ]),
 
                         // ─── Onglet Rémunération ──────────────────────────────
@@ -249,6 +249,13 @@ class ContractForm
                                             ->afterStateUpdated(fn (Get $get, Set $set) => self::updateGross($get, $set))
                                             ->disabled(fn (Get $get): bool => $get('salary_mode') === 'net')
                                             ->dehydrated(true),
+
+                                        TextInput::make('category_salary')
+                                            ->label('Salaire catégoriel (optionnel)')
+                                            ->numeric()
+                                            ->suffix('FCFA')
+                                            ->lte('base_salary')
+                                            ->helperText('Minimum de la grille conventionnelle pour la catégorie. Le bulletin affiche alors « salaire catégoriel » et « sursalaire » (base − catégoriel).'),
                                     ]),
 
                                 Section::make('Indemnités')
@@ -283,14 +290,21 @@ class ContractForm
                                     ->description('Estimation basée sur le barème CNPS et ITS en vigueur en Côte d\'Ivoire')
                                     ->schema([
                                         TextInput::make('gross_salary_preview')
-                                            ->label('Salaire brut')
+                                            ->label('Total des gains')
+                                            ->disabled()
+                                            ->dehydrated(false)
+                                            ->default('0')
+                                            ->suffix('FCFA'),
+
+                                        TextInput::make('taxable_gross_preview')
+                                            ->label('Brut imposable (hors transport exonéré)')
                                             ->disabled()
                                             ->dehydrated(false)
                                             ->default('0')
                                             ->suffix('FCFA'),
 
                                         TextInput::make('cnps_preview')
-                                            ->label('CNPS salarié (6,3 %)')
+                                            ->label('CNPS salarié')
                                             ->disabled()
                                             ->dehydrated(false)
                                             ->default('0')
@@ -298,6 +312,13 @@ class ContractForm
 
                                         TextInput::make('its_preview')
                                             ->label('ITS')
+                                            ->disabled()
+                                            ->dehydrated(false)
+                                            ->default('0')
+                                            ->suffix('FCFA'),
+
+                                        TextInput::make('cmu_preview')
+                                            ->label('CMU (part salariale)')
                                             ->disabled()
                                             ->dehydrated(false)
                                             ->default('0')

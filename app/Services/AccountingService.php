@@ -382,21 +382,27 @@ class AccountingService
 
         $organisationId = (int) $payroll->organisation_id;
         $gross = (float) $payroll->gross_salary;
-        $employer = (float) $payroll->cnps_employer;
+        $cnpsEmployer = (float) $payroll->cnps_employer;
         $cnpsEmployee = (float) $payroll->cnps_employee;
         $its = (float) $payroll->its;
         $other = (float) ($payroll->other_deductions ?? 0);
         $net = (float) $payroll->net_salary;
         $employee = $payroll->employee?->full_name;
 
+        // Charges hors CNPS figées sur le bulletin : CMU (salarié + employeur) et FDFP (employeur)
+        $employerContributions = $payroll->employer_contributions ?? [];
+        $cmuEmployee = (float) ($payroll->cmu_employee ?? 0);
+        $cmuEmployer = (float) ($employerContributions['cmu'] ?? 0);
+        $fdfp = (float) ($employerContributions['fdfp_apprenticeship'] ?? 0) + (float) ($employerContributions['fdfp_training'] ?? 0);
+
         // Bulletin sans net calculé (saisie partielle) : net = brut − retenues salariales
         if ($net <= 0) {
-            $net = max(0, $gross - $cnpsEmployee - $its - $other);
+            $net = max(0, $gross - $cnpsEmployee - $its - $cmuEmployee - $other);
         }
 
-        // Équilibre : 661 + 664 = 421 (net) + 431 (CNPS salarié + employeur) + 447 (ITS) + 471 (autres retenues)
+        // Équilibre : 661 + 664 + 6413 = 421 (net) + 431 (CNPS) + 433 (CMU) + 447 (ITS) + 4423 (FDFP) + 471 (autres retenues)
         // Un écart d'arrondi ou de saisie est porté en 471 plutôt que de bloquer la validation.
-        $residual = round(($gross + $employer) - ($net + $cnpsEmployee + $employer + $its + $other), 2);
+        $residual = round($gross - ($net + $cnpsEmployee + $cmuEmployee + $its + $other), 2);
         $other += $residual;
 
         $date = $payroll->validated_at ?? Carbon::create($payroll->period_year, $payroll->period_month)->endOfMonth();
@@ -413,10 +419,13 @@ class AccountingService
             'user_id' => $payroll->validated_by,
         ], [
             ['code' => $this->mapper->codeFor('payroll.gross', $organisationId), 'debit' => $gross, 'third_party' => $employee],
-            ['code' => $this->mapper->codeFor('payroll.employer_contributions', $organisationId), 'debit' => $employer],
+            ['code' => $this->mapper->codeFor('payroll.employer_contributions', $organisationId), 'debit' => $cnpsEmployer + $cmuEmployer],
+            ['code' => $this->mapper->codeFor('payroll.fdfp_expense', $organisationId), 'debit' => $fdfp],
             ['code' => $this->mapper->codeFor('payroll.net', $organisationId), 'credit' => $net, 'third_party' => $employee],
-            ['code' => $this->mapper->codeFor('payroll.cnps', $organisationId), 'credit' => $cnpsEmployee + $employer],
+            ['code' => $this->mapper->codeFor('payroll.cnps', $organisationId), 'credit' => $cnpsEmployee + $cnpsEmployer],
+            ['code' => $this->mapper->codeFor('payroll.cmu', $organisationId), 'credit' => $cmuEmployee + $cmuEmployer],
             ['code' => $this->mapper->codeFor('payroll.its', $organisationId), 'credit' => $its],
+            ['code' => $this->mapper->codeFor('payroll.fdfp_payable', $organisationId), 'credit' => $fdfp],
             ['code' => $this->mapper->codeFor('treasury.adjustment', $organisationId), 'credit' => max(0, $other), 'debit' => max(0, -$other)],
         ]);
     }

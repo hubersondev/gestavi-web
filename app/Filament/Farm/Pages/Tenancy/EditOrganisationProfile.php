@@ -41,6 +41,10 @@ class EditOrganisationProfile extends EditTenantProfile
                             ->label('Téléphone')
                             ->tel()
                             ->maxLength(20),
+                        TextInput::make('cnps_employer_number')
+                            ->label('N° CNPS employeur')
+                            ->maxLength(30)
+                            ->helperText('Imprimé sur les bulletins de paie.'),
                         Textarea::make('address')
                             ->label('Adresse')
                             ->columnSpanFull(),

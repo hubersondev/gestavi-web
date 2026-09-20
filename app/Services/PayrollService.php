@@ -84,26 +84,50 @@ class PayrollService
         );
         $fiscalParts = (float) ($employee?->fiscal_parts ?? 1);
 
-        $payroll->items()->whereIn('type', ['base_salary', 'allowance', 'cnps_employee', 'its'])->delete();
+        $payroll->items()->whereIn('type', ['base_salary', 'allowance', 'cnps_employee', 'its', 'cmu_employee'])->delete();
 
         $order = 0;
 
-        // Salaire de base
-        PayrollItem::create([
-            'payroll_id' => $payroll->id,
-            'type' => 'base_salary',
-            'label' => 'Salaire de base',
-            'amount' => $contract->base_salary,
-            'is_deduction' => false,
-            'sort_order' => $order++,
-        ]);
+        // Salaire de base : catégoriel + sursalaire si la grille conventionnelle est renseignée
+        if ($contract->hasCategorySalarySplit()) {
+            PayrollItem::create([
+                'payroll_id' => $payroll->id,
+                'type' => 'base_salary',
+                'label' => 'Salaire catégoriel'.($contract->professional_category ? ' (cat. '.$contract->professional_category.')' : ''),
+                'amount' => $contract->category_salary,
+                'is_deduction' => false,
+                'sort_order' => $order++,
+            ]);
 
-        // Indemnité transport
+            PayrollItem::create([
+                'payroll_id' => $payroll->id,
+                'type' => 'base_salary',
+                'label' => 'Sursalaire',
+                'amount' => $contract->getOverSalary(),
+                'is_deduction' => false,
+                'sort_order' => $order++,
+            ]);
+        } else {
+            PayrollItem::create([
+                'payroll_id' => $payroll->id,
+                'type' => 'base_salary',
+                'label' => 'Salaire de base',
+                'amount' => $contract->base_salary,
+                'is_deduction' => false,
+                'sort_order' => $order++,
+            ]);
+        }
+
+        // Prime de transport : exonérée d'ITS et de CNPS jusqu'au plafond légal
         if ($contract->transport_allowance > 0) {
+            $exempt = min((float) $contract->transport_allowance, (float) $params->transport_exemption_ceiling);
+
             PayrollItem::create([
                 'payroll_id' => $payroll->id,
                 'type' => 'allowance',
-                'label' => 'Indemnité de transport',
+                'label' => $exempt >= (float) $contract->transport_allowance
+                    ? 'Prime de transport (non imposable)'
+                    : sprintf('Prime de transport (exonérée jusqu\'à %s FCFA)', number_format($exempt, 0, ',', ' ')),
                 'amount' => $contract->transport_allowance,
                 'is_deduction' => false,
                 'sort_order' => $order++,
@@ -134,41 +158,59 @@ class PayrollService
             ]);
         }
 
-        // Calculer brut (sans CNPS/ITS)
-        $gross = (float) $contract->base_salary
-            + (float) $contract->transport_allowance
-            + (float) $contract->housing_allowance
-            + (float) $contract->food_allowance;
+        $computed = $this->computeFromAmounts(
+            (float) $contract->base_salary,
+            (float) $contract->transport_allowance,
+            (float) $contract->housing_allowance,
+            (float) $contract->food_allowance,
+            $params,
+            $fiscalParts,
+        );
 
-        // CNPS salarié
-        $cnpsEmployee = $this->calculateCnpsEmployee($gross, $params);
+        // CNPS salarié (retraite) sur le brut imposable plafonné
         PayrollItem::create([
             'payroll_id' => $payroll->id,
             'type' => 'cnps_employee',
             'label' => sprintf('Cotisation CNPS salarié (%s %%)', $this->formatRate((float) $params->cnps_employee_rate)),
-            'amount' => $cnpsEmployee,
+            'amount' => $computed['cnps_employee'],
             'is_deduction' => true,
             'sort_order' => $order++,
         ]);
 
-        // ITS
-        $its = $this->calculateIts($gross - $cnpsEmployee, $params, $fiscalParts);
-        if ($its > 0) {
+        // ITS sur le brut imposable
+        if ($computed['its'] > 0) {
             PayrollItem::create([
                 'payroll_id' => $payroll->id,
                 'type' => 'its',
                 'label' => 'ITS (Impôt sur Traitements et Salaires)',
-                'amount' => $its,
+                'amount' => $computed['its'],
                 'is_deduction' => true,
                 'sort_order' => $order++,
             ]);
         }
 
+        // Couverture Maladie Universelle, part salariale (forfait mensuel)
+        if ($computed['cmu_employee'] > 0) {
+            PayrollItem::create([
+                'payroll_id' => $payroll->id,
+                'type' => 'cmu_employee',
+                'label' => 'Couverture Maladie Universelle (part salariale)',
+                'amount' => $computed['cmu_employee'],
+                'is_deduction' => true,
+                'sort_order' => $order++,
+            ]);
+        }
+
+        $employer = $this->employerContributionsBreakdown($computed['taxable_gross'], $params);
+
         // Recalculer les totaux du bulletin (brut, retenues dont autres retenues, net)
         $payroll->update([
-            'cnps_employee' => $cnpsEmployee,
-            'cnps_employer' => $this->calculateCnpsEmployer($gross, $params),
-            'its' => $its,
+            'taxable_gross' => $computed['taxable_gross'],
+            'cnps_employee' => $computed['cnps_employee'],
+            'cnps_employer' => $employer['pension'] + $employer['family'] + $employer['work_accident'],
+            'employer_contributions' => $employer,
+            'its' => $computed['its'],
+            'cmu_employee' => $computed['cmu_employee'],
             'payroll_parameter_id' => $params->exists ? $params->id : null,
             'cnps_ceiling_applied' => (float) $params->cnps_ceiling,
             'fiscal_parts_applied' => $fiscalParts,
@@ -177,7 +219,45 @@ class PayrollService
     }
 
     /**
-     * Cotisation CNPS salarié (retraite) : taux salarié sur le brut plafonné.
+     * Calcul complet d'un bulletin à partir des éléments contractuels :
+     * total des gains, brut imposable (la prime de transport est exonérée jusqu'au
+     * plafond), CNPS salarié et ITS sur le brut imposable, CMU forfaitaire, net.
+     *
+     * @return array{gross: float, taxable_gross: float, exempt_transport: float, cnps_employee: float, its: float, cmu_employee: float, total_deductions: float, net: float}
+     */
+    public function computeFromAmounts(
+        float $baseSalary,
+        float $transportAllowance,
+        float $housingAllowance,
+        float $foodAllowance,
+        ?PayrollParameter $params = null,
+        float $fiscalParts = 1.0,
+    ): array {
+        $params ??= $this->parametersFor(null);
+
+        $exemptTransport = min(max(0, $transportAllowance), (float) $params->transport_exemption_ceiling);
+        $gross = max(0, $baseSalary) + max(0, $transportAllowance) + max(0, $housingAllowance) + max(0, $foodAllowance);
+        $taxableGross = $gross - $exemptTransport;
+
+        $cnpsEmployee = $this->calculateCnpsEmployee($taxableGross, $params);
+        $its = $this->calculateIts($taxableGross, $params, $fiscalParts);
+        $cmuEmployee = round((float) $params->cmu_employee_amount);
+        $deductions = $cnpsEmployee + $its + $cmuEmployee;
+
+        return [
+            'gross' => round($gross, 2),
+            'taxable_gross' => round($taxableGross, 2),
+            'exempt_transport' => round($exemptTransport, 2),
+            'cnps_employee' => $cnpsEmployee,
+            'its' => $its,
+            'cmu_employee' => $cmuEmployee,
+            'total_deductions' => $deductions,
+            'net' => round(max(0, $gross - $deductions), 2),
+        ];
+    }
+
+    /**
+     * Cotisation CNPS salarié (retraite) : taux salarié sur le brut imposable plafonné.
      */
     public function calculateCnpsEmployee(float $grossSalary, ?PayrollParameter $params = null): float
     {
@@ -207,29 +287,35 @@ class PayrollService
     }
 
     /**
-     * Détail des charges patronales par branche (bulletin).
+     * Détail des charges patronales (bulletin) : branches CNPS avec leurs plafonds,
+     * FDFP (taxe d'apprentissage et formation continue) sur le brut imposable, CMU forfaitaire.
      *
-     * @return array{pension: float, family: float, work_accident: float}
+     * @return array{pension: float, family: float, work_accident: float, fdfp_apprenticeship: float, fdfp_training: float, cmu: float, total: float}
      */
-    public function employerContributionsBreakdown(float $grossSalary, PayrollParameter $params): array
+    public function employerContributionsBreakdown(float $taxableGross, PayrollParameter $params): array
     {
-        $gross = max(0, $grossSalary);
+        $gross = max(0, $taxableGross);
         $pensionBase = min($gross, (float) $params->cnps_ceiling);
         $familyBase = min($gross, (float) ($params->cnps_family_ceiling ?? $params->cnps_ceiling));
 
-        return [
+        $breakdown = [
             'pension' => round($pensionBase * (float) $params->cnps_employer_pension_rate),
             'family' => round($familyBase * (float) $params->cnps_family_rate),
             'work_accident' => round($familyBase * (float) $params->cnps_work_accident_rate),
+            'fdfp_apprenticeship' => round($gross * (float) $params->fdfp_apprenticeship_rate),
+            'fdfp_training' => round($gross * (float) $params->fdfp_training_rate),
+            'cmu' => round((float) $params->cmu_employer_amount),
         ];
+
+        return $breakdown + ['total' => array_sum($breakdown)];
     }
 
     /**
-     * ITS mensuel : barème progressif appliqué à l'assiette
-     * (brut − CNPS salarié) × (1 − abattement), moins la réduction pour charges
-     * de famille selon les parts fiscales ; jamais négatif, arrondi au franc.
+     * ITS mensuel (réforme 2024) : barème progressif appliqué directement au brut
+     * imposable (l'abattement paramétrable vaut 0 par défaut), moins la réduction pour
+     * charges de famille selon les parts fiscales ; jamais négatif, arrondi au franc.
      *
-     * @param  float  $taxableBase  Brut diminué de la cotisation CNPS salarié
+     * @param  float  $taxableBase  Brut imposable (gains hors prime de transport exonérée)
      */
     public function calculateIts(float $taxableBase, ?PayrollParameter $params = null, float $fiscalParts = 1.0): float
     {
@@ -260,14 +346,12 @@ class PayrollService
         $params ??= $this->parametersFor(null);
 
         $low = $targetNet;
-        $high = $targetNet * 1.8; // borne haute large (taux marginal max 32 % + CNPS 6,3 %)
+        $high = $targetNet * 1.8 + (float) $params->cmu_employee_amount; // borne haute large (taux marginal max 32 % + CNPS 6,3 % + CMU)
         $mid = $targetNet;
 
         for ($i = 0; $i < 100; $i++) {
             $mid = ($low + $high) / 2;
-            $cnps = $this->calculateCnpsEmployee($mid, $params);
-            $its = $this->calculateIts($mid - $cnps, $params, $fiscalParts);
-            $net = $mid - $cnps - $its;
+            $net = $this->computeFromAmounts($mid, 0, 0, 0, $params, $fiscalParts)['net'];
 
             if (abs($net - $targetNet) < 0.5) {
                 break;
