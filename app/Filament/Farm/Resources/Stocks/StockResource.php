@@ -93,7 +93,7 @@ class StockResource extends Resource
     public static function scopeEloquentQueryToTenant(Builder $query, ?Model $tenant): Builder
     {
         return static::applyFarmScope(
-            $query->where('organisation_id', $tenant?->getKey()),
+            $query->where($query->qualifyColumn('organisation_id'), $tenant?->getKey()),
         );
     }
 }

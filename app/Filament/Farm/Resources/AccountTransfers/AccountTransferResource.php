@@ -102,7 +102,7 @@ class AccountTransferResource extends Resource
     public static function scopeEloquentQueryToTenant(Builder $query, ?Model $tenant): Builder
     {
         $membership = static::currentMembership();
-        $query->where('organisation_id', $tenant?->getKey());
+        $query->where($query->qualifyColumn('organisation_id'), $tenant?->getKey());
 
         if (! $membership) {
             return $query->whereRaw('1 = 0');

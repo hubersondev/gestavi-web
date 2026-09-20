@@ -94,7 +94,7 @@ class EmployeeResource extends Resource
         return static::applyFarmScope(
             $query
                 ->with('activeContract')
-                ->where('organisation_id', $tenant?->getKey()),
+                ->where($query->qualifyColumn('organisation_id'), $tenant?->getKey()),
         );
     }
 }

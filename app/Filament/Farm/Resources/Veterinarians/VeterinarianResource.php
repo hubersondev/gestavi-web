@@ -82,6 +82,6 @@ class VeterinarianResource extends Resource
 
     public static function scopeEloquentQueryToTenant(Builder $query, ?Model $tenant): Builder
     {
-        return $query->where('organisation_id', $tenant?->getKey());
+        return $query->where($query->qualifyColumn('organisation_id'), $tenant?->getKey());
     }
 }

@@ -14,6 +14,7 @@ use App\Filament\Farm\Resources\HealthPrograms\Schemas\HealthProgramForm;
 use App\Filament\Farm\Resources\HealthPrograms\Schemas\HealthProgramInfolist;
 use App\Filament\Farm\Resources\HealthPrograms\Tables\HealthProgramsTable;
 use App\Models\HealthProgram;
+use App\Services\CurrentFarm;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -83,7 +84,7 @@ class HealthProgramResource extends Resource
     public static function scopeEloquentQueryToTenant(Builder $query, ?Model $tenant): Builder
     {
         $membership = static::currentMembership();
-        $query->where('organisation_id', $tenant?->getKey());
+        $query->where($query->qualifyColumn('organisation_id'), $tenant?->getKey());
 
         if (! $membership) {
             return $query->whereRaw('1 = 0');
