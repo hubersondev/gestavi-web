@@ -21,6 +21,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Illuminate\Validation\Rule;
 
@@ -137,6 +138,32 @@ class SaleForm
                                             ->schema([
                                                 Hidden::make('id'),
 
+                                                Select::make('product_id')
+                                                    ->label('Produit du catalogue')
+                                                    ->options(fn (): array => \App\Models\Product::query()
+                                                        ->where('organisation_id', Filament::getTenant()?->getKey())
+                                                        ->active()
+                                                        ->orderBy('name')
+                                                        ->pluck('name', 'id')
+                                                        ->toArray())
+                                                    ->rules(fn (): array => [Rule::exists('products', 'id')->where('organisation_id', Filament::getTenant()?->getKey())])
+                                                    ->searchable()
+                                                    ->nullable()
+                                                    ->live()
+                                                    ->afterStateUpdated(function (Set $set, ?string $state): void {
+                                                        $product = $state ? \App\Models\Product::query()->find($state) : null;
+
+                                                        if (! $product) {
+                                                            return;
+                                                        }
+
+                                                        foreach ($product->lineDefaults() as $field => $value) {
+                                                            $set($field, $value);
+                                                        }
+                                                    })
+                                                    ->helperText('Pré-remplit la ligne ; la saisie libre reste possible')
+                                                    ->columnSpan(2),
+
                                                 TextInput::make('product_name')
                                                     ->label('Désignation')
                                                     ->required()
@@ -249,7 +276,7 @@ class SaleForm
                                         TextInput::make('tax_percent')
                                             ->label('TVA (%)')
                                             ->numeric()
-                                            ->default(0)
+                                            ->default(18)
                                             ->minValue(0)
                                             ->maxValue(100)
                                             ->suffix('%')

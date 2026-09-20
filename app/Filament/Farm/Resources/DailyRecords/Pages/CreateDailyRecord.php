@@ -29,6 +29,17 @@ class CreateDailyRecord extends CreateRecord
 
         $data['recorded_by'] = Filament::auth()->id();
 
-        return app(FlockService::class)->recordDailyData($flock, $data);
+        try {
+            return app(FlockService::class)->recordDailyData($flock, $data);
+        } catch (\App\Exceptions\StockException $e) {
+            \Filament\Notifications\Notification::make()
+                ->title('Stock d\'aliment insuffisant')
+                ->body($e->getMessage())
+                ->danger()
+                ->persistent()
+                ->send();
+
+            $this->halt();
+        }
     }
 }

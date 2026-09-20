@@ -244,6 +244,31 @@ class DailyRecordForm
                                             ->step(0.01)
                                             ->suffix('kg'),
 
+                                        Select::make('feed_stock_id')
+                                            ->label('Aliment prélevé sur le stock')
+                                            ->helperText('Optionnel : la quantité consommée sort du stock choisi (FIFO par lots) et alimente le coût de revient de la bande.')
+                                            ->options(function (Get $get): array {
+                                                $tenant = Filament::getTenant();
+                                                $flock = Flock::query()->find($get('flock_id'));
+
+                                                $query = \App\Models\Stock::query()
+                                                    ->where('organisation_id', $tenant?->getKey())
+                                                    ->active()
+                                                    ->whereHas('category', fn (Builder $q) => $q->where('type', \App\Enums\StockCategoryType::Feed->value))
+                                                    ->when($flock?->farm_id, fn (Builder $q, $farmId) => $q->where(fn (Builder $w) => $w->where('farm_id', $farmId)->orWhereNull('farm_id')))
+                                                    ->orderBy('name');
+
+                                                return app(CurrentFarm::class)->restrictForCurrentUser($query, 'farm_id', allowOrganisationLevel: true)
+                                                    ->get()
+                                                    ->mapWithKeys(fn (\App\Models\Stock $s) => [$s->id => $s->name.' ('.number_format((float) $s->quantity, 1, ',', ' ').' '.$s->unit.')'])
+                                                    ->toArray();
+                                            })
+                                            ->rules(fn (): array => [Rule::exists('stocks', 'id')->where('organisation_id', Filament::getTenant()?->getKey())])
+                                            ->searchable()
+                                            ->nullable()
+                                            ->disabledOn('edit')
+                                            ->dehydrated(fn (string $operation): bool => $operation === 'create'),
+
                                         TextInput::make('water_consumed_l')
                                             ->label('Eau consommée')
                                             ->required()

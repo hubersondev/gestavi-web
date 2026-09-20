@@ -11,7 +11,7 @@ class SaleItem extends Model
     use HasFactory;
 
     protected $fillable = [
-        'sale_id', 'flock_id', 'is_live_birds',
+        'sale_id', 'flock_id', 'product_id', 'is_live_birds',
         'product_name', 'description', 'unit',
         'quantity', 'unit_price',
         'discount_percent', 'discount_amount', 'total',
@@ -56,6 +56,11 @@ class SaleItem extends Model
     public function flock(): BelongsTo
     {
         return $this->belongsTo(Flock::class);
+    }
+
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class);
     }
 
     // ─── HELPERS ─────────────────────────────────────────────────────────────

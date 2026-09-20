@@ -30,6 +30,8 @@ class DailyRecord extends Model
         'eggs_broken',
         'eggs_sold',
         'feed_consumed_kg',
+        'feed_stock_id',
+        'feed_movement_id',
         'water_consumed_l',
         'average_weight_g',
         'birds_weighed',
@@ -159,6 +161,22 @@ class DailyRecord extends Model
     public function recorder(): BelongsTo
     {
         return $this->belongsTo(User::class, 'recorded_by');
+    }
+
+    /**
+     * Stock d'aliment sur lequel la consommation du jour a été prélevée.
+     */
+    public function feedStock(): BelongsTo
+    {
+        return $this->belongsTo(Stock::class, 'feed_stock_id');
+    }
+
+    /**
+     * Mouvement de sortie généré pour l'aliment consommé.
+     */
+    public function feedMovement(): BelongsTo
+    {
+        return $this->belongsTo(StockMovement::class, 'feed_movement_id');
     }
 
     // ===== SCOPES =====

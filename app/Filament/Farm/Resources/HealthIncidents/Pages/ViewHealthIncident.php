@@ -37,9 +37,53 @@ class ViewHealthIncident extends ViewRecord
                         ->native(false)
                         ->displayFormat('d/m/Y')
                         ->default(now()),
+
+                    \Filament\Forms\Components\Select::make('treatment_stock_id')
+                        ->label('Médicament prélevé sur le stock')
+                        ->options(function (): array {
+                            $tenant = \Filament\Facades\Filament::getTenant();
+                            $query = \App\Models\Stock::query()
+                                ->where('organisation_id', $tenant?->getKey())
+                                ->active()
+                                ->whereHas('category', fn ($q) => $q->where('type', \App\Enums\StockCategoryType::Medicine->value))
+                                ->orderBy('name');
+
+                            return app(\App\Services\CurrentFarm::class)->restrictForCurrentUser($query, 'farm_id', allowOrganisationLevel: true)
+                                ->get()
+                                ->mapWithKeys(fn (\App\Models\Stock $s) => [$s->id => $s->name.' ('.number_format((float) $s->quantity, 1, ',', ' ').' '.$s->unit.')'])
+                                ->toArray();
+                        })
+                        ->rules(fn (): array => [\Illuminate\Validation\Rule::exists('stocks', 'id')->where('organisation_id', \Filament\Facades\Filament::getTenant()?->getKey())])
+                        ->searchable()
+                        ->nullable()
+                        ->live(),
+
+                    \Filament\Forms\Components\TextInput::make('treatment_stock_quantity')
+                        ->label('Quantité prélevée')
+                        ->numeric()
+                        ->minValue(0.01)
+                        ->step(0.01)
+                        ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get): bool => filled($get('treatment_stock_id')))
+                        ->required(fn (\Filament\Schemas\Components\Utilities\Get $get): bool => filled($get('treatment_stock_id'))),
                 ])
                 ->action(function (array $data) {
-                    $this->record->startTreatment($data['treatment_applied'], $data['treatment_start_date']);
+                    try {
+                        $this->record->startTreatment(
+                            $data['treatment_applied'],
+                            $data['treatment_start_date'],
+                            isset($data['treatment_stock_id']) ? (int) $data['treatment_stock_id'] : null,
+                            (float) ($data['treatment_stock_quantity'] ?? 0),
+                        );
+                    } catch (\App\Exceptions\StockException $e) {
+                        Notification::make()
+                            ->title('Stock insuffisant')
+                            ->body($e->getMessage())
+                            ->danger()
+                            ->persistent()
+                            ->send();
+
+                        return;
+                    }
 
                     Notification::make()
                         ->title('Traitement démarré')
@@ -47,7 +91,7 @@ class ViewHealthIncident extends ViewRecord
                         ->info()
                         ->send();
 
-                    $this->refreshFormData(['status', 'treatment_applied', 'treatment_start_date']);
+                    $this->refreshFormData(['status', 'treatment_applied', 'treatment_start_date', 'treatment_cost', 'treatment_stock_id', 'treatment_stock_quantity']);
                 })
                 ->visible(fn () => $this->record->isDetected() && HealthIncidentResource::canPerformAction('start_treatment')),
 

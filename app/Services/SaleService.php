@@ -86,7 +86,7 @@ class SaleService
         $this->assertFlocksNotUnderWithdrawal($items, $sale->sale_date);
 
         return DB::transaction(function () use ($sale, $items): Sale {
-            $this->syncLines($sale->items(), $items, ['product_name', 'description', 'unit', 'quantity', 'unit_price', 'discount_percent', 'flock_id', 'is_live_birds']);
+            $this->syncLines($sale->items(), $items, ['product_name', 'description', 'unit', 'quantity', 'unit_price', 'discount_percent', 'flock_id', 'product_id', 'is_live_birds']);
 
             $sale->refresh()->calculateTotals();
             $sale->customer?->recalculateBalance();
@@ -111,7 +111,7 @@ class SaleService
             $quote = Quote::create($data);
 
             foreach ($items as $index => $item) {
-                $quote->items()->create(array_merge($this->only($item, ['product_name', 'description', 'unit', 'quantity', 'unit_price', 'discount_percent', 'flock_id']), ['sort_order' => $index]));
+                $quote->items()->create(array_merge($this->only($item, ['product_name', 'description', 'unit', 'quantity', 'unit_price', 'discount_percent', 'flock_id', 'product_id']), ['sort_order' => $index]));
             }
 
             $quote->refresh()->calculateTotals();
@@ -136,7 +136,7 @@ class SaleService
         }
 
         return DB::transaction(function () use ($quote, $items): Quote {
-            $this->syncLines($quote->items(), $items, ['product_name', 'description', 'unit', 'quantity', 'unit_price', 'discount_percent', 'flock_id']);
+            $this->syncLines($quote->items(), $items, ['product_name', 'description', 'unit', 'quantity', 'unit_price', 'discount_percent', 'flock_id', 'product_id']);
 
             $quote->refresh()->calculateTotals();
 

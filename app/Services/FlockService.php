@@ -4,11 +4,13 @@ namespace App\Services;
 
 use App\Enums\FarmLogCategory;
 use App\Enums\FarmLogPriority;
+use App\Enums\StockMovementReason;
 use App\Enums\VaccinationStatus;
 use App\Models\DailyRecord;
 use App\Models\FarmLog;
 use App\Models\Flock;
 use App\Models\HealthProgram;
+use App\Models\Stock;
 use App\Models\Vaccination;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -266,7 +268,81 @@ class FlockService
         $data['flock_id'] = $flock->id;
         $data['recorded_by'] = $data['recorded_by'] ?? Auth::id();
 
-        return DB::transaction(fn (): DailyRecord => DailyRecord::create($data));
+        return DB::transaction(function () use ($data): DailyRecord {
+            $record = DailyRecord::create($data);
+
+            // Aliment prélevé sur le stock : sortie imputée à la bande (coût de revient)
+            if (! empty($record->feed_stock_id) && (float) $record->feed_consumed_kg > 0) {
+                $this->consumeFeedFromStock($record, (float) $record->feed_consumed_kg);
+            }
+
+            return $record;
+        });
+    }
+
+    /**
+     * Sort l'aliment consommé du stock indiqué sur le relevé (FIFO par lots si disponibles)
+     * et mémorise le premier mouvement généré.
+     */
+    public function consumeFeedFromStock(DailyRecord $record, float $kilograms): void
+    {
+        if ($kilograms <= 0 || ! $record->feed_stock_id) {
+            return;
+        }
+
+        $stock = Stock::query()->findOrFail($record->feed_stock_id);
+
+        $movements = app(StockService::class)->recordOut(
+            stock: $stock,
+            quantity: $kilograms,
+            reason: StockMovementReason::Consumption,
+            flockId: $record->flock_id,
+            reference: 'Relevé du '.$record->record_date?->format('d/m/Y'),
+            notes: 'Aliment consommé — bande '.($record->flock?->code ?? ''),
+        );
+
+        DailyRecord::withoutEvents(fn () => DailyRecord::query()
+            ->whereKey($record->getKey())
+            ->update(['feed_movement_id' => $movements->first()?->id]));
+
+        $record->feed_movement_id = $movements->first()?->id;
+    }
+
+    /**
+     * Correction d'un relevé déjà déstocké : la différence d'aliment est régularisée
+     * par un mouvement d'ajustement (sortie si hausse, entrée si baisse).
+     */
+    public function adjustFeedConsumption(DailyRecord $record, float $previousKilograms, float $newKilograms): void
+    {
+        $delta = round($newKilograms - $previousKilograms, 2);
+
+        if (abs($delta) < 0.005 || ! $record->feed_stock_id) {
+            return;
+        }
+
+        $stock = Stock::query()->findOrFail($record->feed_stock_id);
+        $reference = 'Correction relevé du '.$record->record_date?->format('d/m/Y');
+
+        if ($delta > 0) {
+            app(StockService::class)->recordOut(
+                stock: $stock,
+                quantity: $delta,
+                reason: StockMovementReason::Adjustment,
+                flockId: $record->flock_id,
+                reference: $reference,
+                notes: sprintf('Aliment consommé corrigé de %s à %s kg', $previousKilograms, $newKilograms),
+            );
+
+            return;
+        }
+
+        $stock->recordIn(
+            quantity: abs($delta),
+            reason: StockMovementReason::Adjustment,
+            flockId: $record->flock_id,
+            reference: $reference,
+            notes: sprintf('Aliment consommé corrigé de %s à %s kg', $previousKilograms, $newKilograms),
+        );
     }
 
     /**

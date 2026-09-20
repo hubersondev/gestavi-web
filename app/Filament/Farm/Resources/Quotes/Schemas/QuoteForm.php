@@ -138,6 +138,32 @@ class QuoteForm
                                             ->schema([
                                                 Hidden::make('id'),
 
+                                                Select::make('product_id')
+                                                    ->label('Produit du catalogue')
+                                                    ->options(fn (): array => \App\Models\Product::query()
+                                                        ->where('organisation_id', Filament::getTenant()?->getKey())
+                                                        ->active()
+                                                        ->orderBy('name')
+                                                        ->pluck('name', 'id')
+                                                        ->toArray())
+                                                    ->rules(fn (): array => [Rule::exists('products', 'id')->where('organisation_id', Filament::getTenant()?->getKey())])
+                                                    ->searchable()
+                                                    ->nullable()
+                                                    ->live()
+                                                    ->afterStateUpdated(function (\Filament\Schemas\Components\Utilities\Set $set, ?string $state): void {
+                                                        $product = $state ? \App\Models\Product::query()->find($state) : null;
+
+                                                        if (! $product) {
+                                                            return;
+                                                        }
+
+                                                        foreach (['product_name', 'unit', 'unit_price'] as $field) {
+                                                            $set($field, $product->lineDefaults()[$field]);
+                                                        }
+                                                    })
+                                                    ->helperText('Pré-remplit la ligne ; la saisie libre reste possible')
+                                                    ->columnSpan(2),
+
                                                 TextInput::make('product_name')
                                                     ->label('Désignation')
                                                     ->required()

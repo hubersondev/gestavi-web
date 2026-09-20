@@ -35,6 +35,9 @@ class Vaccination extends Model
         'expiry_date',
         'birds_treated',
         'cost',
+        'stock_id',
+        'stock_quantity_used',
+        'stock_movement_id',
         'status',
         'observations',
         'notes',
@@ -68,6 +71,19 @@ class Vaccination extends Model
     public function administrator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'administered_by');
+    }
+
+    /**
+     * Produit de stock (vaccin, médicament) consommé lors de l'administration.
+     */
+    public function stock(): BelongsTo
+    {
+        return $this->belongsTo(Stock::class);
+    }
+
+    public function stockMovement(): BelongsTo
+    {
+        return $this->belongsTo(StockMovement::class);
     }
 
     // ===== SCOPES =====
@@ -192,14 +208,61 @@ class Vaccination extends Model
         $administeredDate = \Carbon\Carbon::parse($data['administered_date'] ?? now()->toDateString());
         $withdrawalDays = (int) ($data['withdrawal_days'] ?? $this->withdrawal_days ?? 0);
 
-        $this->update(array_merge([
-            'status' => VaccinationStatus::Done,
-            'administered_date' => $administeredDate->toDateString(),
-            // Délai d'attente : aucune vente ni abattage avant cette date
-            'withdrawal_until' => $withdrawalDays > 0
-                ? $administeredDate->copy()->addDays($withdrawalDays)->toDateString()
-                : null,
-        ], $data));
+        $stockId = $data['stock_id'] ?? null;
+        $stockQuantity = (float) ($data['stock_quantity_used'] ?? 0);
+        unset($data['stock_id'], $data['stock_quantity_used']);
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($data, $administeredDate, $withdrawalDays, $stockId, $stockQuantity): void {
+            $this->update(array_merge([
+                'status' => VaccinationStatus::Done,
+                'administered_date' => $administeredDate->toDateString(),
+                // Délai d'attente : aucune vente ni abattage avant cette date
+                'withdrawal_until' => $withdrawalDays > 0
+                    ? $administeredDate->copy()->addDays($withdrawalDays)->toDateString()
+                    : null,
+            ], $data));
+
+            // Déstockage du produit administré (vaccin, médicament) imputé à la bande
+            if ($stockId && $stockQuantity > 0 && ! $this->stock_movement_id) {
+                $this->consumeFromStock((int) $stockId, $stockQuantity);
+            }
+        });
+    }
+
+    /**
+     * Prélève le produit sur le stock (FIFO par lots si disponibles) et mémorise le mouvement ;
+     * le coût de la vaccination prend la valeur du mouvement s'il n'a pas été saisi.
+     */
+    public function consumeFromStock(int $stockId, float $quantity): void
+    {
+        $stock = Stock::query()->findOrFail($stockId);
+
+        $movements = app(\App\Services\StockService::class)->recordOut(
+            stock: $stock,
+            quantity: $quantity,
+            reason: \App\Enums\StockMovementReason::Consumption,
+            flockId: $this->flock_id,
+            reference: 'Vaccination #'.$this->getKey(),
+            notes: "{$this->treatment_name} — bande ".($this->flock?->code ?? ''),
+        );
+
+        // Le coût du produit est porté par le mouvement de stock (valorisé au CMUP) : `cost` ne
+        // reçoit que les frais hors stock saisis explicitement, sinon le coût de revient le compterait deux fois.
+        $this->update([
+            'stock_id' => $stock->id,
+            'stock_quantity_used' => $quantity,
+            'stock_movement_id' => $movements->first()?->id,
+        ]);
+    }
+
+    /**
+     * Valeur du produit prélevé sur le stock pour cette vaccination.
+     */
+    public function getStockValue(): float
+    {
+        return $this->stock_movement_id
+            ? (float) StockMovement::query()->where('reference', 'Vaccination #'.$this->getKey())->sum('total_price')
+            : 0.0;
     }
 
     /**

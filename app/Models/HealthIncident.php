@@ -37,6 +37,9 @@ class HealthIncident extends Model
         'treatment_start_date',
         'treatment_end_date',
         'treatment_cost',
+        'treatment_stock_id',
+        'treatment_stock_quantity',
+        'treatment_movement_id',
         'quarantine_applied',
         'quarantine_start_date',
         'quarantine_end_date',
@@ -76,6 +79,16 @@ class HealthIncident extends Model
     public function reporter(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reported_by');
+    }
+
+    public function treatmentStock(): BelongsTo
+    {
+        return $this->belongsTo(Stock::class, 'treatment_stock_id');
+    }
+
+    public function treatmentMovement(): BelongsTo
+    {
+        return $this->belongsTo(StockMovement::class, 'treatment_movement_id');
     }
 
     // ===== SCOPES =====
@@ -216,13 +229,37 @@ class HealthIncident extends Model
     /**
      * Démarrer le traitement.
      */
-    public function startTreatment(string $treatment, ?string $startDate = null): void
+    public function startTreatment(string $treatment, ?string $startDate = null, ?int $stockId = null, float $stockQuantity = 0): void
     {
-        $this->update([
-            'status' => IncidentStatus::UnderTreatment,
-            'treatment_applied' => $treatment,
-            'treatment_start_date' => $startDate ?? now()->toDateString(),
-        ]);
+        \Illuminate\Support\Facades\DB::transaction(function () use ($treatment, $startDate, $stockId, $stockQuantity): void {
+            $this->update([
+                'status' => IncidentStatus::UnderTreatment,
+                'treatment_applied' => $treatment,
+                'treatment_start_date' => $startDate ?? now()->toDateString(),
+            ]);
+
+            // Déstockage du médicament utilisé, imputé à la bande ; coût par défaut = valeur du mouvement
+            if ($stockId && $stockQuantity > 0 && ! $this->treatment_movement_id) {
+                $stock = Stock::query()->findOrFail($stockId);
+
+                $movements = app(\App\Services\StockService::class)->recordOut(
+                    stock: $stock,
+                    quantity: $stockQuantity,
+                    reason: \App\Enums\StockMovementReason::Consumption,
+                    flockId: $this->flock_id,
+                    reference: 'Incident #'.$this->getKey(),
+                    notes: "Traitement « {$this->title} » — bande ".($this->flock?->code ?? ''),
+                );
+
+                // Le coût du médicament est porté par le mouvement de stock (CMUP) ; `treatment_cost`
+                // reste réservé aux frais hors stock (vétérinaire, main-d'œuvre) pour éviter un double comptage.
+                $this->update([
+                    'treatment_stock_id' => $stock->id,
+                    'treatment_stock_quantity' => $stockQuantity,
+                    'treatment_movement_id' => $movements->first()?->id,
+                ]);
+            }
+        });
     }
 
     /**

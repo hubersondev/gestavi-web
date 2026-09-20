@@ -11,7 +11,7 @@ class QuoteItem extends Model
     use HasFactory;
 
     protected $fillable = [
-        'quote_id', 'flock_id',
+        'quote_id', 'flock_id', 'product_id',
         'product_name', 'description', 'unit',
         'quantity', 'unit_price',
         'discount_percent', 'discount_amount', 'total',
@@ -54,6 +54,11 @@ class QuoteItem extends Model
     public function flock(): BelongsTo
     {
         return $this->belongsTo(Flock::class);
+    }
+
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class);
     }
 
     // ─── HELPERS ─────────────────────────────────────────────────────────────

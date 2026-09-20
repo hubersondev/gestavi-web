@@ -30,6 +30,7 @@ class Flock extends Model
         'quantity_started',
         'quantity_current',
         'quantity_sold',
+        'quantity_slaughtered',
         'age_at_arrival',
         'start_date',
         'expected_end_date',
@@ -102,6 +103,11 @@ class Flock extends Model
     public function farmLogs(): HasMany
     {
         return $this->hasMany(FarmLog::class);
+    }
+
+    public function slaughters(): HasMany
+    {
+        return $this->hasMany(Slaughter::class);
     }
 
     // ===== SCOPES =====
@@ -217,21 +223,33 @@ class Flock extends Model
     }
 
     /**
-     * Recalcule quantity_current et quantity_sold depuis les faits :
-     * effectif initial − mortalité − réformes − sujets vendus.
+     * Sujets abattus (cumul des abattages enregistrés).
+     */
+    public function getSlaughteredCount(mixed $upToDate = null): int
+    {
+        return (int) $this->slaughters()
+            ->when($upToDate !== null, fn (Builder $q) => $q->whereDate('slaughter_date', '<=', \Carbon\Carbon::parse($upToDate)->toDateString()))
+            ->sum('birds_count');
+    }
+
+    /**
+     * Recalcule quantity_current, quantity_sold et quantity_slaughtered depuis les faits :
+     * effectif initial − mortalité − réformes − sujets vendus − sujets abattus.
      */
     public function recalculateQuantities(): void
     {
         $sold = $this->getSoldCount();
-        $current = max(0, (int) $this->quantity_started - $this->getTotalMortality() - $this->getTotalCulls() - $sold);
+        $slaughtered = $this->getSlaughteredCount();
+        $current = max(0, (int) $this->quantity_started - $this->getTotalMortality() - $this->getTotalCulls() - $sold - $slaughtered);
 
         static::withoutEvents(fn () => static::query()
             ->whereKey($this->id)
-            ->update(['quantity_current' => $current, 'quantity_sold' => $sold]));
+            ->update(['quantity_current' => $current, 'quantity_sold' => $sold, 'quantity_slaughtered' => $slaughtered]));
 
         $this->quantity_current = $current;
         $this->quantity_sold = $sold;
-        $this->syncOriginalAttributes(['quantity_current', 'quantity_sold']);
+        $this->quantity_slaughtered = $slaughtered;
+        $this->syncOriginalAttributes(['quantity_current', 'quantity_sold', 'quantity_slaughtered']);
     }
 
     /**
@@ -254,7 +272,7 @@ class Flock extends Model
                 ->whereDate('sale_date', '<=', $date))
             ->sum('quantity');
 
-        return max(0, (int) $this->quantity_started - $losses - $sold);
+        return max(0, (int) $this->quantity_started - $losses - $sold - $this->getSlaughteredCount($date));
     }
 
     /**

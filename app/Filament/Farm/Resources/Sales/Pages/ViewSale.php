@@ -118,6 +118,15 @@ class ViewSale extends ViewRecord
                     }
                 }),
 
+            Action::make('createDelivery')
+                ->label('Créer une livraison')
+                ->icon('heroicon-o-truck')
+                ->color('info')
+                ->visible(fn (Sale $record): bool => ! $record->isCancelled()
+                    && \App\Filament\Farm\Resources\Deliveries\DeliveryResource::canCreate()
+                    && Filament::getTenant()?->hasFeature(\App\Enums\PlanFeature::Deliveries))
+                ->url(fn (Sale $record): string => \App\Filament\Farm\Resources\Deliveries\DeliveryResource::getUrl('create', ['sale' => $record->getKey()])),
+
             Action::make('cancel')
                 ->label('Annuler la facture')
                 ->icon('heroicon-o-x-circle')

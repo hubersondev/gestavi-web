@@ -44,20 +44,62 @@ class ViewVaccination extends ViewRecord
                         ->label('Coût')
                         ->numeric()
                         ->step(0.01)
-                        ->suffix('FCFA'),
+                        ->suffix('FCFA')
+                        ->helperText('Laisser vide pour reprendre la valeur du stock prélevé'),
+
+                    \Filament\Forms\Components\Select::make('stock_id')
+                        ->label('Produit prélevé sur le stock (vaccin, médicament)')
+                        ->options(function (): array {
+                            $tenant = \Filament\Facades\Filament::getTenant();
+                            $query = \App\Models\Stock::query()
+                                ->where('organisation_id', $tenant?->getKey())
+                                ->active()
+                                ->whereHas('category', fn ($q) => $q->where('type', \App\Enums\StockCategoryType::Medicine->value))
+                                ->orderBy('name');
+
+                            return app(\App\Services\CurrentFarm::class)->restrictForCurrentUser($query, 'farm_id', allowOrganisationLevel: true)
+                                ->get()
+                                ->mapWithKeys(fn (\App\Models\Stock $s) => [$s->id => $s->name.' ('.number_format((float) $s->quantity, 1, ',', ' ').' '.$s->unit.')'])
+                                ->toArray();
+                        })
+                        ->rules(fn (): array => [\Illuminate\Validation\Rule::exists('stocks', 'id')->where('organisation_id', \Filament\Facades\Filament::getTenant()?->getKey())])
+                        ->searchable()
+                        ->nullable()
+                        ->live(),
+
+                    TextInput::make('stock_quantity_used')
+                        ->label('Quantité prélevée')
+                        ->numeric()
+                        ->minValue(0.01)
+                        ->step(0.01)
+                        ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get): bool => filled($get('stock_id')))
+                        ->required(fn (\Filament\Schemas\Components\Utilities\Get $get): bool => filled($get('stock_id'))),
 
                     Textarea::make('observations')
                         ->label('Observations')
                         ->rows(3),
                 ])
                 ->action(function (array $data) {
-                    $this->record->markAsDone([
-                        'administered_date' => $data['administered_date'],
-                        'birds_treated' => $data['birds_treated'] ?? null,
-                        'cost' => $data['cost'] ?? null,
-                        'observations' => $data['observations'] ?? null,
-                        'administered_by' => \Filament\Facades\Filament::auth()->id(),
-                    ]);
+                    try {
+                        $this->record->markAsDone([
+                            'administered_date' => $data['administered_date'],
+                            'birds_treated' => $data['birds_treated'] ?? null,
+                            'cost' => $data['cost'] ?? null,
+                            'observations' => $data['observations'] ?? null,
+                            'administered_by' => \Filament\Facades\Filament::auth()->id(),
+                            'stock_id' => $data['stock_id'] ?? null,
+                            'stock_quantity_used' => $data['stock_quantity_used'] ?? null,
+                        ]);
+                    } catch (\App\Exceptions\StockException $e) {
+                        Notification::make()
+                            ->title('Stock insuffisant')
+                            ->body($e->getMessage())
+                            ->danger()
+                            ->persistent()
+                            ->send();
+
+                        return;
+                    }
 
                     Notification::make()
                         ->title('Vaccination enregistrée')
@@ -65,7 +107,7 @@ class ViewVaccination extends ViewRecord
                         ->success()
                         ->send();
 
-                    $this->refreshFormData(['status', 'administered_date', 'birds_treated', 'cost', 'observations', 'administered_by']);
+                    $this->refreshFormData(['status', 'administered_date', 'birds_treated', 'cost', 'observations', 'administered_by', 'stock_id', 'stock_quantity_used']);
                 })
                 ->visible(fn () => $this->record->isActionable() && VaccinationResource::canPerformAction('mark_done')),
 
