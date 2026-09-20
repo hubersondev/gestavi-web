@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\LogsAuditTrail;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -11,6 +12,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class JournalLine extends Model
 {
+    use LogsAuditTrail;
+
     protected $fillable = [
         'journal_entry_id', 'organisation_id', 'farm_id', 'entry_date',
         'chart_account_code', 'chart_account_label', 'debit', 'credit', 'third_party', 'label', 'position',

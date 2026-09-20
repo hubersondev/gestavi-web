@@ -71,6 +71,14 @@ Schedule::command('gestavi:aggregate-farm-metrics')
     ->runInBackground()
     ->withoutOverlapping();
 
+// ─── Ledger comptable ────────────────────────────────────────────────────────
+
+// Vérifie chaque chaîne de hachage et ancre sa tête hors base (preuve d'intégrité quotidienne).
+Schedule::command('gestavi:ledger-anchor')
+    ->dailyAt('23:45')
+    ->runInBackground()
+    ->withoutOverlapping();
+
 // ─── Mobile money ────────────────────────────────────────────────────────────
 
 // Retente le rapprochement automatique des encaissements mobile money non rapprochés.

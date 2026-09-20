@@ -78,6 +78,13 @@ Supervision : `sentry/sentry-laravel`, activé dès que `SENTRY_LARAVEL_DSN` est
 - **Comptabilité SYSCOHADA minimale** : plan de comptes, écritures en partie double générées par écouteurs,
   exercices et clôture, journal / grand livre / balance / résultat, export « journal Sage »,
   `gestavi:accounting-rebuild` pour initialiser une base existante.
+- **Ledger intangible** : triggers PostgreSQL interdisant toute modification ou suppression des écritures,
+  de leurs lignes et des transactions de trésorerie (seul le rapprochement bancaire reste modifiable) ;
+  chaîne de hachage SHA-256 par organisation (`previous_hash` → `hash`) ; ancrages de la tête de chaîne à
+  la clôture d'exercice, à la reconstruction et chaque nuit (`gestavi:ledger-anchor`), copiés hors base sur
+  le disque `LEDGER_ANCHOR_DISK` ; `gestavi:ledger-verify` rejoue la chaîne et désigne la première écriture
+  altérée. La reconstruction (`gestavi:accounting-rebuild`) est la seule opération qui désarme les triggers,
+  via `SET LOCAL gestavi.ledger_unlock`, et elle laisse un ancrage daté.
 - **Saisie terrain hors-ligne** : page `/farm/{organisation}/terrain` (PWA, IndexedDB, synchronisation idempotente).
 - **SMS et mobile money** : pilotes SMS (log, Africa's Talking, Orange), webhooks signés Orange/MTN/Moov/Wave,
   rapprochement automatique et manuel des encaissements (`config/sms.php`, `config/mobilemoney.php`).

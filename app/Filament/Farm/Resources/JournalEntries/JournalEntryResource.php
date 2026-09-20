@@ -95,6 +95,13 @@ class JournalEntryResource extends Resource
                         ->state(fn (JournalEntry $record): string => $record->is_reversal ? 'Extourne de '.$record->reversedEntry?->entry_number : 'Écriture')
                         ->badge()
                         ->color(fn (JournalEntry $record): string => $record->is_reversal ? 'warning' : 'success'),
+                    TextEntry::make('hash')
+                        ->label('Empreinte (ledger)')
+                        ->fontFamily('mono')
+                        ->copyable()
+                        ->placeholder('—')
+                        ->helperText('SHA-256 chaîné à l\'écriture précédente : toute altération est détectable.')
+                        ->columnSpanFull(),
                 ]),
             Section::make('Lignes')
                 ->schema([

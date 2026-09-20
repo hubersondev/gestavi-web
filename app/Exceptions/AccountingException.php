@@ -39,4 +39,16 @@ class AccountingException extends Exception
     {
         return new self("Aucun compte comptable n'est associé à la clé « {$key} » : complétez le paramétrage comptable.");
     }
+
+    public static function ledgerCorrupted(string $entryNumber, string $reason): self
+    {
+        $label = match ($reason) {
+            'missing_hash' => 'hash absent',
+            'chain_break' => 'chaînage rompu avec l\'écriture précédente',
+            'hash_mismatch' => 'contenu modifié après enregistrement',
+            default => $reason,
+        };
+
+        return new self("Intégrité du ledger compromise à partir de l'écriture {$entryNumber} : {$label}. Rapprochez la base de la dernière sauvegarde saine et des ancrages.");
+    }
 }

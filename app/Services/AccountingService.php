@@ -7,6 +7,7 @@ use App\Enums\ExpenseCategory;
 use App\Enums\ExpenseStatus;
 use App\Enums\FiscalYearStatus;
 use App\Enums\JournalCode;
+use App\Enums\LedgerAnchorReason;
 use App\Enums\PayrollStatus;
 use App\Enums\SaleStatus;
 use App\Enums\TransactionCategory;
@@ -45,7 +46,11 @@ use Illuminate\Support\Facades\DB;
  */
 class AccountingService
 {
-    public function __construct(private readonly AccountingMapper $mapper, private readonly NumberSequence $sequence) {}
+    public function __construct(
+        private readonly AccountingMapper $mapper,
+        private readonly NumberSequence $sequence,
+        private readonly LedgerService $ledger,
+    ) {}
 
     // ─── PÉRIODES ───────────────────────────────────────────────────────────
 
@@ -103,7 +108,11 @@ class AccountingService
         $this->assertPeriodOpen($organisationId, $date);
 
         return DB::transaction(function () use ($attributes, $lines, $organisationId, $date): JournalEntry {
-            $entry = JournalEntry::query()->create(array_merge($attributes, [
+            // La chaîne de hachage impose de sérialiser les écritures d'une même organisation
+            $this->ledger->lockChain($organisationId);
+
+            $entryAttributes = array_merge($attributes, [
+                'organisation_id' => $organisationId,
                 'entry_date' => $date->toDateString(),
                 'fiscal_year_id' => $this->fiscalYearFor($organisationId, $date)?->id,
                 'entry_number' => $this->sequence->nextFormatted(
@@ -116,22 +125,38 @@ class AccountingService
                 ),
                 'user_id' => $attributes['user_id'] ?? Auth::id(),
                 'is_generated' => $attributes['is_generated'] ?? true,
-            ]));
+            ]);
+
+            $lineAttributes = [];
 
             foreach ($lines as $position => $line) {
-                JournalLine::query()->create([
-                    'journal_entry_id' => $entry->id,
+                $lineAttributes[] = [
                     'organisation_id' => $organisationId,
-                    'farm_id' => $line['farm_id'] ?? $entry->farm_id,
+                    'farm_id' => $line['farm_id'] ?? $entryAttributes['farm_id'] ?? null,
                     'entry_date' => $date->toDateString(),
+                    'code' => $line['code'],
                     'chart_account_code' => $line['code'],
                     'chart_account_label' => ChartAccount::labelFor($line['code'], $organisationId),
                     'debit' => round((float) ($line['debit'] ?? 0), 2),
                     'credit' => round((float) ($line['credit'] ?? 0), 2),
                     'third_party' => $line['third_party'] ?? null,
-                    'label' => $line['label'] ?? $entry->label,
+                    'label' => $line['label'] ?? $entryAttributes['label'],
                     'position' => $position,
-                ]);
+                ];
+            }
+
+            $previousHash = $this->ledger->headHash($organisationId);
+
+            $entry = JournalEntry::query()->make($entryAttributes);
+            $entry->forceFill([
+                'previous_hash' => $previousHash,
+                'hash' => $this->ledger->hashFor($previousHash, $this->ledger->canonicalPayload($entryAttributes, $lineAttributes)),
+            ])->save();
+
+            foreach ($lineAttributes as $lineAttribute) {
+                unset($lineAttribute['code']);
+
+                JournalLine::query()->create(['journal_entry_id' => $entry->id] + $lineAttribute);
             }
 
             return $entry;
@@ -475,6 +500,9 @@ class AccountingService
                 'net_result' => round($result, 2),
             ]);
 
+            // La tête de chaîne à la clôture est ancrée en base et hors base
+            $this->ledger->anchor($fiscalYear->organisation_id, LedgerAnchorReason::FiscalYearClose, $userId, 'Clôture '.$fiscalYear->label);
+
             return $fiscalYear->fresh();
         });
     }
@@ -490,12 +518,15 @@ class AccountingService
      */
     public function rebuild(int $organisationId): array
     {
-        return DB::transaction(function () use ($organisationId): array {
-            JournalEntry::query()
+        return $this->ledger->withUnlockedLedger(function () use ($organisationId): array {
+            $generated = JournalEntry::query()
                 ->where('organisation_id', $organisationId)
                 ->where('is_generated', true)
-                ->where('reference_type', '!=', FiscalYear::class)
-                ->delete();
+                ->where('reference_type', '!=', FiscalYear::class);
+
+            // Les clés étrangères sont en RESTRICT : les lignes se suppriment avant les en-têtes
+            JournalLine::query()->whereIn('journal_entry_id', $generated->clone()->select('id'))->delete();
+            $generated->delete();
 
             $counts = ['sales' => 0, 'expenses' => 0, 'payrolls' => 0, 'transactions' => 0];
 
@@ -544,6 +575,10 @@ class AccountingService
                 ->each(function (Transaction $transaction) use (&$counts): void {
                     $counts['transactions'] += $this->postTransaction($transaction) ? 1 : 0;
                 });
+
+            // La chaîne est recalculée de bout en bout puis la reconstruction est ancrée : elle laisse une trace
+            $this->ledger->rehash($organisationId);
+            $this->ledger->anchor($organisationId, LedgerAnchorReason::Rebuild, Auth::id(), 'Reconstruction du journal');
 
             return $counts;
         });

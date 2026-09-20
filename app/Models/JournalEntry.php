@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\JournalCode;
+use App\Models\Concerns\LogsAuditTrail;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -16,6 +17,8 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
  */
 class JournalEntry extends Model
 {
+    use LogsAuditTrail;
+
     protected $fillable = [
         'organisation_id', 'farm_id', 'fiscal_year_id', 'entry_number', 'entry_date', 'journal', 'label',
         'reference_type', 'reference_id', 'reference_number', 'is_reversal', 'reversed_entry_id', 'is_generated', 'user_id',
