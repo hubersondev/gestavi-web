@@ -62,3 +62,11 @@ Schedule::command('backup:run --only-db')
 Schedule::command('backup:monitor')
     ->dailyAt('08:30')
     ->withoutOverlapping();
+
+// ─── Tableau de bord groupe ──────────────────────────────────────────────────
+
+// Agrégats quotidiens par ferme (hier et aujourd'hui) pour la consolidation de direction.
+Schedule::command('gestavi:aggregate-farm-metrics')
+    ->dailyAt('23:30')
+    ->runInBackground()
+    ->withoutOverlapping();
