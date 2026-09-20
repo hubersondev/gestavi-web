@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Filament\Farm\Pages\Reports\AccountingReportPage;
 use App\Filament\Farm\Pages\Reports\CommercialReportPage;
 use App\Filament\Farm\Pages\Reports\FinancialReportPage;
 use App\Filament\Farm\Pages\Reports\ProductionReportPage;
@@ -36,6 +37,7 @@ class GenerateReportExport implements ShouldQueue
         'financier' => FinancialReportPage::class,
         'commercial' => CommercialReportPage::class,
         'stocks' => StockReportPage::class,
+        'comptabilite' => AccountingReportPage::class,
     ];
 
     public int $tries = 2;

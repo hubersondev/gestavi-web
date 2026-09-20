@@ -18,6 +18,8 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Illuminate\Validation\Rule;
 
@@ -87,13 +89,35 @@ class ExpenseForm
                                     ->columns(3)
                                     ->schema([
                                         TextInput::make('amount')
-                                            ->label('Montant')
+                                            ->label('Montant TTC')
                                             ->numeric()
                                             ->required()
                                             ->minValue(1)
                                             ->suffix('XOF')
                                             ->disabledOn('edit')
+                                            ->live(onBlur: true)
+                                            ->afterStateUpdated(fn (Get $get, Set $set) => self::recalculateTax($get, $set))
                                             ->helperText('Ne peut plus être modifié après création'),
+
+                                        Select::make('tax_percent')
+                                            ->label('TVA')
+                                            ->options(['0' => 'Exonéré (0 %)', '18' => 'TVA 18 %'])
+                                            ->default('0')
+                                            ->required()
+                                            ->native(false)
+                                            ->disabledOn('edit')
+                                            ->live()
+                                            ->afterStateUpdated(fn (Get $get, Set $set) => self::recalculateTax($get, $set))
+                                            ->helperText('TVA incluse dans le montant TTC (récupérable, compte 4452)'),
+
+                                        TextInput::make('tax_amount')
+                                            ->label('dont TVA')
+                                            ->numeric()
+                                            ->default(0)
+                                            ->suffix('XOF')
+                                            ->disabled()
+                                            ->dehydrated()
+                                            ->helperText('Calculée : TTC × taux / (100 + taux)'),
 
                                         DatePicker::make('expense_date')
                                             ->label('Date de la dépense')
@@ -234,5 +258,16 @@ class ExpenseForm
                     ])
                     ->columnSpanFull(),
             ]);
+    }
+
+    /**
+     * TVA incluse dans le TTC : tax = TTC × taux / (100 + taux), arrondie au franc.
+     */
+    private static function recalculateTax(Get $get, Set $set): void
+    {
+        $amount = (float) ($get('amount') ?? 0);
+        $rate = (float) ($get('tax_percent') ?? 0);
+
+        $set('tax_amount', $rate > 0 && $amount > 0 ? round($amount * $rate / (100 + $rate), 0) : 0);
     }
 }

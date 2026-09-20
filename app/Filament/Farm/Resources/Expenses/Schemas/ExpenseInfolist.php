@@ -75,11 +75,23 @@ class ExpenseInfolist
                     ->columns(3)
                     ->schema([
                         TextEntry::make('amount')
-                            ->label('Montant total')
+                            ->label('Montant TTC')
                             ->numeric(thousandsSeparator: ' ')
                             ->suffix(' XOF')
                             ->weight('bold')
                             ->size('lg'),
+
+                        TextEntry::make('tax_amount')
+                            ->label('dont TVA')
+                            ->numeric(thousandsSeparator: ' ')
+                            ->suffix(fn (Expense $record): string => ' XOF ('.number_format((float) $record->tax_percent, 0).' %)')
+                            ->color('gray'),
+
+                        TextEntry::make('amount_excl_tax')
+                            ->label('Montant HT')
+                            ->state(fn (Expense $record): float => (float) $record->amount - (float) $record->tax_amount)
+                            ->numeric(thousandsSeparator: ' ')
+                            ->suffix(' XOF'),
 
                         TextEntry::make('paid_amount')
                             ->label('Payé')

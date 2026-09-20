@@ -30,6 +30,11 @@ class DatabaseSeeder extends Seeder
             OrganisationPermissionSeeder::class,
         ]);
 
+        // Plan comptable SYSCOHADA de référence et imputations par défaut
+        $this->call([
+            ChartAccountSeeder::class,
+        ]);
+
         // Devises, pays, villes et types d'élevage
         $this->call([
             CurrencySeeder::class,

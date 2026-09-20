@@ -69,12 +69,14 @@ it('crée une facture avec ses lignes depuis le formulaire', function () {
 
     expect($sale)->not->toBeNull()
         ->and($sale->items()->count())->toBe(2)
-        // 20 × 3 500 = 70 000 ; 10 × 3 000 − 10 % = 27 000
+        // 20 × 3 500 = 70 000 ; 10 × 3 000 − 10 % = 27 000 ; TVA 18 % par défaut = 17 460
         ->and((float) $sale->subtotal)->toBe(97000.0)
-        ->and((float) $sale->total)->toBe(97000.0)
-        ->and((float) $sale->balance)->toBe(97000.0)
+        ->and((float) $sale->tax_percent)->toBe(18.0)
+        ->and((float) $sale->tax_amount)->toBe(17460.0)
+        ->and((float) $sale->total)->toBe(114460.0)
+        ->and((float) $sale->balance)->toBe(114460.0)
         ->and($sale->status)->toBe(SaleStatus::Pending)
-        ->and((float) $customer->fresh()->balance)->toBe(97000.0);
+        ->and((float) $customer->fresh()->balance)->toBe(114460.0);
 });
 
 it('refuse une facture sans ligne', function () {

@@ -24,7 +24,7 @@ class Expense extends Model
         'supplier_id', 'account_id', 'user_id',
         'expense_number', 'expense_date', 'due_date', 'paid_at',
         'category', 'status',
-        'amount', 'paid_amount', 'balance',
+        'amount', 'tax_percent', 'tax_amount', 'paid_amount', 'balance',
         'description', 'reference', 'attachment', 'notes',
     ];
 
@@ -37,6 +37,8 @@ class Expense extends Model
             'due_date' => 'date',
             'paid_at' => 'datetime',
             'amount' => 'decimal:2',
+            'tax_percent' => 'decimal:2',
+            'tax_amount' => 'decimal:2',
             'paid_amount' => 'decimal:2',
             'balance' => 'decimal:2',
         ];
