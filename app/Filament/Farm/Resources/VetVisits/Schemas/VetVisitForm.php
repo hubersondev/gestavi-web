@@ -19,6 +19,7 @@ use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Validation\Rule;
 
 class VetVisitForm
 {
@@ -34,6 +35,8 @@ class VetVisitForm
                                 Section::make('Contexte')
                                     ->schema([
                                         Select::make('farm_id')
+                                            // Garde-fou serveur : la valeur soumise doit appartenir à l'organisation courante
+                                            ->rules(fn (): array => [Rule::exists('farms', 'id')->where('organisation_id', Filament::getTenant()?->getKey())])
                                             ->label('Ferme')
                                             ->options(function () {
                                                 $tenant = Filament::getTenant();
@@ -65,6 +68,8 @@ class VetVisitForm
                                             ->columnSpan(2),
 
                                         Select::make('flock_id')
+                                            // Garde-fou serveur : la valeur soumise doit appartenir à l'organisation courante
+                                            ->rules(fn (): array => [Rule::exists('flocks', 'id')->where('organisation_id', Filament::getTenant()?->getKey())])
                                             ->label('Bande (optionnel)')
                                             ->options(function (Get $get) {
                                                 $farmId = $get('farm_id');
@@ -92,6 +97,8 @@ class VetVisitForm
                                             ->helperText('Laisser vide si la visite concerne toute la ferme'),
 
                                         Select::make('veterinarian_id')
+                                            // Garde-fou serveur : la valeur soumise doit appartenir à l'organisation courante
+                                            ->rules(fn (): array => [Rule::exists('veterinarians', 'id')->where('organisation_id', Filament::getTenant()?->getKey())])
                                             ->label('Vétérinaire')
                                             ->options(function () {
                                                 return Veterinarian::query()

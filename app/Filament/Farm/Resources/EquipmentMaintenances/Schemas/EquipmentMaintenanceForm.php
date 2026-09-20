@@ -15,6 +15,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Schema;
+use Illuminate\Validation\Rule;
 
 class EquipmentMaintenanceForm
 {
@@ -31,6 +32,8 @@ class EquipmentMaintenanceForm
                                     ->columns(2)
                                     ->schema([
                                         Select::make('equipment_id')
+                                            // Garde-fou serveur : la valeur soumise doit appartenir à l'organisation courante
+                                            ->rules(fn (): array => [Rule::exists('equipments', 'id')->where('organisation_id', Filament::getTenant()?->getKey())])
                                             ->label('Équipement')
                                             ->options(function (): array {
                                                 $tenant = Filament::getTenant();

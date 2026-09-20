@@ -75,12 +75,9 @@ class EquipmentMovementResource extends Resource
 
     public static function scopeEloquentQueryToTenant(Builder $query, ?Model $tenant): Builder
     {
-        return static::applyFarmScopeThrough(
-            $query->whereHas('equipment', fn (Builder $q) => $q->whereHas(
-                'farm',
-                fn (Builder $f) => $f->where('organisation_id', $tenant?->getKey()),
-            )),
-            'equipment',
+        // Discriminants directs (organisation_id / farm_id) : plus de jointure à travers la chaîne parente
+        return static::applyFarmScope(
+            $query->where($query->qualifyColumn('organisation_id'), $tenant?->getKey()),
         );
     }
 }

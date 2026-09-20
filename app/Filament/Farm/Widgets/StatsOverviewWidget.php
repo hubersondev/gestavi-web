@@ -56,7 +56,7 @@ class StatsOverviewWidget extends BaseWidget
     {
         $flocks = Flock::query()
             ->active()
-            ->whereHas('building.farm', fn (Builder $q) => app(CurrentFarm::class)->restrictFarmsTableForCurrentUser($q->where('organisation_id', $orgId)))
+            ->where('flocks.organisation_id', $orgId)->tap(fn (Builder $q) => app(CurrentFarm::class)->restrictForCurrentUser($q, 'flocks.farm_id'))
             ->with('chickenType')
             ->get();
 
@@ -77,12 +77,12 @@ class StatsOverviewWidget extends BaseWidget
     {
         $totalBirds = (int) Flock::query()
             ->active()
-            ->whereHas('building.farm', fn (Builder $q) => app(CurrentFarm::class)->restrictFarmsTableForCurrentUser($q->where('organisation_id', $orgId)))
+            ->where('flocks.organisation_id', $orgId)->tap(fn (Builder $q) => app(CurrentFarm::class)->restrictForCurrentUser($q, 'flocks.farm_id'))
             ->sum('quantity_current');
 
         $totalStarted = (int) Flock::query()
             ->active()
-            ->whereHas('building.farm', fn (Builder $q) => app(CurrentFarm::class)->restrictFarmsTableForCurrentUser($q->where('organisation_id', $orgId)))
+            ->where('flocks.organisation_id', $orgId)->tap(fn (Builder $q) => app(CurrentFarm::class)->restrictForCurrentUser($q, 'flocks.farm_id'))
             ->sum('quantity_started');
 
         $survivalRate = $totalStarted > 0
@@ -99,7 +99,7 @@ class StatsOverviewWidget extends BaseWidget
     {
         $activeFlockIds = Flock::query()
             ->active()
-            ->whereHas('building.farm', fn (Builder $q) => app(CurrentFarm::class)->restrictFarmsTableForCurrentUser($q->where('organisation_id', $orgId)))
+            ->where('flocks.organisation_id', $orgId)->tap(fn (Builder $q) => app(CurrentFarm::class)->restrictForCurrentUser($q, 'flocks.farm_id'))
             ->pluck('id');
 
         if ($activeFlockIds->isEmpty()) {
@@ -163,7 +163,7 @@ class StatsOverviewWidget extends BaseWidget
     {
         $activeFlockIds = Flock::query()
             ->active()
-            ->whereHas('building.farm', fn (Builder $q) => app(CurrentFarm::class)->restrictFarmsTableForCurrentUser($q->where('organisation_id', $orgId)))
+            ->where('flocks.organisation_id', $orgId)->tap(fn (Builder $q) => app(CurrentFarm::class)->restrictForCurrentUser($q, 'flocks.farm_id'))
             ->pluck('id');
 
         if ($activeFlockIds->isEmpty()) {

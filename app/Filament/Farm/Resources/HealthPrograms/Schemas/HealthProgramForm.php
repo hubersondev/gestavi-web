@@ -13,6 +13,7 @@ use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Schema;
+use Illuminate\Validation\Rule;
 
 class HealthProgramForm
 {
@@ -30,6 +31,8 @@ class HealthProgramForm
                                     ->description('Définir si ce programme est global ou spécifique à une ferme')
                                     ->schema([
                                         Select::make('farm_id')
+                                            // Garde-fou serveur : la valeur soumise doit appartenir à l'organisation courante
+                                            ->rules(fn (): array => [Rule::exists('farms', 'id')->where('organisation_id', Filament::getTenant()?->getKey())])
                                             ->label('Ferme')
                                             ->options(function () {
                                                 $tenant = Filament::getTenant();

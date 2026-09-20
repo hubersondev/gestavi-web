@@ -22,6 +22,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
+use Illuminate\Validation\Rule;
 
 class SaleForm
 {
@@ -46,6 +47,8 @@ class SaleForm
                                             ->placeholder('Généré automatiquement (FAC-YYYY-XXXXX)'),
 
                                         Select::make('farm_id')
+                                            // Garde-fou serveur : la valeur soumise doit appartenir à l'organisation courante
+                                            ->rules(fn (): array => [Rule::exists('farms', 'id')->where('organisation_id', Filament::getTenant()?->getKey())])
                                             ->label('Ferme')
                                             ->helperText('Optionnel — laisser vide pour une vente de niveau organisation')
                                             ->options(function (): array {
@@ -67,6 +70,8 @@ class SaleForm
                                             ->nullable(),
 
                                         Select::make('customer_id')
+                                            // Garde-fou serveur : la valeur soumise doit appartenir à l'organisation courante
+                                            ->rules(fn (): array => [Rule::exists('customers', 'id')->where('organisation_id', Filament::getTenant()?->getKey())])
                                             ->label('Client')
                                             ->options(function (): array {
                                                 $tenant = Filament::getTenant();
@@ -85,6 +90,8 @@ class SaleForm
                                             ->helperText('Laisser vide pour une vente comptant'),
 
                                         Select::make('quote_id')
+                                            // Garde-fou serveur : la valeur soumise doit appartenir à l'organisation courante
+                                            ->rules(fn (): array => [Rule::exists('quotes', 'id')->where('organisation_id', Filament::getTenant()?->getKey())])
                                             ->label('Devis lié')
                                             ->options(function (): array {
                                                 $tenant = Filament::getTenant();
@@ -137,6 +144,8 @@ class SaleForm
                                                     ->columnSpan(3),
 
                                                 Select::make('flock_id')
+                                                    // Garde-fou serveur : la valeur soumise doit appartenir à l'organisation courante
+                                                    ->rules(fn (): array => [Rule::exists('flocks', 'id')->where('organisation_id', Filament::getTenant()?->getKey())])
                                                     ->label('Bande liée')
                                                     ->options(function (): array {
                                                         $tenant = Filament::getTenant();
@@ -296,6 +305,8 @@ class SaleForm
                                             ->helperText('Mode de paiement prévu (informatif)'),
 
                                         Select::make('account_id')
+                                            // Garde-fou serveur : la valeur soumise doit appartenir à l'organisation courante
+                                            ->rules(fn (): array => [Rule::exists('accounts', 'id')->where('organisation_id', Filament::getTenant()?->getKey())])
                                             ->label('Compte d\'encaissement')
                                             ->options(function (): array {
                                                 $tenant = Filament::getTenant();

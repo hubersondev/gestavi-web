@@ -21,6 +21,7 @@ use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
+use Illuminate\Validation\Rule;
 
 class PurchaseOrderForm
 {
@@ -43,6 +44,8 @@ class PurchaseOrderForm
                                             ->placeholder('Généré automatiquement (BC-YYYY-XXXXX)'),
 
                                         Select::make('supplier_id')
+                                            // Garde-fou serveur : la valeur soumise doit appartenir à l'organisation courante
+                                            ->rules(fn (): array => [Rule::exists('suppliers', 'id')->where(fn ($q) => $q->where('organisation_id', Filament::getTenant()?->getKey())->orWhereNull('organisation_id'))])
                                             ->label('Fournisseur')
                                             ->options(function (): array {
                                                 $tenant = Filament::getTenant();
@@ -60,6 +63,8 @@ class PurchaseOrderForm
                                             ->preload(),
 
                                         Select::make('farm_id')
+                                            // Garde-fou serveur : la valeur soumise doit appartenir à l'organisation courante
+                                            ->rules(fn (): array => [Rule::exists('farms', 'id')->where('organisation_id', Filament::getTenant()?->getKey())])
                                             ->label('Ferme destinataire')
                                             ->options(function (): array {
                                                 $tenant = Filament::getTenant();
@@ -113,6 +118,8 @@ class PurchaseOrderForm
                                                 Hidden::make('id'),
 
                                                 Select::make('stock_id')
+                                                    // Garde-fou serveur : la valeur soumise doit appartenir à l'organisation courante
+                                                    ->rules(fn (): array => [Rule::exists('stocks', 'id')->where('organisation_id', Filament::getTenant()?->getKey())])
                                                     ->label('Produit existant')
                                                     ->options(function (): array {
                                                         $tenant = Filament::getTenant();

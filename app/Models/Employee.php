@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\EmployeeStatus;
 use App\Enums\Gender;
 use App\Enums\MaritalStatus;
+use App\Models\Concerns\BelongsToOrganisation;
 use App\Models\Concerns\LogsAuditTrail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -15,7 +16,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Employee extends Model
 {
-    use HasFactory, LogsAuditTrail;
+    use BelongsToOrganisation, HasFactory, LogsAuditTrail;
     use SoftDeletes;
 
     protected $fillable = [

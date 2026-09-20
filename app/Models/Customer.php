@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\CustomerType;
 use App\Enums\SaleStatus;
+use App\Models\Concerns\BelongsToOrganisation;
 use App\Models\Concerns\LogsAuditTrail;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -15,7 +16,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Customer extends Model
 {
-    use HasFactory, LogsAuditTrail, SoftDeletes;
+    use BelongsToOrganisation, HasFactory, LogsAuditTrail, SoftDeletes;
 
     protected $fillable = [
         'organisation_id', 'farm_id',

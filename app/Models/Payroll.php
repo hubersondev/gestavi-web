@@ -6,6 +6,7 @@ use App\Enums\ExpenseCategory;
 use App\Enums\ExpenseStatus;
 use App\Enums\PayrollStatus;
 use App\Exceptions\AccountException;
+use App\Models\Concerns\BelongsToOrganisation;
 use App\Models\Concerns\LogsAuditTrail;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -17,9 +18,13 @@ use Illuminate\Support\Facades\DB;
 
 class Payroll extends Model
 {
-    use HasFactory, LogsAuditTrail, SoftDeletes;
+    use BelongsToOrganisation, HasFactory, LogsAuditTrail, SoftDeletes;
+
+    /** Parent métier dont héritent organisation_id et farm_id. */
+    protected static string $organisationParentRelation = 'employee';
 
     protected $fillable = [
+        'organisation_id', 'farm_id',
         'employee_id', 'contract_id', 'payroll_parameter_id', 'validated_by', 'paid_by', 'expense_id',
         'period_year', 'period_month', 'status',
         'gross_salary', 'cnps_employee', 'cnps_employer', 'its',

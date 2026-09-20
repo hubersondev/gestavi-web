@@ -18,6 +18,7 @@ use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Validation\Rule;
 
 class VaccinationForm
 {
@@ -100,6 +101,8 @@ class VaccinationForm
                                             ->columnSpanFull(),
 
                                         Select::make('flock_id')
+                                            // Garde-fou serveur : la valeur soumise doit appartenir à l'organisation courante
+                                            ->rules(fn (): array => [Rule::exists('flocks', 'id')->where('organisation_id', Filament::getTenant()?->getKey())])
                                             ->label('Bande')
                                             ->options(function (Get $get) {
                                                 $tenant = Filament::getTenant();
@@ -138,6 +141,8 @@ class VaccinationForm
                                             ->columnSpanFull(),
 
                                         Select::make('health_program_id')
+                                            // Garde-fou serveur : la valeur soumise doit appartenir à l'organisation courante
+                                            ->rules(fn (): array => [Rule::exists('health_programs', 'id')->where(fn ($q) => $q->where('organisation_id', Filament::getTenant()?->getKey())->orWhereNull('organisation_id'))])
                                             ->label('Programme sanitaire (optionnel)')
                                             ->options(function (Get $get) {
                                                 $flockId = $get('flock_id');

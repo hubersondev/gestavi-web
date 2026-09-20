@@ -1,29 +1,51 @@
 <?php
 
+use App\Enums\AttendanceStatus;
+use App\Enums\LeaveStatus;
+use App\Enums\LeaveType;
 use App\Enums\PlanFeature;
 use App\Enums\VetVisitType;
 use App\Filament\Farm\Resources\Accounts\AccountResource;
+use App\Filament\Farm\Resources\Attendances\AttendanceResource;
+use App\Filament\Farm\Resources\Contracts\ContractResource;
+use App\Filament\Farm\Resources\CreditNotes\CreditNoteResource;
+use App\Filament\Farm\Resources\DailyRecords\DailyRecordResource;
 use App\Filament\Farm\Resources\Employees\EmployeeResource;
+use App\Filament\Farm\Resources\EquipmentMaintenances\EquipmentMaintenanceResource;
 use App\Filament\Farm\Resources\Expenses\ExpenseResource;
+use App\Filament\Farm\Resources\Leaves\LeaveResource;
 use App\Filament\Farm\Resources\Payrolls\PayrollResource;
 use App\Filament\Farm\Resources\Sales\SaleResource;
+use App\Filament\Farm\Resources\StockLots\StockLotResource;
 use App\Filament\Farm\Resources\StockMovements\StockMovementResource;
 use App\Filament\Farm\Resources\Stocks\StockResource;
 use App\Filament\Farm\Resources\Transactions\TransactionResource;
+use App\Filament\Farm\Resources\Vaccinations\VaccinationResource;
 use App\Filament\Farm\Resources\VetVisits\VetVisitResource;
 use App\Models\Account;
+use App\Models\Attendance;
+use App\Models\Building;
+use App\Models\Contract;
+use App\Models\CreditNote;
+use App\Models\DailyRecord;
 use App\Models\Employee;
+use App\Models\Equipment;
+use App\Models\EquipmentMaintenance;
 use App\Models\Expense;
 use App\Models\Farm;
+use App\Models\Flock;
+use App\Models\Leave;
 use App\Models\Organisation;
 use App\Models\OrganisationUser;
 use App\Models\Payroll;
 use App\Models\Plan;
 use App\Models\Sale;
 use App\Models\Stock;
+use App\Models\StockLot;
 use App\Models\StockMovement;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Models\Vaccination;
 use App\Models\VetVisit;
 use App\Services\CurrentFarm;
 use Database\Seeders\OrganisationPermissionSeeder;
@@ -139,7 +161,92 @@ dataset('ressources cloisonnées', [
         ]), withOrganisationLevel: false),
         fn () => VetVisitResource::scopeEloquentQueryToTenant(VetVisit::query(), test()->organisation),
     ],
+    // ─── Tables scopées directement depuis l'action 32 (organisation_id / farm_id dénormalisés) ───
+    'DailyRecord (via bande)' => [
+        fn () => seedPerFarm(fn (?int $farmId) => DailyRecord::create([
+            'flock_id' => flockOnFarm($farmId)->id,
+            'record_date' => now()->toDateString(),
+        ]), withOrganisationLevel: false),
+        fn () => DailyRecordResource::scopeEloquentQueryToTenant(DailyRecord::query(), test()->organisation),
+    ],
+    'Vaccination (via bande)' => [
+        fn () => seedPerFarm(fn (?int $farmId) => Vaccination::create([
+            'flock_id' => flockOnFarm($farmId)->id,
+            'treatment_name' => 'Newcastle',
+            'treatment_type' => 'vaccin',
+            'scheduled_date' => now()->toDateString(),
+        ]), withOrganisationLevel: false),
+        fn () => VaccinationResource::scopeEloquentQueryToTenant(Vaccination::query(), test()->organisation),
+    ],
+    'Contract (via employé)' => [
+        fn () => seedPerFarm(fn (?int $farmId) => Contract::factory()->create(['employee_id' => employeeOnFarm($farmId)->id]), withOrganisationLevel: false),
+        fn () => ContractResource::scopeEloquentQueryToTenant(Contract::query(), test()->organisation),
+    ],
+    'Leave (via employé)' => [
+        fn () => seedPerFarm(fn (?int $farmId) => Leave::create([
+            'employee_id' => employeeOnFarm($farmId)->id,
+            'type' => LeaveType::Annual,
+            'status' => LeaveStatus::Pending,
+            'start_date' => now()->toDateString(),
+            'end_date' => now()->addDay()->toDateString(),
+            'days_count' => 2,
+            'reason' => 'Test cloisonnement',
+        ]), withOrganisationLevel: false),
+        fn () => LeaveResource::scopeEloquentQueryToTenant(Leave::query(), test()->organisation),
+    ],
+    'Attendance (via employé)' => [
+        fn () => seedPerFarm(fn (?int $farmId) => Attendance::create([
+            'employee_id' => employeeOnFarm($farmId)->id,
+            'attendance_date' => now()->toDateString(),
+            'status' => AttendanceStatus::Present,
+        ]), withOrganisationLevel: false),
+        fn () => AttendanceResource::scopeEloquentQueryToTenant(Attendance::query(), test()->organisation),
+    ],
+    'StockLot (via stock)' => [
+        fn () => seedPerFarm(fn (?int $farmId) => Stock::factory()
+            ->create(['organisation_id' => test()->organisation->id, 'farm_id' => $farmId, 'quantity' => 0])
+            ->lots()->create([
+                'lot_number' => 'LOT-'.uniqid(),
+                'reception_date' => now()->toDateString(),
+                'initial_quantity' => 10,
+                'unit_price' => 100,
+            ]), withOrganisationLevel: false),
+        fn () => StockLotResource::scopeEloquentQueryToTenant(StockLot::query(), test()->organisation),
+    ],
+    'CreditNote (via facture)' => [
+        fn () => seedPerFarm(fn (?int $farmId) => CreditNote::factory()->create([
+            'organisation_id' => test()->organisation->id,
+            'sale_id' => Sale::factory()->create(['organisation_id' => test()->organisation->id, 'farm_id' => $farmId])->id,
+        ]), withOrganisationLevel: false),
+        fn () => CreditNoteResource::scopeEloquentQueryToTenant(CreditNote::query(), test()->organisation),
+    ],
+    'EquipmentMaintenance (via équipement)' => [
+        fn () => seedPerFarm(fn (?int $farmId) => EquipmentMaintenance::factory()->create([
+            'equipment_id' => Equipment::factory()->create([
+                'building_id' => Building::factory()->create(['farm_id' => $farmId])->id,
+            ])->id,
+        ]), withOrganisationLevel: false),
+        fn () => EquipmentMaintenanceResource::scopeEloquentQueryToTenant(EquipmentMaintenance::query(), test()->organisation),
+    ],
 ]);
+
+/**
+ * Bande active rattachée à une ferme (organisation_id / farm_id se remplissent depuis le bâtiment).
+ */
+function flockOnFarm(int $farmId): Flock
+{
+    return Flock::factory()->active()->create([
+        'building_id' => Building::factory()->create(['farm_id' => $farmId])->id,
+        'quantity_started' => 100,
+        'quantity_current' => 100,
+        'start_date' => now()->subDays(5),
+    ]);
+}
+
+function employeeOnFarm(int $farmId): Employee
+{
+    return Employee::factory()->create(['organisation_id' => test()->organisation->id, 'farm_id' => $farmId]);
+}
 
 it('un employé affecté à la ferme A ne voit que la ferme A', function (Closure $seed, Closure $scoped) {
     [$idsA, $idsB, $idsOrg] = $seed();

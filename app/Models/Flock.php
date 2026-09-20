@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\FlockStatus;
+use App\Models\Concerns\BelongsToOrganisation;
 use App\Models\Concerns\LogsAuditTrail;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -13,9 +14,13 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Flock extends Model
 {
-    use HasFactory, LogsAuditTrail, SoftDeletes;
+    use BelongsToOrganisation, HasFactory, LogsAuditTrail, SoftDeletes;
+
+    /** Parent métier dont héritent organisation_id et farm_id. */
+    protected static string $organisationParentRelation = 'building';
 
     protected $fillable = [
+        'organisation_id', 'farm_id',
         'building_id',
         'chicken_type_id',
         'breed',
@@ -52,6 +57,16 @@ class Flock extends Model
     public function building(): BelongsTo
     {
         return $this->belongsTo(Building::class);
+    }
+
+    public function farm(): BelongsTo
+    {
+        return $this->belongsTo(Farm::class);
+    }
+
+    public function organisation(): BelongsTo
+    {
+        return $this->belongsTo(Organisation::class);
     }
 
     public function chickenType(): BelongsTo

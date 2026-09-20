@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\StockMovementReason;
 use App\Enums\StockMovementType;
 use App\Exceptions\StockException;
+use App\Models\Concerns\BelongsToOrganisation;
 use App\Models\Concerns\LogsAuditTrail;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -16,7 +17,7 @@ use Illuminate\Support\Facades\DB;
 
 class Stock extends Model
 {
-    use HasFactory, LogsAuditTrail, SoftDeletes;
+    use BelongsToOrganisation, HasFactory, LogsAuditTrail, SoftDeletes;
 
     protected $fillable = [
         'organisation_id', 'farm_id', 'stock_category_id',

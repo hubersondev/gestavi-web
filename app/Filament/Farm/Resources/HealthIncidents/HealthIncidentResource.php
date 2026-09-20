@@ -91,19 +91,9 @@ class HealthIncidentResource extends Resource
 
     public static function scopeEloquentQueryToTenant(Builder $query, ?Model $tenant): Builder
     {
-        $membership = static::currentMembership();
-        $currentFarm = static::currentFarm();
-
-        return $query->whereHas('flock.building.farm', function (Builder $q) use ($tenant, $membership, $currentFarm) {
-            $q->where('farms.organisation_id', $tenant?->getKey());
-
-            if ($membership) {
-                $q->accessibleBy($membership);
-            }
-
-            if ($currentFarm) {
-                $q->where('farms.id', $currentFarm->id);
-            }
-        });
+        // Discriminants directs (organisation_id / farm_id) : plus de jointure à travers la chaîne parente
+        return static::applyFarmScope(
+            $query->where($query->qualifyColumn('organisation_id'), $tenant?->getKey()),
+        );
     }
 }

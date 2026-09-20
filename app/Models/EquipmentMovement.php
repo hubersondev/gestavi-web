@@ -2,15 +2,20 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToOrganisation;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class EquipmentMovement extends Model
 {
-    use HasFactory;
+    use BelongsToOrganisation, HasFactory;
+
+    /** Parent métier dont héritent organisation_id et farm_id. */
+    protected static string $organisationParentRelation = 'equipment';
 
     protected $fillable = [
+        'organisation_id', 'farm_id',
         'equipment_id',
         'moved_by',
         'from_building_id',

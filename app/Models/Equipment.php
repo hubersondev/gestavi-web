@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToOrganisation;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,11 +11,15 @@ use Illuminate\Support\Facades\Auth;
 
 class Equipment extends Model
 {
-    use HasFactory;
+    use BelongsToOrganisation, HasFactory;
+
+    /** Parent métier dont héritent organisation_id et farm_id. */
+    protected static string $organisationParentRelation = 'building';
 
     protected $table = 'equipments';
 
     protected $fillable = [
+        'organisation_id',
         'building_id',
         'farm_id',
         'supplier_id',

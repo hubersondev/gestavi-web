@@ -67,6 +67,8 @@ class FlockForm
                                             ->columnSpan(2),
 
                                         Select::make('building_id')
+                                            // Garde-fou serveur : la valeur soumise doit appartenir à l'organisation courante
+                                            ->rules(fn (): array => [Rule::exists('buildings', 'id')->where('organisation_id', Filament::getTenant()?->getKey())])
                                             ->label('Bâtiment')
                                             ->options(function (Get $get) {
                                                 $tenant = Filament::getTenant();
@@ -232,6 +234,8 @@ class FlockForm
                                 Section::make('Achat des sujets')
                                     ->schema([
                                         Select::make('supplier_id')
+                                            // Garde-fou serveur : la valeur soumise doit appartenir à l'organisation courante
+                                            ->rules(fn (): array => [Rule::exists('suppliers', 'id')->where(fn ($q) => $q->where('organisation_id', Filament::getTenant()?->getKey())->orWhereNull('organisation_id'))])
                                             ->label('Fournisseur (couvoir)')
                                             ->options(function () {
                                                 $tenant = Filament::getTenant();

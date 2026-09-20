@@ -38,7 +38,7 @@ class StockStatsOverviewWidget extends StatsOverviewWidget
             ->value('total');
 
         $lotsBaseQuery = StockLot::query()
-            ->whereHas('stock', fn ($q) => app(CurrentFarm::class)->restrictForCurrentUser($q->where('organisation_id', $tenant->getKey())));
+            ->where('stock_lots.organisation_id', $tenant->getKey())->tap(fn (Builder $q) => app(CurrentFarm::class)->restrictForCurrentUser($q, 'stock_lots.farm_id'));
 
         $activeLots = (clone $lotsBaseQuery)->where('current_quantity', '>', 0)->count();
         $expiringSoon = (clone $lotsBaseQuery)->expiringSoon(7)->where('current_quantity', '>', 0)->count();

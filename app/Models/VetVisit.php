@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\VetVisitType;
+use App\Models\Concerns\BelongsToOrganisation;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,9 +12,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class VetVisit extends Model
 {
-    use HasFactory;
+    use BelongsToOrganisation, HasFactory;
 
     protected $fillable = [
+        'organisation_id',
         'farm_id',
         'flock_id',
         'veterinarian_id',

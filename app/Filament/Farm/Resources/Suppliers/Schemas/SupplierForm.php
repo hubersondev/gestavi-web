@@ -15,6 +15,7 @@ use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Validation\Rule;
 
 class SupplierForm
 {
@@ -51,6 +52,8 @@ class SupplierForm
                                             ->searchable(),
 
                                         Select::make('parent_supplier_id')
+                                            // Garde-fou serveur : la valeur soumise doit appartenir à l'organisation courante
+                                            ->rules(fn (): array => [Rule::exists('suppliers', 'id')->where(fn ($q) => $q->where('organisation_id', Filament::getTenant()?->getKey())->orWhereNull('organisation_id'))])
                                             ->label('Réseau fournisseur')
                                             ->helperText('Regrouper ce fournisseur sous un réseau existant (optionnel)')
                                             ->options(function () {
@@ -70,6 +73,8 @@ class SupplierForm
                                             ->nullable(),
 
                                         Select::make('farm_id')
+                                            // Garde-fou serveur : la valeur soumise doit appartenir à l'organisation courante
+                                            ->rules(fn (): array => [Rule::exists('farms', 'id')->where('organisation_id', Filament::getTenant()?->getKey())])
                                             ->label('Ferme')
                                             ->helperText('Laisser vide pour un fournisseur réseau (toutes fermes)')
                                             ->options(function () {

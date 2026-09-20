@@ -19,6 +19,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
+use Illuminate\Validation\Rule;
 
 class QuoteForm
 {
@@ -42,6 +43,8 @@ class QuoteForm
                                             ->placeholder('Généré automatiquement (DEV-YYYY-XXXXX)'),
 
                                         Select::make('farm_id')
+                                            // Garde-fou serveur : la valeur soumise doit appartenir à l'organisation courante
+                                            ->rules(fn (): array => [Rule::exists('farms', 'id')->where('organisation_id', Filament::getTenant()?->getKey())])
                                             ->label('Ferme')
                                             ->options(function (): array {
                                                 $tenant = Filament::getTenant();
@@ -58,6 +61,8 @@ class QuoteForm
                                             ->nullable(),
 
                                         Select::make('customer_id')
+                                            // Garde-fou serveur : la valeur soumise doit appartenir à l'organisation courante
+                                            ->rules(fn (): array => [Rule::exists('customers', 'id')->where('organisation_id', Filament::getTenant()?->getKey())])
                                             ->label('Client')
                                             ->options(function (): array {
                                                 $tenant = Filament::getTenant();
@@ -140,6 +145,8 @@ class QuoteForm
                                                     ->columnSpan(3),
 
                                                 Select::make('flock_id')
+                                                    // Garde-fou serveur : la valeur soumise doit appartenir à l'organisation courante
+                                                    ->rules(fn (): array => [Rule::exists('flocks', 'id')->where('organisation_id', Filament::getTenant()?->getKey())])
                                                     ->label('Bande liée')
                                                     ->options(function (): array {
                                                         $tenant = Filament::getTenant();

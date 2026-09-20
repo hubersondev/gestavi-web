@@ -14,6 +14,7 @@ use App\Filament\Farm\Resources\Suppliers\Schemas\SupplierForm;
 use App\Filament\Farm\Resources\Suppliers\Schemas\SupplierInfolist;
 use App\Filament\Farm\Resources\Suppliers\Tables\SuppliersTable;
 use App\Models\Supplier;
+use App\Services\CurrentFarm;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -83,28 +84,28 @@ class SupplierResource extends Resource
     public static function scopeEloquentQueryToTenant(Builder $query, ?Model $tenant): Builder
     {
         $membership = static::currentMembership();
-        $currentFarm = static::currentFarm();
+        $query->where($query->qualifyColumn('organisation_id'), $tenant?->getKey());
 
-        return $query->where(function (Builder $q) use ($tenant, $membership, $currentFarm) {
-            // Fournisseurs liés à une ferme (standalone ou branches)
-            $q->whereHas('farm', function (Builder $farmQuery) use ($tenant, $membership, $currentFarm) {
-                $farmQuery->where('farms.organisation_id', $tenant?->getKey());
+        if (! $membership) {
+            return $query->whereRaw('1 = 0');
+        }
 
-                if ($membership) {
-                    $farmQuery->accessibleBy($membership);
-                }
+        $currentFarm = app(CurrentFarm::class);
+        $ids = $currentFarm->accessibleFarmIds($membership);
 
-                if ($currentFarm) {
-                    $farmQuery->where('farms.id', $currentFarm->id);
-                }
-            });
+        if ($ids === null) {
+            return $query;
+        }
 
-            // Fournisseurs réseau (sans ferme) : visibles sauf si une ferme est sélectionnée
-            if (! $currentFarm) {
-                $q->orWhere(function (Builder $networkQuery) use ($tenant) {
-                    $networkQuery->whereNull('farm_id')
-                        ->where('organisation_id', $tenant?->getKey());
-                });
+        $farmSelected = $currentFarm->get($membership) !== null;
+
+        // Fournisseurs de ferme : selon l'affectation ; fournisseurs réseau (farm_id NULL) :
+        // visibles de tous les membres sauf quand une ferme précise est sélectionnée.
+        return $query->where(function (Builder $q) use ($ids, $farmSelected): void {
+            $q->whereIn('farm_id', $ids);
+
+            if (! $farmSelected) {
+                $q->orWhereNull('farm_id');
             }
         });
     }

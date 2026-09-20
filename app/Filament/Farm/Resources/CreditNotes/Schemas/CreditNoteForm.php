@@ -12,6 +12,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Illuminate\Validation\Rule;
 
 class CreditNoteForm
 {
@@ -30,6 +31,8 @@ class CreditNoteForm
                             ->placeholder('Généré automatiquement (AV-YYYY-XXXXX)'),
 
                         Select::make('sale_id')
+                            // Garde-fou serveur : la valeur soumise doit appartenir à l'organisation courante
+                            ->rules(fn (): array => [Rule::exists('sales', 'id')->where('organisation_id', Filament::getTenant()?->getKey())])
                             ->label('Facture concernée')
                             ->options(function (): array {
                                 $tenant = Filament::getTenant();

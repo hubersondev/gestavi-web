@@ -6,6 +6,7 @@ use App\Enums\CreditNoteStatus;
 use App\Enums\SaleStatus;
 use App\Enums\TransactionCategory;
 use App\Exceptions\CommercialException;
+use App\Models\Concerns\BelongsToOrganisation;
 use App\Models\Concerns\LogsAuditTrail;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -16,9 +17,13 @@ use Illuminate\Support\Facades\DB;
 
 class CreditNote extends Model
 {
-    use HasFactory, LogsAuditTrail, SoftDeletes;
+    use BelongsToOrganisation, HasFactory, LogsAuditTrail, SoftDeletes;
+
+    /** Parent métier dont héritent organisation_id et farm_id. */
+    protected static string $organisationParentRelation = 'sale';
 
     protected $fillable = [
+        'farm_id',
         'organisation_id', 'sale_id', 'customer_id', 'user_id',
         'credit_note_number', 'issue_date',
         'amount', 'applied_amount', 'refunded_amount', 'refund_account_id',

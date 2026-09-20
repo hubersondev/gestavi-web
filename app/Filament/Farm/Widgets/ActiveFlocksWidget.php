@@ -29,9 +29,9 @@ class ActiveFlocksWidget extends TableWidget
             ->query(
                 Flock::query()
                     ->active()
-                    ->when($tenant, fn (Builder $q) => $q->whereHas(
-                        'building.farm',
-                        fn (Builder $sub) => app(CurrentFarm::class)->restrictFarmsTableForCurrentUser($sub->where('organisation_id', $tenant->getKey()))
+                    ->when($tenant, fn (Builder $q) => app(CurrentFarm::class)->restrictForCurrentUser(
+                        $q->where('flocks.organisation_id', $tenant->getKey()),
+                        'flocks.farm_id',
                     ))
                     ->with(['building', 'chickenType'])
                     ->orderByDesc('start_date')

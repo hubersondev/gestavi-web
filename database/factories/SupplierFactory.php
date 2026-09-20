@@ -4,7 +4,7 @@ namespace Database\Factories;
 
 use App\Models\City;
 use App\Models\Country;
-use App\Models\Farm;
+use App\Models\Organisation;
 use App\Models\Supplier;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -21,7 +21,10 @@ class SupplierFactory extends Factory
     public function definition(): array
     {
         return [
-            'farm_id' => Farm::factory(),
+            // Fournisseur réseau par défaut (organisation sans ferme) ; passer farm_id pour une branche de ferme,
+            // l'organisation est alors déduite de la ferme par le trait BelongsToOrganisation.
+            'organisation_id' => fn (array $attributes) => isset($attributes['farm_id']) ? null : Organisation::factory()->create()->id,
+            'farm_id' => null,
             'name' => fake()->company(),
             'code' => strtoupper(fake()->unique()->bothify('SUP-###')),
             'type' => fake()->randomElement(['aliment', 'medicament', 'poussin', 'materiel', 'equipement']),

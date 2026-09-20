@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\TransactionCategory;
 use App\Enums\TransactionType;
+use App\Models\Concerns\BelongsToOrganisation;
 use App\Models\Concerns\LogsAuditTrail;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -13,9 +14,13 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class Transaction extends Model
 {
-    use HasFactory, LogsAuditTrail;
+    use BelongsToOrganisation, HasFactory, LogsAuditTrail;
+
+    /** Parent métier dont héritent organisation_id et farm_id. */
+    protected static string $organisationParentRelation = 'account';
 
     protected $fillable = [
+        'organisation_id', 'farm_id',
         'account_id', 'user_id',
         'type', 'category',
         'amount', 'balance_before', 'balance_after',

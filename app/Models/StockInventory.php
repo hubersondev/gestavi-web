@@ -6,6 +6,7 @@ use App\Enums\StockInventoryDifferenceReason;
 use App\Enums\StockInventoryStatus;
 use App\Enums\StockMovementReason;
 use App\Enums\StockMovementType;
+use App\Models\Concerns\BelongsToOrganisation;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -14,9 +15,13 @@ use Illuminate\Support\Facades\DB;
 
 class StockInventory extends Model
 {
-    use HasFactory;
+    use BelongsToOrganisation, HasFactory;
+
+    /** Parent métier dont héritent organisation_id et farm_id. */
+    protected static string $organisationParentRelation = 'stock';
 
     protected $fillable = [
+        'farm_id',
         'organisation_id', 'stock_id', 'stock_lot_id',
         'conducted_by', 'validated_by', 'adjustment_movement_id',
         'inventory_ref', 'inventory_date',

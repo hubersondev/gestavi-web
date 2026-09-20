@@ -18,6 +18,7 @@ use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
+use Illuminate\Validation\Rule;
 
 class LeaveForm
 {
@@ -35,6 +36,8 @@ class LeaveForm
                                 Section::make('Employé')
                                     ->schema([
                                         Select::make('employee_id')
+                                            // Garde-fou serveur : la valeur soumise doit appartenir à l'organisation courante
+                                            ->rules(fn (): array => [Rule::exists('employees', 'id')->where('organisation_id', Filament::getTenant()?->getKey())])
                                             ->label('Employé')
                                             ->options(function (): array {
                                                 $tenant = Filament::getTenant();

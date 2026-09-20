@@ -104,7 +104,7 @@ class ProductionReportPage extends Page implements HasTable
                     $tenant = Filament::getTenant();
 
                     return Flock::query()
-                        ->whereHas('building.farm', fn ($q) => app(CurrentFarm::class)->restrictFarmsTableForCurrentUser($q->where('organisation_id', $tenant?->getKey())))
+                        ->where('flocks.organisation_id', $tenant?->getKey())->tap(fn (Builder $q) => app(CurrentFarm::class)->restrictForCurrentUser($q, 'flocks.farm_id'))
                         ->orderByDesc('start_date')
                         ->get()
                         ->mapWithKeys(fn (Flock $f) => [$f->id => $f->code.' — '.$f->name])
@@ -207,14 +207,9 @@ class ProductionReportPage extends Page implements HasTable
         $flockId = $filters['flock_id'] ?? null;
 
         return $query
-            ->whereHas('flock.building.farm', function (Builder $q) use ($tenant, $farmId): void {
-                $q->where('organisation_id', $tenant?->getKey());
-                app(CurrentFarm::class)->restrictFarmsTableForCurrentUser($q);
-
-                if ($farmId) {
-                    $q->where('farms.id', $farmId);
-                }
-            })
+            ->where('daily_records.organisation_id', $tenant?->getKey())
+            ->tap(fn (Builder $q) => app(CurrentFarm::class)->restrictForCurrentUser($q, 'daily_records.farm_id'))
+            ->when($farmId, fn (Builder $q) => $q->where('daily_records.farm_id', $farmId))
             ->when($flockId, fn (Builder $q) => $q->where('flock_id', $flockId))
             ->whereBetween('record_date', [$filters['date_from'], $filters['date_to']]);
     }
@@ -315,9 +310,7 @@ class ProductionReportPage extends Page implements HasTable
         }
 
         $rows = $this->applyFilters(DailyRecord::query())
-            ->join('flocks', 'flocks.id', '=', 'daily_records.flock_id')
-            ->join('buildings', 'buildings.id', '=', 'flocks.building_id')
-            ->join('farms', 'farms.id', '=', 'buildings.farm_id')
+            ->join('farms', 'farms.id', '=', 'daily_records.farm_id')
             ->selectRaw('farms.id AS farm_id, farms.name AS farm_name')
             ->selectRaw('COUNT(DISTINCT daily_records.flock_id) AS flocks')
             ->selectRaw('COUNT(*) AS records')

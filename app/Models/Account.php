@@ -6,6 +6,7 @@ use App\Enums\AccountType;
 use App\Enums\MobileMoneyOperator;
 use App\Enums\TransactionCategory;
 use App\Enums\TransactionType;
+use App\Models\Concerns\BelongsToOrganisation;
 use App\Models\Concerns\LogsAuditTrail;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -18,7 +19,7 @@ use Illuminate\Support\Facades\DB;
 
 class Account extends Model
 {
-    use HasFactory, LogsAuditTrail, SoftDeletes;
+    use BelongsToOrganisation, HasFactory, LogsAuditTrail, SoftDeletes;
 
     protected $fillable = [
         'organisation_id', 'farm_id',

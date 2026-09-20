@@ -14,6 +14,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Illuminate\Validation\Rule;
 
 class StockMovementForm
 {
@@ -25,6 +26,8 @@ class StockMovementForm
                     ->columns(2)
                     ->schema([
                         Select::make('stock_id')
+                            // Garde-fou serveur : la valeur soumise doit appartenir à l'organisation courante
+                            ->rules(fn (): array => [Rule::exists('stocks', 'id')->where('organisation_id', Filament::getTenant()?->getKey())])
                             ->label('Produit')
                             ->options(function (): array {
                                 $tenant = Filament::getTenant();
@@ -75,6 +78,8 @@ class StockMovementForm
                             ->displayFormat('d/m/Y'),
 
                         Select::make('flock_id')
+                            // Garde-fou serveur : la valeur soumise doit appartenir à l'organisation courante
+                            ->rules(fn (): array => [Rule::exists('flocks', 'id')->where('organisation_id', Filament::getTenant()?->getKey())])
                             ->label('Bande')
                             ->options(function (): array {
                                 $tenant = Filament::getTenant();

@@ -14,6 +14,7 @@ use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
+use Illuminate\Validation\Rule;
 
 class AccountTransferForm
 {
@@ -31,6 +32,8 @@ class AccountTransferForm
                                     ->columns(2)
                                     ->schema([
                                         Select::make('from_account_id')
+                                            // Garde-fou serveur : la valeur soumise doit appartenir à l'organisation courante
+                                            ->rules(fn (): array => [Rule::exists('accounts', 'id')->where('organisation_id', Filament::getTenant()?->getKey())])
                                             ->label('Compte source')
                                             ->options(fn () => self::accountOptions())
                                             ->required()
@@ -58,6 +61,8 @@ class AccountTransferForm
                                             }),
 
                                         Select::make('to_account_id')
+                                            // Garde-fou serveur : la valeur soumise doit appartenir à l'organisation courante
+                                            ->rules(fn (): array => [Rule::exists('accounts', 'id')->where('organisation_id', Filament::getTenant()?->getKey())])
                                             ->label('Compte destinataire')
                                             ->options(function (Get $get): array {
                                                 return collect(self::accountOptions())

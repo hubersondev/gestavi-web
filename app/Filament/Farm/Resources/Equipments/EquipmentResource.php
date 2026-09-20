@@ -92,20 +92,9 @@ class EquipmentResource extends Resource
 
     public static function scopeEloquentQueryToTenant(Builder $query, ?Model $tenant): Builder
     {
-        $membership = static::currentMembership();
-        $currentFarm = static::currentFarm();
-
-        // Utiliser farm_id directement pour inclure les équipements en stock (building_id nullable)
-        return $query->whereHas('farm', function (Builder $q) use ($tenant, $membership, $currentFarm) {
-            $q->where('farms.organisation_id', $tenant?->getKey());
-
-            if ($membership) {
-                $q->accessibleBy($membership);
-            }
-
-            if ($currentFarm) {
-                $q->where('farms.id', $currentFarm->id);
-            }
-        });
+        // Discriminants directs (organisation_id / farm_id) : plus de jointure à travers la chaîne parente
+        return static::applyFarmScope(
+            $query->where($query->qualifyColumn('organisation_id'), $tenant?->getKey()),
+        );
     }
 }

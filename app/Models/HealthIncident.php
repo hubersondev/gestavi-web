@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\IncidentCategory;
 use App\Enums\IncidentSeverity;
 use App\Enums\IncidentStatus;
+use App\Models\Concerns\BelongsToOrganisation;
 use App\Models\Concerns\LogsAuditTrail;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -13,9 +14,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class HealthIncident extends Model
 {
-    use HasFactory, LogsAuditTrail;
+    use BelongsToOrganisation, HasFactory, LogsAuditTrail;
+
+    /** Parent métier dont héritent organisation_id et farm_id. */
+    protected static string $organisationParentRelation = 'flock';
 
     protected $fillable = [
+        'organisation_id', 'farm_id',
         'flock_id',
         'reported_by',
         'title',

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\StockLotStatus;
+use App\Models\Concerns\BelongsToOrganisation;
 use App\Models\Concerns\LogsAuditTrail;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,9 +13,13 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class StockLot extends Model
 {
-    use HasFactory, LogsAuditTrail, SoftDeletes;
+    use BelongsToOrganisation, HasFactory, LogsAuditTrail, SoftDeletes;
+
+    /** Parent métier dont héritent organisation_id et farm_id. */
+    protected static string $organisationParentRelation = 'stock';
 
     protected $fillable = [
+        'organisation_id', 'farm_id',
         'stock_id', 'supplier_id',
         'lot_number', 'internal_lot_number',
         'manufacturing_date', 'expiry_date', 'reception_date', 'shelf_life_days',

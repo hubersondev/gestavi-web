@@ -18,6 +18,7 @@ use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
+use Illuminate\Validation\Rule;
 
 class PayrollForm
 {
@@ -35,6 +36,8 @@ class PayrollForm
                                 Section::make('Employé & Contrat')
                                     ->schema([
                                         Select::make('employee_id')
+                                            // Garde-fou serveur : la valeur soumise doit appartenir à l'organisation courante
+                                            ->rules(fn (): array => [Rule::exists('employees', 'id')->where('organisation_id', Filament::getTenant()?->getKey())])
                                             ->label('Employé')
                                             ->options(function (): array {
                                                 $tenant = Filament::getTenant();
@@ -72,6 +75,8 @@ class PayrollForm
                                             }),
 
                                         Select::make('contract_id')
+                                            // Garde-fou serveur : la valeur soumise doit appartenir à l'organisation courante
+                                            ->rules(fn (): array => [Rule::exists('contracts', 'id')->where('organisation_id', Filament::getTenant()?->getKey())])
                                             ->label('Contrat')
                                             ->options(fn (Get $get): array => Contract::where('employee_id', $get('employee_id'))
                                                 ->where('status', 'active')

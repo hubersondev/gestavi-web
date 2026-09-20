@@ -16,6 +16,7 @@ use Filament\Forms\Components\TimePicker;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Schema;
+use Illuminate\Validation\Rule;
 
 class AttendanceForm
 {
@@ -33,6 +34,8 @@ class AttendanceForm
                                 Section::make('Employé & Date')
                                     ->schema([
                                         Select::make('employee_id')
+                                            // Garde-fou serveur : la valeur soumise doit appartenir à l'organisation courante
+                                            ->rules(fn (): array => [Rule::exists('employees', 'id')->where('organisation_id', Filament::getTenant()?->getKey())])
                                             ->label('Employé')
                                             ->options(function (): array {
                                                 $tenant = Filament::getTenant();

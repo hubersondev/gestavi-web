@@ -13,6 +13,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Illuminate\Validation\Rule;
 
 class StockLotForm
 {
@@ -24,6 +25,8 @@ class StockLotForm
                     ->columns(2)
                     ->schema([
                         Select::make('stock_id')
+                            // Garde-fou serveur : la valeur soumise doit appartenir à l'organisation courante
+                            ->rules(fn (): array => [Rule::exists('stocks', 'id')->where('organisation_id', Filament::getTenant()?->getKey())])
                             ->label('Produit')
                             ->options(function (): array {
                                 $tenant = Filament::getTenant();
@@ -42,6 +45,8 @@ class StockLotForm
                             ->disabledOn('edit'),
 
                         Select::make('supplier_id')
+                            // Garde-fou serveur : la valeur soumise doit appartenir à l'organisation courante
+                            ->rules(fn (): array => [Rule::exists('suppliers', 'id')->where(fn ($q) => $q->where('organisation_id', Filament::getTenant()?->getKey())->orWhereNull('organisation_id'))])
                             ->label('Fournisseur')
                             ->options(function (): array {
                                 $tenant = Filament::getTenant();

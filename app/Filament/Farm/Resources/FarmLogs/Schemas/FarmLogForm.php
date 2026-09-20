@@ -20,6 +20,7 @@ use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Validation\Rule;
 
 class FarmLogForm
 {
@@ -35,6 +36,8 @@ class FarmLogForm
                                 Section::make('Localisation')
                                     ->schema([
                                         Select::make('farm_id')
+                                            // Garde-fou serveur : la valeur soumise doit appartenir à l'organisation courante
+                                            ->rules(fn (): array => [Rule::exists('farms', 'id')->where('organisation_id', Filament::getTenant()?->getKey())])
                                             ->label('Ferme')
                                             ->options(function () {
                                                 $tenant = Filament::getTenant();
@@ -66,6 +69,8 @@ class FarmLogForm
                                             ->columnSpan(2),
 
                                         Select::make('flock_id')
+                                            // Garde-fou serveur : la valeur soumise doit appartenir à l'organisation courante
+                                            ->rules(fn (): array => [Rule::exists('flocks', 'id')->where('organisation_id', Filament::getTenant()?->getKey())])
                                             ->label('Bande (optionnel)')
                                             ->options(function (Get $get) {
                                                 $farmId = $get('farm_id');
@@ -92,6 +97,8 @@ class FarmLogForm
                                             ->placeholder('Ferme entière'),
 
                                         Select::make('building_id')
+                                            // Garde-fou serveur : la valeur soumise doit appartenir à l'organisation courante
+                                            ->rules(fn (): array => [Rule::exists('buildings', 'id')->where('organisation_id', Filament::getTenant()?->getKey())])
                                             ->label('Bâtiment (optionnel)')
                                             ->options(function (Get $get) {
                                                 $farmId = $get('farm_id');

@@ -4,15 +4,20 @@ namespace App\Models;
 
 use App\Enums\LeaveStatus;
 use App\Enums\LeaveType;
+use App\Models\Concerns\BelongsToOrganisation;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Leave extends Model
 {
-    use HasFactory;
+    use BelongsToOrganisation, HasFactory;
+
+    /** Parent métier dont héritent organisation_id et farm_id. */
+    protected static string $organisationParentRelation = 'employee';
 
     protected $fillable = [
+        'organisation_id', 'farm_id',
         'employee_id', 'approved_by',
         'type', 'status',
         'start_date', 'end_date', 'days_count',

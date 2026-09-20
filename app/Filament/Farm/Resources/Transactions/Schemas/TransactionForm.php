@@ -17,6 +17,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
+use Illuminate\Validation\Rule;
 
 class TransactionForm
 {
@@ -33,6 +34,8 @@ class TransactionForm
                                 Section::make('Compte concerné')
                                     ->schema([
                                         Select::make('account_id')
+                                            // Garde-fou serveur : la valeur soumise doit appartenir à l'organisation courante
+                                            ->rules(fn (): array => [Rule::exists('accounts', 'id')->where('organisation_id', Filament::getTenant()?->getKey())])
                                             ->label('Compte')
                                             ->options(function (): array {
                                                 $tenant = Filament::getTenant();

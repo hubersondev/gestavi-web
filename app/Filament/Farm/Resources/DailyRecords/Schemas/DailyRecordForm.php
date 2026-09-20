@@ -68,6 +68,8 @@ class DailyRecordForm
                                             ->columnSpanFull(),
 
                                         Select::make('flock_id')
+                                            // Garde-fou serveur : la valeur soumise doit appartenir à l'organisation courante
+                                            ->rules(fn (): array => [Rule::exists('flocks', 'id')->where('organisation_id', Filament::getTenant()?->getKey())])
                                             ->label('Bande')
                                             ->options(function (Get $get) {
                                                 $tenant = Filament::getTenant();

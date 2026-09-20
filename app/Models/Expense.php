@@ -6,6 +6,7 @@ use App\Enums\ExpenseCategory;
 use App\Enums\ExpenseStatus;
 use App\Enums\TransactionCategory;
 use App\Exceptions\ExpenseException;
+use App\Models\Concerns\BelongsToOrganisation;
 use App\Models\Concerns\LogsAuditTrail;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -16,7 +17,7 @@ use Illuminate\Support\Facades\DB;
 
 class Expense extends Model
 {
-    use HasFactory, LogsAuditTrail, SoftDeletes;
+    use BelongsToOrganisation, HasFactory, LogsAuditTrail, SoftDeletes;
 
     protected $fillable = [
         'organisation_id', 'farm_id', 'flock_id',

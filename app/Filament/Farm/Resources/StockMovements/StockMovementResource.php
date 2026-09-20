@@ -92,9 +92,9 @@ class StockMovementResource extends Resource
 
     public static function scopeEloquentQueryToTenant(Builder $query, ?Model $tenant): Builder
     {
-        return static::applyFarmScopeThrough(
-            $query->whereHas('stock', fn (Builder $q) => $q->where('organisation_id', $tenant?->getKey())),
-            'stock',
+        // Discriminants directs (organisation_id / farm_id) : plus de jointure à travers la chaîne parente
+        return static::applyFarmScope(
+            $query->where($query->qualifyColumn('organisation_id'), $tenant?->getKey()),
         );
     }
 }

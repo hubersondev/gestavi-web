@@ -67,10 +67,10 @@ it('calcule les KPI financiers sur 250 transactions sans troncature, avec soldes
     // 250 transactions dans la période : 200 crédits de 10 sur A, 50 débits de 4 sur B
     $rows = [];
     for ($i = 0; $i < 200; $i++) {
-        $rows[] = ['account_id' => $accountA->id, 'type' => 'credit', 'category' => 'other', 'amount' => 10, 'balance_before' => 0, 'balance_after' => 0, 'description' => 'c', 'transaction_date' => now()->subDays($i % 10)->toDateString(), 'created_at' => now(), 'updated_at' => now()];
+        $rows[] = ['organisation_id' => $accountA->organisation_id, 'farm_id' => $accountA->farm_id, 'account_id' => $accountA->id, 'type' => 'credit', 'category' => 'other', 'amount' => 10, 'balance_before' => 0, 'balance_after' => 0, 'description' => 'c', 'transaction_date' => now()->subDays($i % 10)->toDateString(), 'created_at' => now(), 'updated_at' => now()];
     }
     for ($i = 0; $i < 50; $i++) {
-        $rows[] = ['account_id' => $accountB->id, 'type' => 'debit', 'category' => 'other', 'amount' => 4, 'balance_before' => 0, 'balance_after' => 0, 'description' => 'd', 'transaction_date' => now()->subDays($i % 10)->toDateString(), 'created_at' => now(), 'updated_at' => now()];
+        $rows[] = ['organisation_id' => $accountB->organisation_id, 'farm_id' => $accountB->farm_id, 'account_id' => $accountB->id, 'type' => 'debit', 'category' => 'other', 'amount' => 4, 'balance_before' => 0, 'balance_after' => 0, 'description' => 'd', 'transaction_date' => now()->subDays($i % 10)->toDateString(), 'created_at' => now(), 'updated_at' => now()];
     }
     Transaction::query()->insert($rows);
 

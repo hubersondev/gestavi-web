@@ -32,7 +32,7 @@ class ProductionChartWidget extends ChartWidget
 
         $activeFlockIds = Flock::query()
             ->active()
-            ->whereHas('building.farm', fn (Builder $q) => app(CurrentFarm::class)->restrictFarmsTableForCurrentUser($q->where('organisation_id', $tenant->getKey())))
+            ->where('flocks.organisation_id', $tenant->getKey())->tap(fn (Builder $q) => app(CurrentFarm::class)->restrictForCurrentUser($q, 'flocks.farm_id'))
             ->pluck('id');
 
         if ($activeFlockIds->isEmpty()) {
