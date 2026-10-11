@@ -7,6 +7,7 @@ use App\Models\Concerns\BelongsToOrganisation;
 use App\Models\Concerns\LogsAuditTrail;
 use App\Services\NumberSequence;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -16,6 +17,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Delivery extends Model
 {
     use BelongsToOrganisation, LogsAuditTrail;
+    use HasFactory;
 
     /** Parent métier dont héritent organisation_id et farm_id. */
     protected static string $organisationParentRelation = 'sale';

@@ -5,6 +5,7 @@ namespace Database\Factories;
 use App\Enums\VaccinationStatus;
 use App\Models\Flock;
 use App\Models\Vaccination;
+use Database\Factories\Concerns\InheritsOrganisationFromParent;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -12,6 +13,8 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class VaccinationFactory extends Factory
 {
+    use InheritsOrganisationFromParent;
+
     protected $model = Vaccination::class;
 
     /**
@@ -20,7 +23,9 @@ class VaccinationFactory extends Factory
     public function definition(): array
     {
         return [
-            'flock_id' => Flock::factory()->active(),
+            'organisation_id' => $this->organisationIdFrom('flock_id', Flock::class),
+            'farm_id' => $this->farmIdFrom('flock_id', Flock::class),
+            'flock_id' => fn (array $attributes): int => Flock::factory()->active()->create($this->scopeAttributes($attributes))->id,
             'treatment_name' => fake()->randomElement(['Newcastle HB1', 'Gumboro', 'Bronchite infectieuse', 'Vermifuge']),
             'treatment_type' => fake()->randomElement(['vaccin', 'vermifuge', 'vitamine']),
             'scheduled_date' => fake()->dateTimeBetween('-5 days', '+20 days')->format('Y-m-d'),

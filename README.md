@@ -121,4 +121,7 @@ Le rapport d'audit complet et le plan d'action sont dans `AUDIT.md`.
 - Code, commentaires, libellés et messages en français ; PHPDoc plutôt que commentaires inline.
 - Filament 5 : `Schema` / `->components()`, `Filament\Actions\Action`, `Get` depuis `Filament\Schemas\Components\Utilities`.
 - Toute évolution est couverte par un test Pest (Feature de préférence) ; `vendor/bin/pint` avant commit.
+- Factories des tables de faits : `organisation_id` et `farm_id` suivent le parent passé en attribut (trait
+  `Database\Factories\Concerns\InheritsOrganisationFromParent`) ; `Model::factory()->create(['organisation_id' => $org->id, 'farm_id' => $farm->id])`
+  crée toute la chaîne parente dans cette organisation.
 - Ne pas ajouter de CRUD brut sur une table de journal ; passer par les services (`FlockService`, `SaleService`, `StockService`, `PayrollService`).

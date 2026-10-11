@@ -3,16 +3,20 @@
 use App\Models\AccountTransfer;
 use App\Models\Attendance;
 use App\Models\DailyRecord;
+use App\Models\Delivery;
 use App\Models\FarmLog;
+use App\Models\FiscalYear;
 use App\Models\HealthIncident;
 use App\Models\HealthProgram;
 use App\Models\Leave;
+use App\Models\MobileMoneyTransaction;
 use App\Models\Payment;
 use App\Models\Payroll;
 use App\Models\ProductionPhase;
 use App\Models\PurchaseOrderItem;
 use App\Models\QuoteItem;
 use App\Models\SaleItem;
+use App\Models\Slaughter;
 use App\Models\StockCategory;
 use App\Models\StockInventory;
 use App\Models\StockLot;
@@ -57,4 +61,8 @@ it('chaque factory crée un enregistrement cohérent', function (string $model) 
     SaleItem::class,
     QuoteItem::class,
     PurchaseOrderItem::class,
+    Delivery::class,
+    Slaughter::class,
+    MobileMoneyTransaction::class,
+    FiscalYear::class,
 ]);

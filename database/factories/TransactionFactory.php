@@ -6,6 +6,7 @@ use App\Enums\TransactionCategory;
 use App\Enums\TransactionType;
 use App\Models\Account;
 use App\Models\Transaction;
+use Database\Factories\Concerns\InheritsOrganisationFromParent;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -13,6 +14,8 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class TransactionFactory extends Factory
 {
+    use InheritsOrganisationFromParent;
+
     protected $model = Transaction::class;
 
     /**
@@ -23,7 +26,9 @@ class TransactionFactory extends Factory
         $amount = fake()->numberBetween(1000, 500000);
 
         return [
-            'account_id' => Account::factory(),
+            'organisation_id' => $this->organisationIdFrom('account_id', Account::class),
+            'farm_id' => $this->farmIdFrom('account_id', Account::class),
+            'account_id' => fn (array $attributes): int => Account::factory()->create($this->scopeAttributes($attributes))->id,
             'type' => TransactionType::Credit,
             'category' => TransactionCategory::Other,
             'amount' => $amount,

@@ -5,6 +5,7 @@ namespace Database\Factories;
 use App\Enums\PayrollStatus;
 use App\Models\Employee;
 use App\Models\Payroll;
+use Database\Factories\Concerns\InheritsOrganisationFromParent;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -12,6 +13,8 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class PayrollFactory extends Factory
 {
+    use InheritsOrganisationFromParent;
+
     protected $model = Payroll::class;
 
     /**
@@ -20,7 +23,9 @@ class PayrollFactory extends Factory
     public function definition(): array
     {
         return [
-            'employee_id' => Employee::factory(),
+            'organisation_id' => $this->organisationIdFrom('employee_id', Employee::class),
+            'farm_id' => $this->farmIdFrom('employee_id', Employee::class),
+            'employee_id' => fn (array $attributes): int => Employee::factory()->create($this->scopeAttributes($attributes))->id,
             'period_year' => now()->year,
             'period_month' => now()->month,
             'status' => PayrollStatus::Draft,

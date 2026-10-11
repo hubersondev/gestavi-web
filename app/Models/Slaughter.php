@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\StockMovementReason;
 use App\Models\Concerns\BelongsToOrganisation;
 use App\Models\Concerns\LogsAuditTrail;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\DB;
@@ -16,6 +17,7 @@ use Illuminate\Support\Facades\DB;
 class Slaughter extends Model
 {
     use BelongsToOrganisation, LogsAuditTrail;
+    use HasFactory;
 
     /** Parent métier dont héritent organisation_id et farm_id. */
     protected static string $organisationParentRelation = 'flock';

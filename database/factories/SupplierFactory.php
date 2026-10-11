@@ -32,8 +32,10 @@ class SupplierFactory extends Factory
             'phone' => fake()->phoneNumber(),
             'email' => fake()->optional()->companyEmail(),
             'address' => fake()->optional()->address(),
-            'country_id' => Country::factory(),
-            'city_id' => City::factory(),
+            // Référentiels partagés : réutiliser un pays/une ville existants (les codes pays sont uniques)
+            'country_id' => fn (): int => Country::query()->value('id') ?? Country::factory()->create()->id,
+            'city_id' => fn (array $attributes): int => City::query()->where('country_id', $attributes['country_id'])->value('id')
+                ?? City::factory()->create(['country_id' => $attributes['country_id']])->id,
             'is_active' => true,
         ];
     }

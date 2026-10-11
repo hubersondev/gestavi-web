@@ -5,7 +5,10 @@ namespace Database\Factories;
 use App\Enums\FlockStatus;
 use App\Models\Building;
 use App\Models\ChickenType;
+use App\Models\Farm;
 use App\Models\Flock;
+use App\Models\Organisation;
+use Database\Factories\Concerns\InheritsOrganisationFromParent;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -13,6 +16,8 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class FlockFactory extends Factory
 {
+    use InheritsOrganisationFromParent;
+
     protected $model = Flock::class;
 
     /**
@@ -24,7 +29,21 @@ class FlockFactory extends Factory
         $pricePerUnit = fake()->randomFloat(2, 200, 2000);
 
         return [
-            'building_id' => Building::factory(),
+            'organisation_id' => function (array $attributes): int {
+                if ($building = $this->parentKey($attributes, 'building_id')) {
+                    return (int) Building::query()->whereKey($building)->value('organisation_id');
+                }
+
+                if ($farm = $this->parentKey($attributes, 'farm_id')) {
+                    return (int) Farm::query()->whereKey($farm)->value('organisation_id');
+                }
+
+                return Organisation::factory()->create()->id;
+            },
+            'farm_id' => fn (array $attributes): int => ($building = $this->parentKey($attributes, 'building_id'))
+                ? (int) Building::query()->whereKey($building)->value('farm_id')
+                : Farm::factory()->create(['organisation_id' => $attributes['organisation_id']])->id,
+            'building_id' => fn (array $attributes): int => Building::factory()->create(['farm_id' => $attributes['farm_id']])->id,
             'chicken_type_id' => ChickenType::factory(),
             'code' => strtoupper(fake()->unique()->bothify('LOT-###')),
             'name' => 'Bande '.fake()->randomLetter().fake()->randomDigit(),

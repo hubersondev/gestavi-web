@@ -4,8 +4,8 @@ namespace Database\Factories;
 
 use App\Enums\CreditNoteStatus;
 use App\Models\CreditNote;
-use App\Models\Organisation;
 use App\Models\Sale;
+use Database\Factories\Concerns\InheritsOrganisationFromParent;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -13,13 +13,16 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class CreditNoteFactory extends Factory
 {
+    use InheritsOrganisationFromParent;
+
     protected $model = CreditNote::class;
 
     public function definition(): array
     {
         return [
-            'organisation_id' => Organisation::factory(),
-            'sale_id' => Sale::factory(),
+            'organisation_id' => $this->organisationIdFrom('sale_id', Sale::class),
+            'farm_id' => $this->farmIdFrom('sale_id', Sale::class),
+            'sale_id' => fn (array $attributes): int => Sale::factory()->create($this->scopeAttributes($attributes))->id,
             'issue_date' => fake()->dateTimeBetween('-15 days', 'now'),
             'amount' => fake()->numberBetween(1000, 50000),
             'reason' => fake()->randomElement(['Produit retourné', 'Erreur de facturation', 'Remise commerciale']),

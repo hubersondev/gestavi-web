@@ -4,9 +4,9 @@ namespace Database\Factories;
 
 use App\Enums\PaymentTerms;
 use App\Enums\PurchaseOrderStatus;
-use App\Models\Organisation;
 use App\Models\PurchaseOrder;
 use App\Models\Supplier;
+use Database\Factories\Concerns\InheritsOrganisationFromParent;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -14,13 +14,16 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class PurchaseOrderFactory extends Factory
 {
+    use InheritsOrganisationFromParent;
+
     protected $model = PurchaseOrder::class;
 
     public function definition(): array
     {
         return [
-            'organisation_id' => Organisation::factory(),
-            'supplier_id' => Supplier::factory(),
+            'organisation_id' => $this->organisationIdFrom('supplier_id', Supplier::class),
+            'farm_id' => $this->farmIdFrom('supplier_id', Supplier::class),
+            'supplier_id' => fn (array $attributes): int => Supplier::factory()->create($this->scopeAttributes($attributes))->id,
             'order_date' => fake()->dateTimeBetween('-30 days', 'now'),
             'expected_delivery_date' => fake()->dateTimeBetween('now', '+15 days'),
             'status' => PurchaseOrderStatus::Draft,

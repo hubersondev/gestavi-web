@@ -20,7 +20,8 @@ class CityFactory extends Factory
     {
         return [
             'name' => fake()->city(),
-            'country_id' => Country::factory(),
+            // Les codes pays sont uniques : réutiliser un pays existant avant d'en inventer un
+            'country_id' => fn (): int => Country::query()->value('id') ?? Country::factory()->create()->id,
             'is_active' => true,
         ];
     }

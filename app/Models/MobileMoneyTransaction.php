@@ -8,6 +8,7 @@ use App\Models\Concerns\LogsAuditTrail;
 use App\Services\MobileMoney\Direction;
 use App\Services\MobileMoney\TransactionStatus;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -17,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class MobileMoneyTransaction extends Model
 {
     use BelongsToOrganisation, LogsAuditTrail;
+    use HasFactory;
 
     /** Parent métier dont héritent organisation_id et farm_id (compte marchand). */
     protected static string $organisationParentRelation = 'account';

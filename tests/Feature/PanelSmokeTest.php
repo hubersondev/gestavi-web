@@ -93,10 +93,10 @@ function panelRecordRoutes(Panel $panel, ?Organisation $tenant): array
             continue;
         }
 
-        $record = smokeRecordFor($resource, $tenant);
+        $record = smokeRecordFor($resource, $tenant, $reason);
 
         if (! $record) {
-            $uncovered[] = class_basename($resource);
+            $uncovered[] = class_basename($resource).($reason ? " ({$reason})" : '');
 
             continue;
         }
@@ -114,8 +114,9 @@ function panelRecordRoutes(Panel $panel, ?Organisation $tenant): array
 /**
  * @param  class-string<resource>  $resource
  */
-function smokeRecordFor(string $resource, ?Organisation $tenant): ?Model
+function smokeRecordFor(string $resource, ?Organisation $tenant, ?string &$reason = null): ?Model
 {
+    $reason = null;
     $model = $resource::getModel();
 
     // Le scope global de tenant n'est posé qu'au démarrage du panel : on cloisonne explicitement,
@@ -131,6 +132,8 @@ function smokeRecordFor(string $resource, ?Organisation $tenant): ?Model
     }
 
     if (! method_exists($model, 'factory')) {
+        $reason = 'pas de factory';
+
         return null;
     }
 
@@ -148,7 +151,9 @@ function smokeRecordFor(string $resource, ?Organisation $tenant): ?Model
     // Savepoint : une factory incompatible (contraintes, organisation) ne doit pas avorter la transaction du test
     try {
         DB::transaction(fn () => $model::factory()->create($attributes));
-    } catch (Throwable) {
+    } catch (Throwable $exception) {
+        $reason = mb_substr($exception->getMessage(), 0, 160);
+
         return null;
     }
 
@@ -221,7 +226,14 @@ it('le propriétaire ouvre toutes les pages d\'enregistrement du panel ferme san
     ['urls' => $urls, 'uncovered' => $uncovered] = panelRecordRoutes($panel, $this->organisation);
     expect($urls)->not->toBeEmpty();
 
-    $failures = visitAll($urls, [200], fn (string $url) => $this->get($url));
+    // Une fiche verrouillée (facture payée, journal intangible…) refuse l'édition par un 403 : comportement attendu
+    $editUrls = array_filter($urls, fn (string $name): bool => str_ends_with($name, '.edit'), ARRAY_FILTER_USE_KEY);
+    $otherUrls = array_diff_key($urls, $editUrls);
+
+    $failures = [
+        ...visitAll($otherUrls, [200], fn (string $url) => $this->get($url)),
+        ...visitAll($editUrls, [200, 403], fn (string $url) => $this->get($url)),
+    ];
 
     expect($failures)->toBe([], "Pages d'enregistrement en erreur (propriétaire) :\n".implode("\n", $failures));
 

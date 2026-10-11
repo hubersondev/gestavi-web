@@ -4,6 +4,9 @@ namespace Database\Factories;
 
 use App\Models\Building;
 use App\Models\Equipment;
+use App\Models\Farm;
+use App\Models\Organisation;
+use Database\Factories\Concerns\InheritsOrganisationFromParent;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -11,6 +14,8 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class EquipmentFactory extends Factory
 {
+    use InheritsOrganisationFromParent;
+
     protected $model = Equipment::class;
 
     /**
@@ -19,7 +24,21 @@ class EquipmentFactory extends Factory
     public function definition(): array
     {
         return [
-            'building_id' => Building::factory(),
+            'organisation_id' => function (array $attributes): int {
+                if ($building = $this->parentKey($attributes, 'building_id')) {
+                    return (int) Building::query()->whereKey($building)->value('organisation_id');
+                }
+
+                if ($farm = $this->parentKey($attributes, 'farm_id')) {
+                    return (int) Farm::query()->whereKey($farm)->value('organisation_id');
+                }
+
+                return Organisation::factory()->create()->id;
+            },
+            'farm_id' => fn (array $attributes): int => ($building = $this->parentKey($attributes, 'building_id'))
+                ? (int) Building::query()->whereKey($building)->value('farm_id')
+                : Farm::factory()->create(['organisation_id' => $attributes['organisation_id']])->id,
+            'building_id' => fn (array $attributes): int => Building::factory()->create(['farm_id' => $attributes['farm_id']])->id,
             'inventory_number' => strtoupper(fake()->unique()->bothify('EQP-#####')),
             'name' => 'Équipement '.fake()->randomLetter().fake()->randomDigit(),
             'serial_number' => fake()->optional()->bothify('SN-####-????'),

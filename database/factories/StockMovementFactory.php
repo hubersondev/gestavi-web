@@ -6,6 +6,7 @@ use App\Enums\StockMovementReason;
 use App\Enums\StockMovementType;
 use App\Models\Stock;
 use App\Models\StockMovement;
+use Database\Factories\Concerns\InheritsOrganisationFromParent;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -13,6 +14,8 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class StockMovementFactory extends Factory
 {
+    use InheritsOrganisationFromParent;
+
     protected $model = StockMovement::class;
 
     /**
@@ -24,7 +27,9 @@ class StockMovementFactory extends Factory
         $price = fake()->numberBetween(100, 5000);
 
         return [
-            'stock_id' => Stock::factory(),
+            'organisation_id' => $this->organisationIdFrom('stock_id', Stock::class),
+            'farm_id' => $this->farmIdFrom('stock_id', Stock::class),
+            'stock_id' => fn (array $attributes): int => Stock::factory()->create($this->scopeAttributes($attributes))->id,
             'type' => StockMovementType::In,
             'reason' => StockMovementReason::Purchase,
             'quantity' => $quantity,

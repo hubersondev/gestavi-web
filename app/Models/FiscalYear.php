@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\FiscalYearStatus;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -14,6 +15,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class FiscalYear extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'organisation_id', 'label', 'starts_on', 'ends_on', 'status', 'closed_at', 'closed_by', 'net_result',
     ];

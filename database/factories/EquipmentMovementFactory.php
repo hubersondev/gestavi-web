@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\Equipment;
 use App\Models\EquipmentMovement;
+use Database\Factories\Concerns\InheritsOrganisationFromParent;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -11,6 +12,8 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class EquipmentMovementFactory extends Factory
 {
+    use InheritsOrganisationFromParent;
+
     protected $model = EquipmentMovement::class;
 
     /**
@@ -19,7 +22,9 @@ class EquipmentMovementFactory extends Factory
     public function definition(): array
     {
         return [
-            'equipment_id' => Equipment::factory(),
+            'organisation_id' => $this->organisationIdFrom('equipment_id', Equipment::class),
+            'farm_id' => $this->farmIdFrom('equipment_id', Equipment::class),
+            'equipment_id' => fn (array $attributes): int => Equipment::factory()->create($this->scopeAttributes($attributes))->id,
             'movement_type' => fake()->randomElement(['transfer', 'entry', 'exit', 'loan', 'return']),
             'movement_date' => fake()->dateTimeBetween('-6 months', 'now'),
             'reason' => fake()->optional()->sentence(),

@@ -6,6 +6,7 @@ use App\Enums\ContractStatus;
 use App\Enums\ContractType;
 use App\Models\Contract;
 use App\Models\Employee;
+use Database\Factories\Concerns\InheritsOrganisationFromParent;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -13,12 +14,16 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class ContractFactory extends Factory
 {
+    use InheritsOrganisationFromParent;
+
     protected $model = Contract::class;
 
     public function definition(): array
     {
         return [
-            'employee_id' => Employee::factory(),
+            'organisation_id' => $this->organisationIdFrom('employee_id', Employee::class),
+            'farm_id' => $this->farmIdFrom('employee_id', Employee::class),
+            'employee_id' => fn (array $attributes): int => Employee::factory()->create($this->scopeAttributes($attributes))->id,
             'type' => ContractType::Cdi,
             'status' => ContractStatus::Active,
             'start_date' => now()->subYear()->startOfMonth(),

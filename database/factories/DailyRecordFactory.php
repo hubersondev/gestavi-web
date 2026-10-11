@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\DailyRecord;
 use App\Models\Flock;
+use Database\Factories\Concerns\InheritsOrganisationFromParent;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -11,6 +12,8 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class DailyRecordFactory extends Factory
 {
+    use InheritsOrganisationFromParent;
+
     protected $model = DailyRecord::class;
 
     /**
@@ -19,7 +22,9 @@ class DailyRecordFactory extends Factory
     public function definition(): array
     {
         return [
-            'flock_id' => Flock::factory()->active(),
+            'organisation_id' => $this->organisationIdFrom('flock_id', Flock::class),
+            'farm_id' => $this->farmIdFrom('flock_id', Flock::class),
+            'flock_id' => fn (array $attributes): int => Flock::factory()->active()->create($this->scopeAttributes($attributes))->id,
             'record_date' => fake()->dateTimeBetween('-10 days', 'now')->format('Y-m-d'),
             'age_days' => fake()->numberBetween(1, 60),
             'mortality' => fake()->numberBetween(0, 5),

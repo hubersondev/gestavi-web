@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\Equipment;
 use App\Models\EquipmentMaintenance;
+use Database\Factories\Concerns\InheritsOrganisationFromParent;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -11,6 +12,8 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class EquipmentMaintenanceFactory extends Factory
 {
+    use InheritsOrganisationFromParent;
+
     protected $model = EquipmentMaintenance::class;
 
     /**
@@ -22,7 +25,9 @@ class EquipmentMaintenanceFactory extends Factory
         $partsCost = fake()->randomFloat(2, 0, 100000);
 
         return [
-            'equipment_id' => Equipment::factory(),
+            'organisation_id' => $this->organisationIdFrom('equipment_id', Equipment::class),
+            'farm_id' => $this->farmIdFrom('equipment_id', Equipment::class),
+            'equipment_id' => fn (array $attributes): int => Equipment::factory()->create($this->scopeAttributes($attributes))->id,
             'maintenance_type' => fake()->randomElement(['preventive', 'corrective', 'inspection', 'cleaning']),
             'title' => fake()->sentence(3),
             'description' => fake()->optional()->sentence(),
