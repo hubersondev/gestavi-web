@@ -44,6 +44,10 @@ php artisan test --compact tests/Feature/FlockEffectifTest.php
 vendor/bin/pint                     # formatage (obligatoire avant commit)
 ```
 
+`tests/Feature/PanelSmokeTest.php` ouvre chaque page des deux panels par une vraie requête HTTP (panel
+démarré, scopes de tenant actifs) pour le propriétaire, un employé restreint et le super-administrateur :
+à lancer après toute modification d'une ressource, d'un rapport ou d'un scope.
+
 `phpunit.xml` lit `DB_PASSWORD` depuis `.env`. Pour lancer plusieurs suites en parallèle,
 préfixer par `DB_DATABASE=<autre base>`.
 

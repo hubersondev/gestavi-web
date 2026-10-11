@@ -181,7 +181,7 @@ class FinancialReportPage extends Page implements HasTable
         return Account::query()
             ->where('organisation_id', $tenant?->getKey())
             ->tap(fn (Builder $q) => app(CurrentFarm::class)->restrictForCurrentUser($q))
-            ->when($filters['farm_id'] ?? null, fn (Builder $q, $farmId) => $q->where('farm_id', $farmId))
+            ->when($filters['farm_id'] ?? null, fn (Builder $q, $farmId) => $q->where($q->qualifyColumn('farm_id'), $farmId))
             ->when($filters['account_id'] ?? null, fn (Builder $q, $accountId) => $q->where('id', $accountId));
     }
 
@@ -214,7 +214,7 @@ class FinancialReportPage extends Page implements HasTable
         return Expense::query()
             ->where('organisation_id', $tenant?->getKey())
             ->tap(fn (Builder $q) => app(CurrentFarm::class)->restrictForCurrentUser($q))
-            ->when($filters['farm_id'] ?? null, fn (Builder $q, $farmId) => $q->where('farm_id', $farmId))
+            ->when($filters['farm_id'] ?? null, fn (Builder $q, $farmId) => $q->where($q->qualifyColumn('farm_id'), $farmId))
             ->whereBetween('expense_date', [$filters['date_from'], $filters['date_to']])
             ->whereNot('status', 'cancelled')
             ->selectRaw('category, COUNT(*) as count, SUM(amount) as total')

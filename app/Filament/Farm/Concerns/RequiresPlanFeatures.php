@@ -25,7 +25,12 @@ trait RequiresPlanFeatures
         return static::tenantHasRequiredFeatures() && static::canViewAny();
     }
 
-    protected static function tenantHasRequiredFeatures(): bool
+    /**
+     * Le plan du tenant couvre-t-il les fonctionnalités requises ? Indépendant des
+     * permissions : un refus de permission se traduit par un 403, pas par une
+     * invitation à changer de plan.
+     */
+    public static function tenantHasRequiredFeatures(): bool
     {
         /** @var Organisation|null $tenant */
         $tenant = Filament::getTenant();

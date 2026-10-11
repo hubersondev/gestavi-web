@@ -53,14 +53,14 @@ class EquipmentMovementInfolist
                             ->icon('heroicon-o-arrow-up-circle')
                             ->iconColor('danger')
                             ->placeholder('Stock / Externe')
-                            ->description(fn (EquipmentMovement $record): ?string => $record->fromBuilding?->farm?->name),
+                            ->helperText(fn (EquipmentMovement $record): ?string => $record->fromBuilding?->farm?->name),
 
                         TextEntry::make('toBuilding.name')
                             ->label('Bâtiment de destination')
                             ->icon('heroicon-o-arrow-down-circle')
                             ->iconColor('success')
                             ->placeholder('Stock / Externe')
-                            ->description(fn (EquipmentMovement $record): ?string => $record->toBuilding?->farm?->name),
+                            ->helperText(fn (EquipmentMovement $record): ?string => $record->toBuilding?->farm?->name),
 
                         TextEntry::make('description_computed')
                             ->label('Description')

@@ -105,6 +105,8 @@ class CurrentFarm
             return $query;
         }
 
+        $column = $this->qualify($query, $column);
+
         return $query->where(function (Builder $q) use ($ids, $column, $membership): void {
             $q->whereIn($column, $ids);
 
@@ -179,6 +181,8 @@ class CurrentFarm
             return $query;
         }
 
+        $column = $this->qualify($query, $column);
+
         return $query->where(function (Builder $q) use ($ids, $column, $membership, $allowOrganisationLevel): void {
             $q->whereIn($column, $ids);
 
@@ -205,5 +209,14 @@ class CurrentFarm
     private function sessionKey(OrganisationUser $membership): string
     {
         return "current_farm_{$membership->organisation_id}_{$membership->user_id}";
+    }
+
+    /**
+     * Qualifie la colonne par la table du modèle quand elle ne l'est pas déjà : les requêtes
+     * qui joignent `farms` (rapports, comparaisons) porteraient sinon une colonne ambiguë.
+     */
+    private function qualify(Builder $query, string $column): string
+    {
+        return str_contains($column, '.') ? $column : $query->qualifyColumn($column);
     }
 }

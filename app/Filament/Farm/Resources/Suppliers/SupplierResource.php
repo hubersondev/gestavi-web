@@ -102,10 +102,10 @@ class SupplierResource extends Resource
         // Fournisseurs de ferme : selon l'affectation ; fournisseurs réseau (farm_id NULL) :
         // visibles de tous les membres sauf quand une ferme précise est sélectionnée.
         return $query->where(function (Builder $q) use ($ids, $farmSelected): void {
-            $q->whereIn('farm_id', $ids);
+            $q->whereIn($q->qualifyColumn('farm_id'), $ids);
 
             if (! $farmSelected) {
-                $q->orWhereNull('farm_id');
+                $q->orWhereNull($q->qualifyColumn('farm_id'));
             }
         });
     }

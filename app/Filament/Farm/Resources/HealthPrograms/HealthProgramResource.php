@@ -99,7 +99,7 @@ class HealthProgramResource extends Resource
         // Référentiel : les programmes d'organisation (farm_id NULL) restent visibles
         // de tous les membres ; ceux liés à une ferme suivent l'affectation.
         return $query->where(function (Builder $q) use ($ids): void {
-            $q->whereNull('farm_id')->orWhereIn('farm_id', $ids);
+            $q->whereNull($q->qualifyColumn('farm_id'))->orWhereIn($q->qualifyColumn('farm_id'), $ids);
         });
     }
 }

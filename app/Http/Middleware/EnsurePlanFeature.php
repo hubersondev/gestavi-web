@@ -38,8 +38,9 @@ class EnsurePlanFeature
             return $next($request);
         }
 
-        // Vérifier les features requises (canAccess() est public via le trait)
-        if ($componentClass::canAccess()) {
+        // Seule l'absence de fonctionnalité dans le plan renvoie vers la page de changement
+        // de plan ; un défaut de permission est traité en 403 par la page elle-même
+        if ($componentClass::tenantHasRequiredFeatures()) {
             return $next($request);
         }
 

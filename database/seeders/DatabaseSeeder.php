@@ -201,11 +201,9 @@ class DatabaseSeeder extends Seeder
             'start_date' => '2026-03-01',
             'expected_end_date' => '2026-04-15',
             'status' => FlockStatus::Active,
-            'supplier_name' => 'SIPRA',
             'purchase_price_per_unit' => 450,
             'total_purchase_price' => 1350000,
             'notes' => 'Poussins Cobb 500, livrés en bon état.',
-            'is_active' => true,
         ]);
 
         Flock::create([
@@ -219,11 +217,9 @@ class DatabaseSeeder extends Seeder
             'start_date' => '2026-01-15',
             'expected_end_date' => '2027-06-15',
             'status' => FlockStatus::Active,
-            'supplier_name' => 'Élevage Abidjan Poussins',
             'purchase_price_per_unit' => 3500,
             'total_purchase_price' => 7000000,
             'notes' => 'Poulettes Isa Brown 16 semaines, vaccinées.',
-            'is_active' => true,
         ]);
 
         // Assigner la ferme principale à l'employé (restriction d'accès)

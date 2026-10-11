@@ -35,11 +35,11 @@ class VetVisitInfolist
                         TextEntry::make('flock.code')
                             ->label('Bande')
                             ->placeholder('Toute la ferme')
-                            ->description(fn ($record) => $record->flock?->name),
+                            ->helperText(fn ($record) => $record->flock?->name),
 
                         TextEntry::make('veterinarian.name')
                             ->label('Vétérinaire')
-                            ->description(fn ($record) => $record->veterinarian?->clinic),
+                            ->helperText(fn ($record) => $record->veterinarian?->clinic),
 
                         TextEntry::make('reason')
                             ->label('Motif')

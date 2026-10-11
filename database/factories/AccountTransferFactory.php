@@ -20,12 +20,16 @@ class AccountTransferFactory extends Factory
      */
     public function definition(): array
     {
-        $organisation = Organisation::factory()->create();
+        // Les comptes suivent l'organisation (et la ferme) passées en attributs, sinon une organisation neuve
+        $accountFor = fn (array $attributes): int => Account::factory()->create([
+            'organisation_id' => $attributes['organisation_id'],
+            'farm_id' => $attributes['farm_id'] ?? null,
+        ])->id;
 
         return [
-            'organisation_id' => $organisation->id,
-            'from_account_id' => Account::factory()->create(['organisation_id' => $organisation->id, 'farm_id' => null])->id,
-            'to_account_id' => Account::factory()->create(['organisation_id' => $organisation->id, 'farm_id' => null])->id,
+            'organisation_id' => Organisation::factory(),
+            'from_account_id' => $accountFor,
+            'to_account_id' => $accountFor,
             'amount' => fake()->numberBetween(10000, 300000),
             'fees' => 0,
             'transfer_date' => now()->toDateString(),

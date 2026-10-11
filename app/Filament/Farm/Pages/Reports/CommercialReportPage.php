@@ -273,7 +273,7 @@ class CommercialReportPage extends Page implements HasTable
 
         $salesConstraint = fn (Builder $q) => $q
             ->whereBetween('sale_date', [$from, $to])
-            ->when($farmId, fn (Builder $s) => $s->where('farm_id', $farmId))
+            ->when($farmId, fn (Builder $s) => $s->where($s->qualifyColumn('farm_id'), $farmId))
             ->whereNot('status', SaleStatus::Cancelled);
 
         return Customer::query()

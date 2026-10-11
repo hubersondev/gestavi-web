@@ -20,7 +20,7 @@ class EquipmentMaintenanceInfolist
                         TextEntry::make('equipment.name')
                             ->label('Équipement')
                             ->weight('bold')
-                            ->description(fn (EquipmentMaintenance $record): ?string => $record->equipment?->inventory_number),
+                            ->helperText(fn (EquipmentMaintenance $record): ?string => $record->equipment?->inventory_number),
 
                         TextEntry::make('maintenance_type')
                             ->label('Type')
