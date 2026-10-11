@@ -29,6 +29,10 @@ class AnchorLedger extends Command
 
         $failures = 0;
 
+        if ($organisations->isEmpty()) {
+            $this->info('Aucune organisation ne possède encore d\'écriture : rien à ancrer.');
+        }
+
         foreach ($organisations as $organisation) {
             try {
                 $anchor = $ledger->anchor($organisation->id, $reason);

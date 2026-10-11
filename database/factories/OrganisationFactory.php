@@ -28,8 +28,10 @@ class OrganisationFactory extends Factory
             'email' => fake()->companyEmail(),
             'phone' => fake()->phoneNumber(),
             'address' => fake()->address(),
-            'country_id' => Country::factory(),
-            'city_id' => City::factory(),
+            // Référentiels partagés : réutiliser le pays et une ville existants avant d'en créer
+            'country_id' => fn (): int => Country::query()->value('id') ?? Country::factory()->create()->id,
+            'city_id' => fn (array $attributes): int => City::query()->where('country_id', $attributes['country_id'])->value('id')
+                ?? City::factory()->create(['country_id' => $attributes['country_id']])->id,
             'description' => fake()->sentence(),
             'is_active' => true,
         ];

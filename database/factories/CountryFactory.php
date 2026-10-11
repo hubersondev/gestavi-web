@@ -18,9 +18,11 @@ class CountryFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => fake()->unique()->country(),
-            'code' => fake()->unique()->countryCode(),
-            'code_iso3' => fake()->unique()->countryISOAlpha3(),
+            // Codes de la plage « à usage privé » de l'ISO 3166 (AA, QM–QZ, XA–XZ, ZZ) : jamais un vrai pays,
+            // donc jamais en collision avec le référentiel seedé (CI, FR…) ni ses codes à trois lettres
+            'code' => $code = fake()->unique()->regexify('(Q[M-Z]|X[A-Z])'),
+            'name' => 'Pays de test '.$code,
+            'code_iso3' => $code.strtoupper(fake()->randomLetter()),
             'phone_code' => '+'.fake()->numberBetween(1, 999),
             'currency_id' => null,
             'default_language' => 'fr',

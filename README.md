@@ -59,6 +59,44 @@ série de migrations : `php artisan schema:dump --prune` (nécessite `pg_dump`).
 
 PostgreSQL est la seule base supportée : les requêtes de rapport utilisent `DISTINCT ON`, `FILTER` et `to_char`.
 
+## Environnement de recette et de production
+
+Trois processus doivent tourner en permanence, plus un cron :
+
+```bash
+php artisan serve                 # ou php-fpm derrière nginx/Caddy avec APP_URL en HTTPS
+php artisan queue:work --tries=3  # worker de file (Supervisor ou service systemd, redémarré à chaque déploiement)
+* * * * * cd /var/www/gestavi && php artisan schedule:run >> /dev/null 2>&1   # cron du planificateur
+```
+
+Réglages attendus hors développement : `APP_ENV=production` (ou `staging`), `APP_DEBUG=false`, `APP_URL=https://…`,
+`QUEUE_CONNECTION=database` ou `redis`, `MAIL_MAILER` réel, `SENTRY_LARAVEL_DSN` renseigné, un disque de
+sauvegarde hors serveur dans `config/backup.php` et `LEDGER_ANCHOR_DISK` sur un stockage distant.
+
+`php artisan gestavi:doctor` contrôle tout cela en une fois (base, migrations en attente, file, battement de
+cœur du planificateur, âge de la dernière sauvegarde, `pg_dump`, intégrité et ancrage du ledger, Sentry,
+courriel, SMS, secrets mobile money, 2FA des comptes à privilèges, organisations à niveau, dossiers
+inscriptibles) et sort en erreur dès qu'un prérequis manque. À lancer après l'installation, puis chaque jour
+par la supervision.
+
+Recette d'une semaine avant ouverture : une organisation réelle, ses fermes et ses membres ; relevés
+quotidiens saisis depuis la page terrain ; au moins une vente payée par mobile money de test, une dépense,
+un bulletin validé puis payé ; `gestavi:ledger-verify` et `backup:monitor` verts chaque matin ;
+`gestavi:doctor` sans échec le dernier jour.
+
+## Après chaque déploiement
+
+```bash
+php artisan migrate --force
+php artisan gestavi:tenants-upgrade            # référentiels partagés + rôles, permissions, phases, produits de chaque organisation
+php artisan gestavi:tenants-upgrade --regenerate-draft-payrolls   # si les règles de paie ont changé
+php artisan gestavi:accounting-rebuild         # si des imputations ou écritures générées ont changé
+php artisan gestavi:ledger-verify
+```
+
+Une organisation créée avant un module n'en reçoit ni les permissions ni les référentiels tant que
+`gestavi:tenants-upgrade` n'a pas tourné : les rôles non propriétaires voient alors un 403 sur ce module.
+
 ## Tâches planifiées et files
 
 ```bash

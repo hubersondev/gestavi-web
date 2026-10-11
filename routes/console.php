@@ -1,7 +1,9 @@
 <?php
 
+use App\Console\Commands\Doctor;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
@@ -9,6 +11,11 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 // ─── Tâches planifiées ────────────────────────────────────────────────────────
+
+// Battement de cœur du planificateur, lu par gestavi:doctor pour prouver que le cron tourne.
+Schedule::call(fn () => Cache::put(Doctor::SCHEDULER_HEARTBEAT_KEY, now()->toIso8601String(), now()->addDay()))
+    ->everyMinute()
+    ->name('gestavi-heartbeat');
 
 // Marque quotidiennement les lots de stock dont la péremption est dépassée.
 Schedule::command('gestavi:expire-stock-lots')

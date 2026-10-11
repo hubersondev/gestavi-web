@@ -432,6 +432,11 @@ class Organisation extends Model implements HasCurrentTenantLabel
         return $this->hasMany(Farm::class);
     }
 
+    public function products(): HasMany
+    {
+        return $this->hasMany(Product::class);
+    }
+
     public function productionPhases(): HasMany
     {
         return $this->hasMany(ProductionPhase::class);
