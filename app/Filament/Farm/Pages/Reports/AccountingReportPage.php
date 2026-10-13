@@ -100,7 +100,7 @@ class AccountingReportPage extends Page implements HasTable
                 ->searchable()
                 ->placeholder('Tous')
                 ->live(),
-        ]);
+        ])->columns(['sm' => 2, 'lg' => 4]);
     }
 
     public function updatedFilters(): void

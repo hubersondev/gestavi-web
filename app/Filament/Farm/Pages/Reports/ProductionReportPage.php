@@ -114,7 +114,7 @@ class ProductionReportPage extends Page implements HasTable
                 ->searchable()
                 ->preload()
                 ->live(),
-        ]);
+        ])->columns(['sm' => 2, 'lg' => 4]);
     }
 
     public function table(Table $table): Table

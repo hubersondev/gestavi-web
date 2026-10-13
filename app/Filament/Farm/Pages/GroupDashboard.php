@@ -62,7 +62,7 @@ class GroupDashboard extends Page
         return $schema->components([
             DatePicker::make('filters.date_from')->label('Du')->native(false)->displayFormat('d/m/Y')->live(),
             DatePicker::make('filters.date_to')->label('Au')->native(false)->displayFormat('d/m/Y')->live(),
-        ]);
+        ])->columns(['sm' => 2, 'lg' => 4]);
     }
 
     public function updatedFilters(): void

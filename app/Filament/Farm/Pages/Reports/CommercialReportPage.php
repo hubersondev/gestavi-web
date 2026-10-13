@@ -87,7 +87,7 @@ class CommercialReportPage extends Page implements HasTable
                 ->placeholder('Toutes les fermes')
                 ->searchable()
                 ->live(),
-        ]);
+        ])->columns(['sm' => 2, 'lg' => 4]);
     }
 
     public function table(Table $table): Table

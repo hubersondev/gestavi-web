@@ -74,7 +74,7 @@ class FlockCostReportPage extends Page implements HasTable
                 ->options(FlockStatus::class)
                 ->placeholder('Actives et clôturées')
                 ->live(),
-        ]);
+        ])->columns(['sm' => 2, 'lg' => 4]);
     }
 
     public function updatedFilters(): void

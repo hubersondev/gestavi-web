@@ -105,7 +105,7 @@ class FinancialReportPage extends Page implements HasTable
                 ->placeholder('Tous les comptes')
                 ->searchable()
                 ->live(),
-        ]);
+        ])->columns(['sm' => 2, 'lg' => 4]);
     }
 
     public function table(Table $table): Table

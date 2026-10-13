@@ -101,7 +101,7 @@ class StockReportPage extends Page implements HasTable
                 ->placeholder('Toutes')
                 ->searchable()
                 ->live(),
-        ]);
+        ])->columns(['sm' => 2, 'lg' => 4]);
     }
 
     public function table(Table $table): Table
