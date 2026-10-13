@@ -158,6 +158,10 @@ Le rapport d'audit complet et le plan d'action sont dans `AUDIT.md`.
 
 - Code, commentaires, libellés et messages en français ; PHPDoc plutôt que commentaires inline.
 - Filament 5 : `Schema` / `->components()`, `Filament\Actions\Action`, `Get` depuis `Filament\Schemas\Components\Utilities`.
+- Le panel Farm sert le thème `resources/css/filament/farm/theme.css` (compilé par `npm run build`, à relancer après
+  chaque `git pull`) : ses `@source` couvrent `app/Filament/Farm` et `resources/views/filament/farm`, ce qui rend
+  disponibles les classes Tailwind des vues personnalisées (rapports, tableau de bord groupe). Une vue placée
+  ailleurs n'en bénéficie pas.
 - Toute évolution est couverte par un test Pest (Feature de préférence) ; `vendor/bin/pint` avant commit.
 - Factories des tables de faits : `organisation_id` et `farm_id` suivent le parent passé en attribut (trait
   `Database\Factories\Concerns\InheritsOrganisationFromParent`) ; `Model::factory()->create(['organisation_id' => $org->id, 'farm_id' => $farm->id])`
