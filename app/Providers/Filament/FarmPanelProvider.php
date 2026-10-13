@@ -32,6 +32,7 @@ class FarmPanelProvider extends PanelProvider
         return $panel
             ->id('farm')
             ->path('farm')
+            ->viteTheme('resources/css/filament/farm/theme.css')
             ->login()
             ->passwordReset()
             ->multiFactorAuthentication(

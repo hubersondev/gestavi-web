@@ -1,0 +1,11 @@
+/*
+ * Thème du panel Farm : reprend la feuille de style Filament et y ajoute les classes
+ * utilitaires Tailwind employées par les vues personnalisées (rapports, tableau de bord
+ * groupe, frise des vaccinations, page de mise à niveau). Sans ce thème, ces classes
+ * sont absentes du CSS servi et les pages s'affichent sans mise en page.
+ */
+@import '../../../../vendor/filament/filament/resources/css/theme.css';
+
+@source '../../../../app/Filament/Farm/**/*';
+@source '../../../../resources/views/filament/farm/**/*';
+@source '../../../../resources/views/livewire/**/*';
