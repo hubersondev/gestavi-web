@@ -2,6 +2,7 @@
 
 use App\Enums\ExpenseCategory;
 use App\Enums\FiscalYearStatus;
+use App\Enums\JournalCode;
 use App\Enums\SaleStatus;
 use App\Exceptions\AccountingException;
 use App\Models\Account;
@@ -48,13 +49,24 @@ it('la clôture solde les classes 6 et 7 vers 131 et verrouille la période', fu
     expect($closed->isClosed())->toBeTrue()
         ->and((float) $closed->net_result)->toBe(60000.0);
 
-    $closing = JournalEntry::query()->where('reference_type', FiscalYear::class)->where('reference_id', $this->fiscalYear->id)->first();
+    $closing = JournalEntry::query()->where('reference_type', FiscalYear::class)->where('reference_id', $this->fiscalYear->id)->where('journal', JournalCode::Miscellaneous->value)->first();
 
     expect($closing)->not->toBeNull()
         ->and($closing->isBalanced())->toBeTrue()
         ->and((float) $closing->lines()->where('chart_account_code', '701')->sum('debit'))->toBe(100000.0)
         ->and((float) $closing->lines()->where('chart_account_code', '605')->sum('credit'))->toBe(40000.0)
         ->and((float) $closing->lines()->where('chart_account_code', '131')->sum('credit'))->toBe(60000.0);
+
+    // À-nouveaux : les soldes de bilan (créance client, dette fournisseur, résultat) sont reportés au 1er jour suivant
+    $opening = JournalEntry::query()->where('reference_type', FiscalYear::class)->where('reference_id', $this->fiscalYear->id)->where('journal', JournalCode::Opening->value)->first();
+
+    expect($opening)->not->toBeNull()
+        ->and($opening->entry_date->toDateString())->toBe(now()->subYear()->endOfYear()->addDay()->toDateString())
+        ->and($opening->isBalanced())->toBeTrue()
+        ->and($opening->lines()->whereRaw("LEFT(chart_account_code, 1) IN ('6', '7')")->exists())->toBeFalse()
+        ->and((float) $opening->lines()->where('chart_account_code', '411')->sum('debit'))->toBe(100000.0)
+        ->and((float) $opening->lines()->where('chart_account_code', '401')->sum('credit'))->toBe(40000.0)
+        ->and((float) $opening->lines()->where('chart_account_code', '131')->sum('credit'))->toBe(60000.0);
 
     // Toute transaction ou écriture datée dans l'exercice clos est refusée
     $cash = Account::factory()->cash()->create(['organisation_id' => $this->organisation->id, 'farm_id' => $this->farm->id, 'initial_balance' => 0, 'current_balance' => 0, 'is_active' => true]);
@@ -72,4 +84,47 @@ it('la clôture solde les classes 6 et 7 vers 131 et verrouille la période', fu
     expect($cash->fresh()->current_balance)->toEqual(1000);
 
     expect(fn () => app(AccountingService::class)->closeFiscalYear($this->fiscalYear->fresh()))->toThrow(AccountingException::class);
+});
+
+it('les à-nouveaux s\'enchaînent d\'un exercice à l\'autre sans cumuler les soldes, et survivent à la reconstruction', function () {
+    $lastYear = now()->subYear()->setMonth(6)->setDay(15);
+
+    app(SaleService::class)->createSale(
+        ['organisation_id' => $this->organisation->id, 'farm_id' => $this->farm->id, 'sale_date' => $lastYear->toDateString(), 'status' => SaleStatus::Pending, 'tax_percent' => 0],
+        [['product_name' => 'Œufs', 'quantity' => 1000, 'unit_price' => 100]],
+    );
+    Expense::factory()->create(['organisation_id' => $this->organisation->id, 'farm_id' => $this->farm->id, 'category' => ExpenseCategory::Utilities, 'amount' => 40000, 'balance' => 40000, 'expense_date' => $lastYear->toDateString()]);
+
+    $currentYear = FiscalYear::create([
+        'organisation_id' => $this->organisation->id,
+        'label' => 'N',
+        'starts_on' => now()->startOfYear()->toDateString(),
+        'ends_on' => now()->endOfYear()->toDateString(),
+        'status' => FiscalYearStatus::Open,
+    ]);
+
+    app(AccountingService::class)->closeFiscalYear($this->fiscalYear);
+
+    // L'écriture d'à-nouveaux est rattachée à l'exercice qu'elle ouvre
+    $openingN = JournalEntry::query()->where('journal', JournalCode::Opening->value)->where('reference_id', $this->fiscalYear->id)->first();
+    expect($openingN->fiscal_year_id)->toBe($currentYear->id);
+
+    // Exercice N sans mouvement : les à-nouveaux de N+1 reprennent les mêmes soldes, sans doublon, et le résultat est nul
+    $closedN = app(AccountingService::class)->closeFiscalYear($currentYear);
+    $openingNext = JournalEntry::query()->where('journal', JournalCode::Opening->value)->where('reference_id', $currentYear->id)->first();
+
+    expect((float) $closedN->net_result)->toBe(0.0)
+        ->and($openingNext)->not->toBeNull()
+        ->and($openingNext->entry_date->toDateString())->toBe(now()->endOfYear()->addDay()->toDateString())
+        ->and($openingNext->isBalanced())->toBeTrue()
+        ->and((float) $openingNext->lines()->where('chart_account_code', '411')->sum('debit'))->toBe(100000.0)
+        ->and((float) $openingNext->lines()->where('chart_account_code', '401')->sum('credit'))->toBe(40000.0)
+        ->and((float) $openingNext->lines()->where('chart_account_code', '131')->sum('credit'))->toBe(60000.0);
+
+    // La reconstruction rejoue les faits (même dans l'exercice clos) et conserve la clôture de N-1 et les deux à-nouveaux
+    app(AccountingService::class)->rebuild($this->organisation->id);
+
+    expect(JournalEntry::query()->where('journal', JournalCode::Opening->value)->count())->toBe(2)
+        ->and(JournalEntry::query()->where('reference_type', FiscalYear::class)->where('journal', JournalCode::Miscellaneous->value)->count())->toBe(1)
+        ->and(JournalEntry::query()->where('journal', JournalCode::Sales->value)->where('fiscal_year_id', $this->fiscalYear->id)->count())->toBe(1);
 });

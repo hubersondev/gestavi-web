@@ -143,7 +143,7 @@ class FiscalYearResource extends Resource
                     ->color('danger')
                     ->requiresConfirmation()
                     ->modalHeading('Clôturer l\'exercice')
-                    ->modalDescription('Les classes 6 et 7 seront soldées vers le compte 131 (résultat net) et plus aucune écriture ni transaction ne pourra être datée dans cet exercice. Cette action est irréversible.')
+                    ->modalDescription('Les classes 6 et 7 seront soldées vers le compte 131 (résultat net), les soldes des comptes de bilan seront reportés en à-nouveaux (journal AN) au lendemain de la fin d\'exercice, et plus aucune écriture ni transaction ne pourra être datée dans cet exercice. Cette action est irréversible.')
                     ->visible(fn (FiscalYear $record): bool => $record->isOpen() && static::canPerformAction('close'))
                     ->action(function (FiscalYear $record): void {
                         try {

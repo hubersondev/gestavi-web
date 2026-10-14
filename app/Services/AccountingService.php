@@ -63,6 +63,11 @@ class AccountingService
             return;
         }
 
+        // La reconstruction rejoue des faits déjà comptabilisés, y compris dans les exercices clos
+        if ($this->ledger->isUnlocked()) {
+            return;
+        }
+
         $closed = FiscalYear::query()
             ->where('organisation_id', $organisationId)
             ->where('status', FiscalYearStatus::Closed->value)
@@ -502,6 +507,8 @@ class AccountingService
                 ], $lines);
             }
 
+            $this->carryForwardBalances($fiscalYear, $userId);
+
             $fiscalYear->update([
                 'status' => FiscalYearStatus::Closed,
                 'closed_at' => now(),
@@ -514,6 +521,56 @@ class AccountingService
 
             return $fiscalYear->fresh();
         });
+    }
+
+    /**
+     * Écriture d'à-nouveaux : les soldes des comptes de bilan (classes 1 à 5) arrêtés sur la période
+     * de l'exercice, écriture de clôture comprise, sont reportés au journal AN le lendemain de la
+     * fin d'exercice. Chaque exercice part ainsi de ses à-nouveaux et de ses seuls mouvements,
+     * sans cumul depuis l'origine.
+     */
+    private function carryForwardBalances(FiscalYear $fiscalYear, ?int $userId): ?JournalEntry
+    {
+        $balances = JournalLine::query()
+            ->where('organisation_id', $fiscalYear->organisation_id)
+            ->whereBetween('entry_date', [$fiscalYear->starts_on->toDateString(), $fiscalYear->ends_on->toDateString()])
+            ->whereRaw("LEFT(chart_account_code, 1) IN ('1', '2', '3', '4', '5')")
+            ->selectRaw('chart_account_code, SUM(debit) AS debit, SUM(credit) AS credit')
+            ->groupBy('chart_account_code')
+            ->orderBy('chart_account_code')
+            ->get();
+
+        $lines = [];
+
+        foreach ($balances as $balance) {
+            $net = round((float) $balance->debit - (float) $balance->credit, 2);
+
+            if (abs($net) < 0.01) {
+                continue;
+            }
+
+            $lines[] = $net > 0
+                ? ['code' => $balance->chart_account_code, 'debit' => $net]
+                : ['code' => $balance->chart_account_code, 'credit' => -$net];
+        }
+
+        if ($lines === []) {
+            return null;
+        }
+
+        $openingDate = $fiscalYear->ends_on->copy()->addDay();
+
+        return $this->record([
+            'organisation_id' => $fiscalYear->organisation_id,
+            'entry_date' => $openingDate,
+            'journal' => JournalCode::Opening,
+            'label' => 'À-nouveaux au '.$openingDate->format('d/m/Y').' — report des soldes de l\'exercice '.$fiscalYear->label,
+            'reference_type' => FiscalYear::class,
+            'reference_id' => $fiscalYear->id,
+            'reference_number' => $fiscalYear->label,
+            'user_id' => $userId,
+            'is_generated' => true,
+        ], $lines);
     }
 
     // ─── RECONSTRUCTION ─────────────────────────────────────────────────────

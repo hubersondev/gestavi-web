@@ -16,6 +16,7 @@ enum JournalCode: string implements HasColor, HasLabel
     case Cash = 'CA';
     case Miscellaneous = 'OD';
     case Payroll = 'PA';
+    case Opening = 'AN';
 
     public function getLabel(): string
     {
@@ -26,6 +27,7 @@ enum JournalCode: string implements HasColor, HasLabel
             self::Cash => 'Caisse',
             self::Miscellaneous => 'Opérations diverses',
             self::Payroll => 'Paie',
+            self::Opening => 'À-nouveaux',
         };
     }
 
@@ -38,6 +40,7 @@ enum JournalCode: string implements HasColor, HasLabel
             self::Cash => 'primary',
             self::Miscellaneous => 'gray',
             self::Payroll => 'danger',
+            self::Opening => 'gray',
         };
     }
 }

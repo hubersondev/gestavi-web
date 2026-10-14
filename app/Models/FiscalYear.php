@@ -10,8 +10,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * Exercice comptable d'une organisation. Une fois clôturé, aucune écriture ni
- * transaction ne peut plus être datée dans sa période.
+ * Exercice comptable d'une organisation. Sa clôture solde les classes 6 et 7 vers le résultat,
+ * reporte les soldes de bilan en à-nouveaux sur le lendemain de sa fin, et interdit ensuite toute
+ * écriture ou transaction datée dans sa période.
  */
 class FiscalYear extends Model
 {

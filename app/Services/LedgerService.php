@@ -25,6 +25,8 @@ class LedgerService
 
     private const string ADVISORY_LOCK_NAMESPACE = 'gestavi_ledger';
 
+    private bool $unlocked = false;
+
     /**
      * Verrouille la chaîne d'une organisation pour la durée de la transaction courante :
      * garantit que deux écritures concurrentes ne partagent pas le même previous_hash.
@@ -152,14 +154,27 @@ class LedgerService
     {
         return DB::transaction(function () use ($callback): mixed {
             DB::statement(sprintf("SET LOCAL %s = 'on'", self::UNLOCK_SETTING));
+            $this->unlocked = true;
 
-            $result = $callback();
+            try {
+                $result = $callback();
+            } finally {
+                $this->unlocked = false;
+            }
 
             // Réarmé explicitement en cas de succès ; un échec annule le SET LOCAL avec la transaction
             DB::statement(sprintf("SET LOCAL %s = 'off'", self::UNLOCK_SETTING));
 
             return $result;
         });
+    }
+
+    /**
+     * Vrai pendant une reconstruction : les faits rejoués peuvent dater d'exercices clos.
+     */
+    public function isUnlocked(): bool
+    {
+        return $this->unlocked;
     }
 
     /**

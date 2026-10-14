@@ -23,6 +23,8 @@ class AccountingServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(\App\Services\AccountingMapper::class);
+        // Singleton : l'état « ledger désarmé » d'une reconstruction doit être vu par les écouteurs de modèles
+        $this->app->singleton(\App\Services\LedgerService::class);
     }
 
     public function boot(): void
