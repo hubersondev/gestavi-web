@@ -288,8 +288,8 @@ class LoadDataset extends Command
                 ];
                 $count++;
 
-                if (count($rows) >= self::CHUNK) {
-                    DB::table('daily_records')->insert($rows);
+                if (count($rows) >= 2500) {
+                    $this->insertChunks('daily_records', $rows);
                     $rows = [];
                 }
 
@@ -298,9 +298,7 @@ class LoadDataset extends Command
             }
         }
 
-        if ($rows !== []) {
-            DB::table('daily_records')->insert($rows);
-        }
+        $this->insertChunks('daily_records', $rows);
 
         return $count;
     }
@@ -395,22 +393,20 @@ class LoadDataset extends Command
                 $expenseId++;
                 $count += 2;
 
-                if (count($sales) >= self::CHUNK) {
-                    DB::table('sales')->insert($sales);
-                    DB::table('sale_items')->insert($items);
-                    DB::table('expenses')->insert($expenses);
-                    DB::table('transactions')->insert($transactions);
+                if (count($sales) >= 2000) {
+                    $this->insertChunks('sales', $sales);
+                    $this->insertChunks('sale_items', $items);
+                    $this->insertChunks('expenses', $expenses);
+                    $this->insertChunks('transactions', $transactions);
                     $sales = $items = $expenses = $transactions = [];
                 }
             }
         }
 
-        if ($sales !== []) {
-            DB::table('sales')->insert($sales);
-            DB::table('sale_items')->insert($items);
-            DB::table('expenses')->insert($expenses);
-            DB::table('transactions')->insert($transactions);
-        }
+        $this->insertChunks('sales', $sales);
+        $this->insertChunks('sale_items', $items);
+        $this->insertChunks('expenses', $expenses);
+        $this->insertChunks('transactions', $transactions);
 
         return $count;
     }
@@ -494,7 +490,14 @@ class LoadDataset extends Command
      */
     private function insertChunks(string $table, array $rows): void
     {
-        foreach (array_chunk($rows, self::CHUNK) as $chunk) {
+        if ($rows === []) {
+            return;
+        }
+
+        // PostgreSQL limite une requête à 65 535 paramètres liés : la taille des lots dépend du nombre de colonnes
+        $size = max(1, min(self::CHUNK, intdiv(60000, count($rows[0]))));
+
+        foreach (array_chunk($rows, $size) as $chunk) {
             DB::table($table)->insert($chunk);
         }
     }
