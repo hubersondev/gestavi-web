@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class Organisation extends Model implements HasCurrentTenantLabel
@@ -485,18 +486,24 @@ class Organisation extends Model implements HasCurrentTenantLabel
      */
     public function seedDefaultProducts(): void
     {
-        foreach (Product::DEFAULT_PRODUCTS as $product) {
-            Product::firstOrCreate(
-                ['organisation_id' => $this->id, 'name' => $product['name']],
-                array_merge($product, ['organisation_id' => $this->id, 'is_active' => true]),
-            );
-        }
+        // Une seule insertion en lot ; l'unicité (organisation_id, name) ignore les produits déjà présents
+        $now = now();
+
+        Product::query()->insertOrIgnore(array_map(fn (array $product): array => array_merge($product, [
+            'organisation_id' => $this->id,
+            'is_active' => true,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]), Product::DEFAULT_PRODUCTS));
     }
 
     public function seedDefaultProductionPhases(): void
     {
         $chickenTypes = ChickenType::whereIn('name', array_keys(self::DEFAULT_PRODUCTION_PHASES))
             ->pluck('id', 'name');
+
+        $now = now();
+        $rows = [];
 
         foreach (self::DEFAULT_PRODUCTION_PHASES as $chickenTypeName => $phases) {
             $chickenTypeId = $chickenTypes->get($chickenTypeName);
@@ -506,19 +513,19 @@ class Organisation extends Model implements HasCurrentTenantLabel
             }
 
             foreach ($phases as $phase) {
-                ProductionPhase::firstOrCreate(
-                    [
-                        'organisation_id' => $this->id,
-                        'chicken_type_id' => $chickenTypeId,
-                        'code' => $phase['code'],
-                    ],
-                    array_merge($phase, [
-                        'organisation_id' => $this->id,
-                        'chicken_type_id' => $chickenTypeId,
-                        'is_active' => true,
-                    ]),
-                );
+                $rows[] = array_merge($phase, [
+                    'organisation_id' => $this->id,
+                    'chicken_type_id' => $chickenTypeId,
+                    'is_active' => true,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]);
             }
+        }
+
+        // Une seule insertion en lot ; l'unicité (organisation, type, code) ignore les phases déjà présentes
+        if ($rows !== []) {
+            ProductionPhase::query()->insertOrIgnore($rows);
         }
     }
 
@@ -528,24 +535,33 @@ class Organisation extends Model implements HasCurrentTenantLabel
     public function createSystemRoles(): void
     {
         $allPermissions = OrganisationPermission::pluck('id', 'slug');
+        $now = now();
+
+        // Rôles en un lot : l'unicité (organisation_id, slug) préserve les rôles existants et leurs libellés
+        OrganisationRole::query()->insertOrIgnore(collect(self::SYSTEM_ROLES)->map(fn (array $data, string $slug): array => [
+            'organisation_id' => $this->id,
+            'slug' => $slug,
+            'name' => $data['name'],
+            'weight' => $data['weight'],
+            'is_system' => true,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ])->values()->all());
+
+        $roleIds = $this->organisationRoles()->whereIn('slug', array_keys(self::SYSTEM_ROLES))->pluck('id', 'slug');
+        $pivot = [];
 
         foreach (self::SYSTEM_ROLES as $slug => $data) {
-            $role = $this->organisationRoles()->firstOrCreate(
-                ['slug' => $slug],
-                [
-                    'name' => $data['name'],
-                    'weight' => $data['weight'],
-                    'is_system' => true,
-                ],
-            );
+            $permissionIds = $data['permissions'] === '*' ? $allPermissions->values() : $allPermissions->only($data['permissions'])->values();
 
-            // Assigner les permissions
-            if ($data['permissions'] === '*') {
-                $role->permissions()->syncWithoutDetaching($allPermissions->values());
-            } else {
-                $permIds = $allPermissions->only($data['permissions'])->values();
-                $role->permissions()->syncWithoutDetaching($permIds);
+            foreach ($permissionIds as $permissionId) {
+                $pivot[] = ['organisation_role_id' => $roleIds[$slug], 'organisation_permission_id' => $permissionId];
             }
+        }
+
+        // Permissions en un lot ; la clé primaire du pivot ignore les attributions déjà faites
+        foreach (array_chunk($pivot, 5000) as $chunk) {
+            DB::table('organisation_role_permission')->insertOrIgnore($chunk);
         }
     }
 
