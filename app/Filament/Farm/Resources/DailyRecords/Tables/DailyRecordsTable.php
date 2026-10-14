@@ -6,6 +6,7 @@ use App\Filament\Farm\Resources\DailyRecords\DailyRecordResource;
 use App\Models\Farm;
 use App\Models\Flock;
 use App\Services\CurrentFarm;
+use App\Services\CurrentFiscalYear;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -23,7 +24,7 @@ class DailyRecordsTable
 {
     public static function configure(Table $table): Table
     {
-        return $table
+        return app(CurrentFiscalYear::class)->applyToTable($table, 'record_date')
             ->columns([
                 TextColumn::make('record_date')
                     ->label('Date')

@@ -86,6 +86,11 @@ class FarmPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
             ])
+            // Exercice comptable actif : filtre d'affichage des journaux datés et défaut des dates
+            ->renderHook(
+                PanelsRenderHook::USER_MENU_BEFORE,
+                fn (): \Illuminate\View\View => view('partials.fiscal-year-selector-hook'),
+            )
             ->renderHook(
                 PanelsRenderHook::USER_MENU_BEFORE,
                 fn (): \Illuminate\View\View => view('partials.farm-selector-hook'),

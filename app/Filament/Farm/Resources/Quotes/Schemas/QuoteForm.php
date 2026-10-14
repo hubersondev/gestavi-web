@@ -3,6 +3,7 @@
 namespace App\Filament\Farm\Resources\Quotes\Schemas;
 
 use App\Enums\QuoteStatus;
+use App\Filament\Farm\Components\FiscalYearDatePicker;
 use App\Models\Customer;
 use App\Models\Farm;
 use App\Models\Flock;
@@ -88,9 +89,8 @@ class QuoteForm
                                 Section::make('Dates')
                                     ->columns(2)
                                     ->schema([
-                                        DatePicker::make('quote_date')
+                                        FiscalYearDatePicker::make('quote_date')
                                             ->label('Date du devis')
-                                            ->default(now())
                                             ->native(false)
                                             ->displayFormat('d/m/Y')
                                             ->required(),

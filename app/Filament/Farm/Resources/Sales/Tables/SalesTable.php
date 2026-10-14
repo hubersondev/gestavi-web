@@ -4,6 +4,7 @@ namespace App\Filament\Farm\Resources\Sales\Tables;
 
 use App\Enums\SaleStatus;
 use App\Models\Sale;
+use App\Services\CurrentFiscalYear;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -21,7 +22,7 @@ class SalesTable
 {
     public static function configure(Table $table): Table
     {
-        return $table
+        return app(CurrentFiscalYear::class)->applyToTable($table, 'sale_date')
             ->defaultSort('sale_date', 'desc')
             ->columns([
                 TextColumn::make('invoice_number')

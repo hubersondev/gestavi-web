@@ -5,6 +5,7 @@ namespace App\Filament\Farm\Pages;
 use App\Models\Account;
 use App\Models\Farm;
 use App\Models\FarmDailyMetric;
+use App\Services\CurrentFiscalYear;
 use App\Services\FarmMetricsAggregator;
 use BackedEnum;
 use Filament\Actions\Action;
@@ -52,8 +53,7 @@ class GroupDashboard extends Page
     public function mount(): void
     {
         $this->filters = [
-            'date_from' => now()->startOfMonth()->toDateString(),
-            'date_to' => now()->toDateString(),
+            ...app(CurrentFiscalYear::class)->reportPeriod(),
         ];
     }
 

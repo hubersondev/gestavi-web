@@ -5,6 +5,7 @@ namespace App\Filament\Farm\Resources\StockMovements\Tables;
 use App\Enums\StockMovementReason;
 use App\Enums\StockMovementType;
 use App\Models\StockMovement;
+use App\Services\CurrentFiscalYear;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -14,7 +15,7 @@ class StockMovementsTable
 {
     public static function configure(Table $table): Table
     {
-        return $table
+        return app(CurrentFiscalYear::class)->applyToTable($table, 'movement_date')
             ->modifyQueryUsing(fn ($query) => $query->with(['stock', 'stockLot', 'flock', 'user']))
             ->defaultSort('movement_date', 'desc')
             ->columns([

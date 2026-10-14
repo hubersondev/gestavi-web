@@ -8,6 +8,7 @@ use App\Filament\Farm\Resources\FarmLogs\FarmLogResource;
 use App\Models\Farm;
 use App\Models\Flock;
 use App\Services\CurrentFarm;
+use App\Services\CurrentFiscalYear;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -26,7 +27,7 @@ class FarmLogsTable
 {
     public static function configure(Table $table): Table
     {
-        return $table
+        return app(CurrentFiscalYear::class)->applyToTable($table, 'log_date')
             ->columns([
                 TextColumn::make('log_date')
                     ->label('Date')

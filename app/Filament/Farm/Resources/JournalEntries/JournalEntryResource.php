@@ -10,6 +10,7 @@ use App\Filament\Farm\Concerns\ScopesToMemberFarms;
 use App\Filament\Farm\Resources\JournalEntries\Pages\ListJournalEntries;
 use App\Filament\Farm\Resources\JournalEntries\Pages\ViewJournalEntry;
 use App\Models\JournalEntry;
+use App\Services\CurrentFiscalYear;
 use BackedEnum;
 use Filament\Actions\ViewAction;
 use Filament\Infolists\Components\RepeatableEntry;
@@ -120,7 +121,7 @@ class JournalEntryResource extends Resource
 
     public static function table(Table $table): Table
     {
-        return $table
+        return app(CurrentFiscalYear::class)->applyToTable($table, 'entry_date')
             ->defaultSort('entry_date', 'desc')
             ->columns([
                 TextColumn::make('entry_number')->label('N° pièce')->badge()->color('primary')->searchable(),

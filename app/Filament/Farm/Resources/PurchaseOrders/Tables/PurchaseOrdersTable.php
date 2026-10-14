@@ -3,6 +3,7 @@
 namespace App\Filament\Farm\Resources\PurchaseOrders\Tables;
 
 use App\Enums\PurchaseOrderStatus;
+use App\Services\CurrentFiscalYear;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -19,7 +20,7 @@ class PurchaseOrdersTable
 {
     public static function configure(Table $table): Table
     {
-        return $table
+        return app(CurrentFiscalYear::class)->applyToTable($table, 'order_date')
             ->defaultSort('order_date', 'desc')
             ->columns([
                 TextColumn::make('order_number')

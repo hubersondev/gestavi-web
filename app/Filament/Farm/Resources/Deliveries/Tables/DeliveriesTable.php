@@ -5,6 +5,7 @@ namespace App\Filament\Farm\Resources\Deliveries\Tables;
 use App\Enums\DeliveryStatus;
 use App\Filament\Farm\Resources\Deliveries\DeliveryResource;
 use App\Models\Delivery;
+use App\Services\CurrentFiscalYear;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
@@ -19,7 +20,7 @@ class DeliveriesTable
 {
     public static function configure(Table $table): Table
     {
-        return $table
+        return app(CurrentFiscalYear::class)->applyToTable($table, 'delivery_date')
             ->modifyQueryUsing(fn ($query) => $query->with(['sale.customer', 'farm']))
             ->columns([
                 TextColumn::make('delivery_number')->label('N° BL')->searchable()->sortable()->weight('bold'),

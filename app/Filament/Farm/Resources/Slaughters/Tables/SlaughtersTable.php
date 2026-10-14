@@ -3,6 +3,7 @@
 namespace App\Filament\Farm\Resources\Slaughters\Tables;
 
 use App\Filament\Farm\Resources\Slaughters\SlaughterResource;
+use App\Services\CurrentFiscalYear;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -11,7 +12,7 @@ class SlaughtersTable
 {
     public static function configure(Table $table): Table
     {
-        return $table
+        return app(CurrentFiscalYear::class)->applyToTable($table, 'slaughter_date')
             ->modifyQueryUsing(fn ($query) => $query->with(['flock', 'farm', 'destinationStock']))
             ->columns([
                 TextColumn::make('slaughter_date')->label('Date')->date('d/m/Y')->sortable(),

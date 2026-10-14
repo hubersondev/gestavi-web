@@ -4,6 +4,7 @@ namespace App\Filament\Farm\Resources\PurchaseOrders\Schemas;
 
 use App\Enums\PaymentTerms;
 use App\Enums\PurchaseOrderStatus;
+use App\Filament\Farm\Components\FiscalYearDatePicker;
 use App\Models\Farm;
 use App\Models\Stock;
 use App\Models\Supplier;
@@ -91,9 +92,8 @@ class PurchaseOrderForm
                                 Section::make('Dates')
                                     ->columns(3)
                                     ->schema([
-                                        DatePicker::make('order_date')
+                                        FiscalYearDatePicker::make('order_date')
                                             ->label('Date commande')
-                                            ->default(now())
                                             ->required()
                                             ->native(false),
 

@@ -3,10 +3,10 @@
 namespace App\Filament\Farm\Resources\CreditNotes\Schemas;
 
 use App\Enums\CreditNoteStatus;
+use App\Filament\Farm\Components\FiscalYearDatePicker;
 use App\Models\Sale;
 use App\Services\CurrentFarm;
 use Filament\Facades\Filament;
-use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -53,9 +53,8 @@ class CreditNoteForm
                             ->preload()
                             ->disabledOn('edit'),
 
-                        DatePicker::make('issue_date')
+                        FiscalYearDatePicker::make('issue_date')
                             ->label('Date d\'émission')
-                            ->default(now())
                             ->native(false)
                             ->displayFormat('d/m/Y')
                             ->required(),

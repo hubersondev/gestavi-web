@@ -2,9 +2,9 @@
 
 namespace App\Filament\Farm\Resources\AccountTransfers\Schemas;
 
+use App\Filament\Farm\Components\FiscalYearDatePicker;
 use App\Models\Account;
 use Filament\Facades\Filament;
-use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -107,9 +107,8 @@ class AccountTransferForm
                                             ->suffix('XOF')
                                             ->helperText('Prélevés sur le compte source'),
 
-                                        DatePicker::make('transfer_date')
+                                        FiscalYearDatePicker::make('transfer_date')
                                             ->label('Date du transfert')
-                                            ->default(now())
                                             ->native(false)
                                             ->displayFormat('d/m/Y')
                                             ->required(),

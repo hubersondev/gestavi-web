@@ -4,10 +4,10 @@ namespace App\Filament\Farm\Resources\Transactions\Schemas;
 
 use App\Enums\TransactionCategory;
 use App\Enums\TransactionType;
+use App\Filament\Farm\Components\FiscalYearDatePicker;
 use App\Models\Account;
 use App\Services\CurrentFarm;
 use Filament\Facades\Filament;
-use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -94,9 +94,8 @@ class TransactionForm
                                             ->native(false)
                                             ->searchable(),
 
-                                        DatePicker::make('transaction_date')
+                                        FiscalYearDatePicker::make('transaction_date')
                                             ->label('Date')
-                                            ->default(now())
                                             ->native(false)
                                             ->displayFormat('d/m/Y')
                                             ->required(),

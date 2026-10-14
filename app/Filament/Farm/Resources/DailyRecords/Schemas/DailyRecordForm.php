@@ -2,12 +2,12 @@
 
 namespace App\Filament\Farm\Resources\DailyRecords\Schemas;
 
+use App\Filament\Farm\Components\FiscalYearDatePicker;
 use App\Models\DailyRecord;
 use App\Models\Farm;
 use App\Models\Flock;
 use App\Services\CurrentFarm;
 use Filament\Facades\Filament;
-use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -107,12 +107,11 @@ class DailyRecordForm
                                             })
                                             ->columnSpanFull(),
 
-                                        DatePicker::make('record_date')
+                                        FiscalYearDatePicker::make('record_date')
                                             ->label('Date du suivi')
                                             ->required()
                                             ->native(false)
                                             ->displayFormat('d/m/Y')
-                                            ->default(now())
                                             ->maxDate(now())
                                             ->rule(fn (Get $get, ?DailyRecord $record) => Rule::unique('daily_records', 'record_date')
                                                 ->where('flock_id', $get('flock_id'))

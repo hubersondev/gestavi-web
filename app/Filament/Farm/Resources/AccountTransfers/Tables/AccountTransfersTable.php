@@ -3,6 +3,7 @@
 namespace App\Filament\Farm\Resources\AccountTransfers\Tables;
 
 use App\Enums\AccountTransferStatus;
+use App\Services\CurrentFiscalYear;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\Summarizers\Sum;
@@ -14,7 +15,7 @@ class AccountTransfersTable
 {
     public static function configure(Table $table): Table
     {
-        return $table
+        return app(CurrentFiscalYear::class)->applyToTable($table, 'transfer_date')
             ->defaultSort('transfer_date', 'desc')
             ->columns([
                 TextColumn::make('reference')

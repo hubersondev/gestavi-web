@@ -3,6 +3,7 @@
 namespace App\Filament\Farm\Resources\Quotes\Tables;
 
 use App\Enums\QuoteStatus;
+use App\Services\CurrentFiscalYear;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -18,7 +19,7 @@ class QuotesTable
 {
     public static function configure(Table $table): Table
     {
-        return $table
+        return app(CurrentFiscalYear::class)->applyToTable($table, 'quote_date')
             ->defaultSort('quote_date', 'desc')
             ->columns([
                 TextColumn::make('quote_number')

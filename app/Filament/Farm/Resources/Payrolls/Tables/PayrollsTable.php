@@ -5,6 +5,7 @@ namespace App\Filament\Farm\Resources\Payrolls\Tables;
 use App\Enums\PayrollStatus;
 use App\Filament\Farm\Resources\Payrolls\PayrollResource;
 use App\Filament\Farm\Resources\Payrolls\Support\PayrollPaymentAction;
+use App\Services\CurrentFiscalYear;
 use App\Services\PayrollService;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
@@ -19,7 +20,7 @@ class PayrollsTable
 {
     public static function configure(Table $table): Table
     {
-        return $table
+        return app(CurrentFiscalYear::class)->applyToTable($table, 'payroll_period')
             ->columns([
                 TextColumn::make('employee.full_name')
                     ->label('Employé')

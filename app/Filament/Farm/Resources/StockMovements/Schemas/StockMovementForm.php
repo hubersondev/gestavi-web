@@ -4,11 +4,11 @@ namespace App\Filament\Farm\Resources\StockMovements\Schemas;
 
 use App\Enums\StockMovementReason;
 use App\Enums\StockMovementType;
+use App\Filament\Farm\Components\FiscalYearDatePicker;
 use App\Models\Flock;
 use App\Models\Stock;
 use App\Services\CurrentFarm;
 use Filament\Facades\Filament;
-use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -70,9 +70,8 @@ class StockMovementForm
                             ->minValue(0)
                             ->suffix('XOF'),
 
-                        DatePicker::make('movement_date')
+                        FiscalYearDatePicker::make('movement_date')
                             ->label('Date du mouvement')
-                            ->default(now())
                             ->required()
                             ->native(false)
                             ->displayFormat('d/m/Y'),

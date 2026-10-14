@@ -4,6 +4,7 @@ namespace App\Filament\Farm\Resources\StockInventories\Tables;
 
 use App\Enums\StockInventoryStatus;
 use App\Models\StockInventory;
+use App\Services\CurrentFiscalYear;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -16,7 +17,7 @@ class StockInventoriesTable
 {
     public static function configure(Table $table): Table
     {
-        return $table
+        return app(CurrentFiscalYear::class)->applyToTable($table, 'inventory_date')
             ->modifyQueryUsing(fn ($query) => $query->with(['stock', 'conductor', 'validator']))
             ->defaultSort('inventory_date', 'desc')
             ->columns([

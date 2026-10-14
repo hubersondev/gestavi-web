@@ -5,6 +5,7 @@ namespace App\Filament\Farm\Resources\Expenses\Tables;
 use App\Enums\ExpenseCategory;
 use App\Enums\ExpenseStatus;
 use App\Models\Expense;
+use App\Services\CurrentFiscalYear;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -23,7 +24,7 @@ class ExpensesTable
 {
     public static function configure(Table $table): Table
     {
-        return $table
+        return app(CurrentFiscalYear::class)->applyToTable($table, 'expense_date')
             ->defaultSort('expense_date', 'desc')
             ->columns([
                 TextColumn::make('expense_number')

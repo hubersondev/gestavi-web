@@ -4,10 +4,10 @@ namespace App\Filament\Farm\Resources\Deliveries\Schemas;
 
 use App\Enums\DeliveryStatus;
 use App\Enums\SaleStatus;
+use App\Filament\Farm\Components\FiscalYearDatePicker;
 use App\Models\Sale;
 use App\Services\CurrentFarm;
 use Filament\Facades\Filament;
-use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -61,10 +61,9 @@ class DeliveryForm
                             })
                             ->disabledOn('edit'),
 
-                        DatePicker::make('delivery_date')
+                        FiscalYearDatePicker::make('delivery_date')
                             ->label('Date de livraison prévue')
                             ->required()
-                            ->default(now())
                             ->native(false)
                             ->displayFormat('d/m/Y'),
 

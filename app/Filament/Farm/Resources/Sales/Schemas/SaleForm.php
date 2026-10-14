@@ -4,6 +4,7 @@ namespace App\Filament\Farm\Resources\Sales\Schemas;
 
 use App\Enums\PaymentMethod;
 use App\Enums\SaleStatus;
+use App\Filament\Farm\Components\FiscalYearDatePicker;
 use App\Models\Account;
 use App\Models\Customer;
 use App\Models\Farm;
@@ -112,10 +113,9 @@ class SaleForm
                                 Section::make('Dates')
                                     ->columns(2)
                                     ->schema([
-                                        DatePicker::make('sale_date')
+                                        FiscalYearDatePicker::make('sale_date')
                                             ->label('Date de vente')
                                             ->required()
-                                            ->default(now())
                                             ->native(false)
                                             ->displayFormat('d/m/Y'),
 

@@ -4,6 +4,7 @@ namespace App\Filament\Farm\Resources\Attendances\Tables;
 
 use App\Enums\AttendanceStatus;
 use App\Filament\Farm\Resources\Attendances\AttendanceResource;
+use App\Services\CurrentFiscalYear;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -19,7 +20,7 @@ class AttendancesTable
 {
     public static function configure(Table $table): Table
     {
-        return $table
+        return app(CurrentFiscalYear::class)->applyToTable($table, 'attendance_date')
             ->columns([
                 TextColumn::make('employee.full_name')
                     ->label('Employé')

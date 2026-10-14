@@ -142,6 +142,11 @@ Supervision : `sentry/sentry-laravel`, activé dès que `SENTRY_LARAVEL_DSN` est
   le contrat, N° CNPS employeur, instantané des charges patronales figé sur chaque bulletin, écriture
   de paie complétée (433 CMU, 6413/4423 FDFP). Le taux accident du travail (2 à 5 % selon le secteur)
   se règle dans le paramétrage de paie de l'organisation.
+- **Exercice actif** (sélecteur dans la barre du haut, service `CurrentFiscalYear`) : filtre d'affichage des listes
+  datées (ventes, avoirs, devis, livraisons, dépenses, bons, transactions, transferts, paiements, paie, stocks,
+  écritures, relevés, pointages, abattages, journal de ferme), période par défaut des rapports, date proposée dans
+  les formulaires avec avertissement non bloquant hors exercice. Jamais une règle de gestion : les services
+  (clôture, à-nouveaux, reconstruction, API, synchronisation terrain) l'ignorent, et « Tous les exercices » lève le filtre.
 - **Saisie terrain hors-ligne** : page `/farm/{organisation}/terrain` (PWA, IndexedDB, synchronisation idempotente).
 - **SMS et mobile money** : pilotes SMS (log, Africa's Talking, Orange), webhooks signés Orange/MTN/Moov/Wave,
   rapprochement automatique et manuel des encaissements (`config/sms.php`, `config/mobilemoney.php`).

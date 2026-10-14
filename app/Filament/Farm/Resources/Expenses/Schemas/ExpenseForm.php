@@ -4,6 +4,7 @@ namespace App\Filament\Farm\Resources\Expenses\Schemas;
 
 use App\Enums\ExpenseCategory;
 use App\Enums\ExpenseStatus;
+use App\Filament\Farm\Components\FiscalYearDatePicker;
 use App\Models\Account;
 use App\Models\Farm;
 use App\Models\Flock;
@@ -119,9 +120,8 @@ class ExpenseForm
                                             ->dehydrated()
                                             ->helperText('Calculée : TTC × taux / (100 + taux)'),
 
-                                        DatePicker::make('expense_date')
+                                        FiscalYearDatePicker::make('expense_date')
                                             ->label('Date de la dépense')
-                                            ->default(now())
                                             ->native(false)
                                             ->displayFormat('d/m/Y')
                                             ->required(),

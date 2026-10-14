@@ -7,6 +7,7 @@ use App\Models\DailyRecord;
 use App\Models\Farm;
 use App\Models\Flock;
 use App\Services\CurrentFarm;
+use App\Services\CurrentFiscalYear;
 use App\Services\FlockService;
 use BackedEnum;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -55,8 +56,7 @@ class ProductionReportPage extends Page implements HasTable
     public function mount(): void
     {
         $this->filters = [
-            'date_from' => now()->startOfMonth()->toDateString(),
-            'date_to' => now()->toDateString(),
+            ...app(CurrentFiscalYear::class)->reportPeriod(),
             'farm_id' => null,
             'flock_id' => null,
         ];

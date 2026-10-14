@@ -3,6 +3,7 @@
 namespace App\Filament\Farm\Resources\CreditNotes\Tables;
 
 use App\Enums\CreditNoteStatus;
+use App\Services\CurrentFiscalYear;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -19,7 +20,7 @@ class CreditNotesTable
 {
     public static function configure(Table $table): Table
     {
-        return $table
+        return app(CurrentFiscalYear::class)->applyToTable($table, 'issue_date')
             ->defaultSort('issue_date', 'desc')
             ->columns([
                 TextColumn::make('credit_note_number')

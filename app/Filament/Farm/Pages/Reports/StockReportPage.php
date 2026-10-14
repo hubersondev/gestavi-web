@@ -9,6 +9,7 @@ use App\Models\Stock;
 use App\Models\StockCategory;
 use App\Models\StockMovement;
 use App\Services\CurrentFarm;
+use App\Services\CurrentFiscalYear;
 use BackedEnum;
 use Filament\Actions\Action as TableAction;
 use Filament\Facades\Filament;
@@ -55,8 +56,7 @@ class StockReportPage extends Page implements HasTable
     public function mount(): void
     {
         $this->filters = [
-            'date_from' => now()->startOfMonth()->toDateString(),
-            'date_to' => now()->toDateString(),
+            ...app(CurrentFiscalYear::class)->reportPeriod(),
             'farm_id' => null,
             'category_id' => null,
         ];

@@ -5,6 +5,7 @@ namespace App\Filament\Farm\Resources\Transactions\Tables;
 use App\Enums\TransactionCategory;
 use App\Enums\TransactionType;
 use App\Models\Account;
+use App\Services\CurrentFiscalYear;
 use Filament\Actions\ViewAction;
 use Filament\Facades\Filament;
 use Filament\Tables\Columns\IconColumn;
@@ -18,7 +19,7 @@ class TransactionsTable
 {
     public static function configure(Table $table): Table
     {
-        return $table
+        return app(CurrentFiscalYear::class)->applyToTable($table, 'transaction_date')
             ->defaultSort('transaction_date', 'desc')
             ->columns([
                 TextColumn::make('transaction_date')

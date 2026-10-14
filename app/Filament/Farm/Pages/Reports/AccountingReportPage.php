@@ -10,6 +10,7 @@ use App\Models\Farm;
 use App\Models\JournalLine;
 use App\Services\AccountingService;
 use App\Services\CurrentFarm;
+use App\Services\CurrentFiscalYear;
 use BackedEnum;
 use Filament\Actions\Action as TableAction;
 use Filament\Facades\Filament;
@@ -57,8 +58,7 @@ class AccountingReportPage extends Page implements HasTable
     public function mount(): void
     {
         $this->filters = [
-            'date_from' => now()->startOfYear()->toDateString(),
-            'date_to' => now()->toDateString(),
+            ...app(CurrentFiscalYear::class)->reportPeriod(fallbackFrom: now()->startOfYear()),
             'farm_id' => null,
             'journal' => null,
             'account_code' => null,

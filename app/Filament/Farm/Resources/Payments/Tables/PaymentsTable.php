@@ -3,6 +3,7 @@
 namespace App\Filament\Farm\Resources\Payments\Tables;
 
 use App\Enums\PaymentMethod;
+use App\Services\CurrentFiscalYear;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\Summarizers\Sum;
@@ -14,7 +15,7 @@ class PaymentsTable
 {
     public static function configure(Table $table): Table
     {
-        return $table
+        return app(CurrentFiscalYear::class)->applyToTable($table, 'payment_date')
             ->defaultSort('payment_date', 'desc')
             ->columns([
                 TextColumn::make('payment_date')
