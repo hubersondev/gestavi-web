@@ -119,7 +119,8 @@ Supervision : `sentry/sentry-laravel`, activé dès que `SENTRY_LARAVEL_DSN` est
   des médicaments à l'administration, abattages, livraisons avec bon PDF.
 - **Comptabilité SYSCOHADA minimale** : plan de comptes, écritures en partie double générées par écouteurs,
   exercices et clôture (classes 6 et 7 soldées vers le 131, puis à-nouveaux des comptes de bilan au journal AN
-  le lendemain de la fin d'exercice), journal / grand livre / balance / résultat, export « journal Sage »,
+  le lendemain de la fin d'exercice, le résultat étant affecté au report à nouveau 121 ou 129 dans ces
+  à-nouveaux), journal / grand livre / balance / résultat, export « journal Sage »,
   `gestavi:accounting-rebuild` pour initialiser une base existante (les écritures de clôture et d'à-nouveaux
   sont conservées). Un exercice créé ou redaté après coup récupère les écritures de sa période ; ce rattachement
   est la seule colonne d'une écriture que le ledger laisse modifier.

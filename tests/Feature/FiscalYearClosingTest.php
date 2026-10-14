@@ -66,7 +66,8 @@ it('la clôture solde les classes 6 et 7 vers 131 et verrouille la période', fu
         ->and($opening->lines()->whereRaw("LEFT(chart_account_code, 1) IN ('6', '7')")->exists())->toBeFalse()
         ->and((float) $opening->lines()->where('chart_account_code', '411')->sum('debit'))->toBe(100000.0)
         ->and((float) $opening->lines()->where('chart_account_code', '401')->sum('credit'))->toBe(40000.0)
-        ->and((float) $opening->lines()->where('chart_account_code', '131')->sum('credit'))->toBe(60000.0);
+        ->and((float) $opening->lines()->where('chart_account_code', '121')->sum('credit'))->toBe(60000.0)
+        ->and($opening->lines()->where('chart_account_code', '131')->exists())->toBeFalse();
 
     // Toute transaction ou écriture datée dans l'exercice clos est refusée
     $cash = Account::factory()->cash()->create(['organisation_id' => $this->organisation->id, 'farm_id' => $this->farm->id, 'initial_balance' => 0, 'current_balance' => 0, 'is_active' => true]);
@@ -156,7 +157,7 @@ it('les à-nouveaux s\'enchaînent d\'un exercice à l\'autre sans cumuler les s
         ->and($openingNext->isBalanced())->toBeTrue()
         ->and((float) $openingNext->lines()->where('chart_account_code', '411')->sum('debit'))->toBe(100000.0)
         ->and((float) $openingNext->lines()->where('chart_account_code', '401')->sum('credit'))->toBe(40000.0)
-        ->and((float) $openingNext->lines()->where('chart_account_code', '131')->sum('credit'))->toBe(60000.0);
+        ->and((float) $openingNext->lines()->where('chart_account_code', '121')->sum('credit'))->toBe(60000.0);
 
     // La reconstruction rejoue les faits (même dans l'exercice clos) et conserve la clôture de N-1 et les deux à-nouveaux
     app(AccountingService::class)->rebuild($this->organisation->id);

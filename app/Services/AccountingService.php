@@ -617,6 +617,8 @@ class AccountingService
 
         $lines = [];
 
+        $resultCode = $this->mapper->codeFor('closing.result', $fiscalYear->organisation_id);
+
         foreach ($balances as $balance) {
             $net = round((float) $balance->debit - (float) $balance->credit, 2);
 
@@ -624,9 +626,14 @@ class AccountingService
                 continue;
             }
 
+            // Affectation du résultat : le 131 est repris en report à nouveau, créditeur (bénéfice) ou débiteur (perte)
+            $code = $balance->chart_account_code === $resultCode
+                ? $this->mapper->codeFor($net > 0 ? 'closing.retained_loss' : 'closing.retained_earnings', $fiscalYear->organisation_id)
+                : $balance->chart_account_code;
+
             $lines[] = $net > 0
-                ? ['code' => $balance->chart_account_code, 'debit' => $net]
-                : ['code' => $balance->chart_account_code, 'credit' => -$net];
+                ? ['code' => $code, 'debit' => $net]
+                : ['code' => $code, 'credit' => -$net];
         }
 
         if ($lines === []) {

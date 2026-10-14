@@ -75,6 +75,8 @@ class AccountingMapper
         'treasury.adjustment' => '471',
         'treasury.other' => '471',
         'closing.result' => '131',
+        'closing.retained_earnings' => '121',
+        'closing.retained_loss' => '129',
     ];
 
     /** @var array<string, string> cache par requête : "{org}|{key}" => code */
