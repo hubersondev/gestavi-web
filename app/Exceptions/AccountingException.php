@@ -15,6 +15,16 @@ class AccountingException extends Exception
         ));
     }
 
+    public static function openingBalanceAlreadyRecorded(string $entryNumber): self
+    {
+        return new self("Le bilan d'ouverture a déjà été saisi (écriture {$entryNumber}). Toute correction passe par une écriture d'extourne.");
+    }
+
+    public static function openingBalanceAccountNotAllowed(string $code): self
+    {
+        return new self("Le compte {$code} n'a pas sa place dans un bilan d'ouverture : seuls les comptes de bilan des classes 1 à 4 sont admis. La trésorerie (classe 5) vient du solde initial de chaque compte, les charges et produits (classes 6 et 7) des opérations de l'exercice.");
+    }
+
     public static function periodClosed(string $date, string $fiscalYear): self
     {
         return new self("La date {$date} appartient à l'exercice « {$fiscalYear} » qui est clôturé : aucune écriture ni transaction ne peut plus y être enregistrée.");

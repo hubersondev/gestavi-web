@@ -7,6 +7,7 @@ use App\Enums\MobileMoneyOperator;
 use App\Models\Farm;
 use App\Services\CurrentFarm;
 use Filament\Facades\Filament;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -84,6 +85,14 @@ class AccountForm
                                             ->default(0)
                                             ->suffix('XOF')
                                             ->helperText('Générera une transaction d\'ouverture si > 0')
+                                            ->disabledOn('edit'),
+
+                                        DatePicker::make('initial_balance_date')
+                                            ->label('Date du solde initial')
+                                            ->native(false)
+                                            ->displayFormat('d/m/Y')
+                                            ->default(now())
+                                            ->helperText('Date de la transaction d\'ouverture : le 1er jour de l\'exercice repris pour une reprise du passé')
                                             ->disabledOn('edit'),
 
                                         TextInput::make('current_balance')

@@ -51,7 +51,7 @@ class Quote extends Model
             }
 
             if (empty($quote->quote_number) && $quote->organisation_id) {
-                $quote->quote_number = self::generateQuoteNumber($quote->organisation_id);
+                $quote->quote_number = self::generateQuoteNumber($quote->organisation_id, $quote->quote_date ? \Illuminate\Support\Carbon::parse($quote->quote_date)->year : null);
             }
         });
     }
@@ -149,9 +149,10 @@ class Quote extends Model
         $this->update($this->computeTotalsFromLines());
     }
 
-    public static function generateQuoteNumber(int $organisationId): string
+    public static function generateQuoteNumber(int $organisationId, ?int $year = null): string
     {
-        $year = now()->year;
+        // Numérotation par année du document, pas de la saisie : une pièce de 2025 saisie en 2026 reste en 2025
+        $year ??= now()->year;
         $sequence = app(\App\Services\NumberSequence::class);
 
         return $sequence->nextFormatted(

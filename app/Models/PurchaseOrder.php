@@ -54,7 +54,7 @@ class PurchaseOrder extends Model
             }
 
             if (empty($order->order_number) && $order->organisation_id) {
-                $order->order_number = self::generateOrderNumber($order->organisation_id);
+                $order->order_number = self::generateOrderNumber($order->organisation_id, $order->order_date ? \Illuminate\Support\Carbon::parse($order->order_date)->year : null);
             }
         });
     }
@@ -173,9 +173,10 @@ class PurchaseOrder extends Model
         }
     }
 
-    public static function generateOrderNumber(int $organisationId): string
+    public static function generateOrderNumber(int $organisationId, ?int $year = null): string
     {
-        $year = now()->year;
+        // Numérotation par année du document, pas de la saisie : une pièce de 2025 saisie en 2026 reste en 2025
+        $year ??= now()->year;
         $sequence = app(\App\Services\NumberSequence::class);
 
         return $sequence->nextFormatted(

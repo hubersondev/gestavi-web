@@ -45,7 +45,7 @@ class Delivery extends Model
             $delivery->status ??= DeliveryStatus::Planned;
 
             if (empty($delivery->delivery_number) && $delivery->organisation_id) {
-                $delivery->delivery_number = self::generateNumber($delivery->organisation_id);
+                $delivery->delivery_number = self::generateNumber($delivery->organisation_id, $delivery->delivery_date ? \Illuminate\Support\Carbon::parse($delivery->delivery_date)->year : null);
             }
         });
     }
@@ -111,9 +111,10 @@ class Delivery extends Model
     /**
      * Numérotation continue BL-AAAA-00001 par organisation.
      */
-    public static function generateNumber(int $organisationId): string
+    public static function generateNumber(int $organisationId, ?int $year = null): string
     {
-        $year = now()->year;
+        // Numérotation par année du document, pas de la saisie : une pièce de 2025 saisie en 2026 reste en 2025
+        $year ??= now()->year;
         $sequence = app(NumberSequence::class);
 
         return $sequence->nextFormatted(

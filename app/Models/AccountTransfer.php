@@ -40,7 +40,7 @@ class AccountTransfer extends Model
     {
         static::creating(function (AccountTransfer $transfer): void {
             if (empty($transfer->reference) && $transfer->organisation_id) {
-                $transfer->reference = self::generateReference($transfer->organisation_id);
+                $transfer->reference = self::generateReference($transfer->organisation_id, $transfer->transfer_date ? \Illuminate\Support\Carbon::parse($transfer->transfer_date)->year : null);
             }
         });
     }
@@ -223,9 +223,10 @@ class AccountTransfer extends Model
         });
     }
 
-    public static function generateReference(int $organisationId): string
+    public static function generateReference(int $organisationId, ?int $year = null): string
     {
-        $year = now()->year;
+        // Numérotation par année du document, pas de la saisie : une pièce de 2025 saisie en 2026 reste en 2025
+        $year ??= now()->year;
         $sequence = app(\App\Services\NumberSequence::class);
 
         return $sequence->nextFormatted(

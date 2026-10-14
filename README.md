@@ -123,6 +123,12 @@ Supervision : `sentry/sentry-laravel`, activé dès que `SENTRY_LARAVEL_DSN` est
   `gestavi:accounting-rebuild` pour initialiser une base existante (les écritures de clôture et d'à-nouveaux
   sont conservées). Un exercice créé ou redaté après coup récupère les écritures de sa période ; ce rattachement
   est la seule colonne d'une écriture que le ledger laisse modifier.
+- **Reprise d'un exercice passé** (client qui démarre en cours d'année ou saisit l'année précédente) : les numéros
+  de pièces (factures, avoirs, dépenses, devis, bons, transferts) suivent l'année de la date du document ; le solde
+  initial d'un compte de trésorerie est daté (champ « Date du solde initial », transaction d'ouverture référencée
+  `OUVERTURE` et jamais recomptée) ; le **bilan d'ouverture** (action sur la liste des écritures, permission
+  `fiscal_years.opening_balance`) reprend une seule fois capital, immobilisations, emprunts, créances et dettes au
+  journal AN, classes 1 à 4 uniquement.
 - **Ledger intangible** : triggers PostgreSQL interdisant toute modification ou suppression des écritures,
   de leurs lignes et des transactions de trésorerie (seul le rapprochement bancaire reste modifiable) ;
   chaîne de hachage SHA-256 par organisation (`previous_hash` → `hash`) ; ancrages de la tête de chaîne à

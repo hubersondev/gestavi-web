@@ -22,7 +22,16 @@ class ChartAccount extends Model
      */
     public const REFERENCE_PLAN = [
         '101' => ['Capital social', ChartAccountType::Equity],
+        '121' => ['Report à nouveau créditeur', ChartAccountType::Equity],
+        '129' => ['Report à nouveau débiteur', ChartAccountType::Equity],
         '131' => ['Résultat net de l\'exercice', ChartAccountType::Equity],
+        '162' => ['Emprunts auprès des établissements de crédit', ChartAccountType::Liability],
+        '22' => ['Terrains', ChartAccountType::Asset],
+        '23' => ['Bâtiments et installations', ChartAccountType::Asset],
+        '242' => ['Matériel et outillage agricole', ChartAccountType::Asset],
+        '244' => ['Matériel et mobilier', ChartAccountType::Asset],
+        '245' => ['Matériel de transport', ChartAccountType::Asset],
+        '28' => ['Amortissements des immobilisations', ChartAccountType::Asset],
         '311' => ['Marchandises (volailles)', ChartAccountType::Asset],
         '321' => ['Matières premières (aliment)', ChartAccountType::Asset],
         '33' => ['Autres approvisionnements (médicaments, litière)', ChartAccountType::Asset],

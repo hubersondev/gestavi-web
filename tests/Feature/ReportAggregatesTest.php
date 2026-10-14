@@ -197,3 +197,19 @@ it('calcule les KPI stocks (valeur, seuil, mouvements) et la comparaison par fer
         ->and($comparison->firstWhere('farm_name', 'Ferme A')->exits)->toBe(15.0)
         ->and($comparison->firstWhere('farm_name', 'Ferme B')->low_stock)->toBe(1);
 });
+
+it('le solde d\'ouverture du rapport financier ne recompte pas le solde initial porté par la transaction d\'ouverture', function () {
+    app(\App\Services\AccountService::class)->createAccount([
+        'organisation_id' => $this->organisation->id,
+        'farm_id' => $this->farmA->id,
+        'name' => 'Banque reprise',
+        'type' => \App\Enums\AccountType::Bank,
+        'initial_balance' => 100000,
+        'initial_balance_date' => now()->subDays(30)->toDateString(),
+    ]);
+
+    $kpis = reportPage(FinancialReportPage::class, $this->period + ['farm_id' => null, 'account_id' => null])->getKpis();
+
+    expect($kpis['opening_balance'])->toBe(100000.0)
+        ->and($kpis['closing_balance'])->toBe(100000.0);
+});

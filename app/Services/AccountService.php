@@ -42,13 +42,15 @@ class AccountService
             }
 
             if ((float) $account->initial_balance > 0) {
+                // Datée du solde initial (reprise d'un exercice passé) et référencée pour ne pas être recomptée
                 $account->transactions()->make([
                     'user_id' => auth()->id(),
                     'type' => TransactionType::Credit,
                     'category' => TransactionCategory::Opening,
                     'amount' => $account->initial_balance,
+                    'reference_number' => Account::OPENING_REFERENCE,
                     'description' => "Solde d'ouverture du compte {$account->name}",
-                    'transaction_date' => now()->toDateString(),
+                    'transaction_date' => ($account->initial_balance_date ?? now())->toDateString(),
                 ])->forceFill([
                     'balance_before' => 0,
                     'balance_after' => $account->initial_balance,

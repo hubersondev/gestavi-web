@@ -53,7 +53,7 @@ class CreditNote extends Model
             }
 
             if (empty($creditNote->credit_note_number) && $creditNote->organisation_id) {
-                $creditNote->credit_note_number = self::generateNumber($creditNote->organisation_id);
+                $creditNote->credit_note_number = self::generateNumber($creditNote->organisation_id, $creditNote->issue_date ? \Illuminate\Support\Carbon::parse($creditNote->issue_date)->year : null);
             }
         });
     }
@@ -226,9 +226,10 @@ class CreditNote extends Model
         $this->update(['status' => CreditNoteStatus::Cancelled]);
     }
 
-    public static function generateNumber(int $organisationId): string
+    public static function generateNumber(int $organisationId, ?int $year = null): string
     {
-        $year = now()->year;
+        // Numérotation par année du document, pas de la saisie : une pièce de 2025 saisie en 2026 reste en 2025
+        $year ??= now()->year;
         $sequence = app(\App\Services\NumberSequence::class);
 
         return $sequence->nextFormatted(

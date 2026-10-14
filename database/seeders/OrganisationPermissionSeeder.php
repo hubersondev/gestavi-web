@@ -173,6 +173,7 @@ class OrganisationPermissionSeeder extends Seeder
             ],
             'fiscal_years' => [
                 'close' => 'Clôturer un exercice comptable',
+                'opening_balance' => 'Saisir le bilan d\'ouverture (reprise des soldes antérieurs)',
             ],
             'stocks' => [
                 'record_movement' => 'Enregistrer un mouvement (entrée/sortie) de stock',

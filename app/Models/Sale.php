@@ -57,7 +57,7 @@ class Sale extends Model
             }
 
             if (empty($sale->invoice_number) && $sale->organisation_id) {
-                $sale->invoice_number = self::generateInvoiceNumber($sale->organisation_id);
+                $sale->invoice_number = self::generateInvoiceNumber($sale->organisation_id, $sale->sale_date ? \Illuminate\Support\Carbon::parse($sale->sale_date)->year : null);
             }
         });
     }
@@ -321,9 +321,10 @@ class Sale extends Model
      * En cas de concurrence, le UNIQUE constraint en base protège contre les doublons.
      * Utilise MAX() sur le numéro existant pour être robuste aux suppressions.
      */
-    public static function generateInvoiceNumber(int $organisationId): string
+    public static function generateInvoiceNumber(int $organisationId, ?int $year = null): string
     {
-        $year = now()->year;
+        // Numérotation par année du document, pas de la saisie : une pièce de 2025 saisie en 2026 reste en 2025
+        $year ??= now()->year;
         $sequence = app(\App\Services\NumberSequence::class);
 
         // Numérotation continue et verrouillée : exigence SYSCOHADA sur les factures

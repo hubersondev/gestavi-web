@@ -25,10 +25,16 @@ class Account extends Model
         'organisation_id', 'farm_id',
         'name', 'code', 'type',
         'bank_name', 'account_number', 'phone_number', 'operator',
-        'initial_balance', 'current_balance', 'currency',
+        'initial_balance', 'initial_balance_date', 'current_balance', 'currency',
         'description', 'notes',
         'is_default', 'is_active',
     ];
+
+    /**
+     * Référence de la transaction d'ouverture générée à la création du compte : elle porte le solde
+     * initial dans les mouvements, qui ne doit donc plus être ajouté à part dans les calculs.
+     */
+    public const string OPENING_REFERENCE = 'OUVERTURE';
 
     protected function casts(): array
     {
@@ -36,6 +42,7 @@ class Account extends Model
             'type' => AccountType::class,
             'operator' => MobileMoneyOperator::class,
             'initial_balance' => 'decimal:2',
+            'initial_balance_date' => 'date',
             'current_balance' => 'decimal:2',
             'is_default' => 'boolean',
             'is_active' => 'boolean',
@@ -256,7 +263,21 @@ class Account extends Model
     {
         $credits = (float) $this->transactions()->where('type', TransactionType::Credit)->sum('amount');
         $debits = (float) $this->transactions()->where('type', TransactionType::Debit)->sum('amount');
-        $this->forceFill(['current_balance' => (float) $this->initial_balance + $credits - $debits])->save();
+        $this->forceFill(['current_balance' => $this->standaloneInitialBalance() + $credits - $debits])->save();
+    }
+
+    /**
+     * Solde initial à ajouter aux mouvements : zéro dès que la transaction d'ouverture le porte déjà
+     * (comptes créés par le service), sinon la valeur de la fiche (comptes importés ou de test).
+     */
+    public function standaloneInitialBalance(): float
+    {
+        return $this->carriesOpeningTransaction() ? 0.0 : (float) $this->initial_balance;
+    }
+
+    public function carriesOpeningTransaction(): bool
+    {
+        return $this->transactions()->where('reference_number', self::OPENING_REFERENCE)->exists();
     }
 
     public function setAsDefault(): void

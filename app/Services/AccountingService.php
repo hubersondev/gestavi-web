@@ -113,6 +113,56 @@ class AccountingService
         return ['attached' => $attached, 'detached' => $detached];
     }
 
+    // ─── BILAN D'OUVERTURE ──────────────────────────────────────────────────
+
+    /** Type de référence de l'écriture de bilan d'ouverture, unique par organisation. */
+    public const string OPENING_BALANCE_REFERENCE = 'opening_balance';
+
+    public function openingBalanceEntry(int $organisationId): ?JournalEntry
+    {
+        return JournalEntry::query()
+            ->where('organisation_id', $organisationId)
+            ->where('reference_type', self::OPENING_BALANCE_REFERENCE)
+            ->first();
+    }
+
+    /**
+     * Reprise des soldes antérieurs à la tenue de la comptabilité dans GESTAVI : capital, immobilisations,
+     * emprunts, créances et dettes au premier jour de l'exercice repris. Une seule fois par organisation,
+     * comptes de bilan des classes 1 à 4 uniquement (la trésorerie vient du solde initial de chaque
+     * compte), équilibrée, au journal AN, et refusée dans un exercice clos comme toute écriture.
+     *
+     * @param  list<array{code: string, debit?: float|int|string|null, credit?: float|int|string|null, label?: string|null}>  $lines
+     */
+    public function recordOpeningBalance(int $organisationId, mixed $date, array $lines, ?int $userId = null): JournalEntry
+    {
+        if ($existing = $this->openingBalanceEntry($organisationId)) {
+            throw AccountingException::openingBalanceAlreadyRecorded($existing->entry_number);
+        }
+
+        foreach ($lines as $line) {
+            $code = trim((string) ($line['code'] ?? ''));
+
+            if ($code === '' || ! in_array(ChartAccount::classOf($code), [1, 2, 3, 4], true)) {
+                throw AccountingException::openingBalanceAccountNotAllowed($code);
+            }
+        }
+
+        $openingDate = Carbon::parse($date);
+
+        return $this->record([
+            'organisation_id' => $organisationId,
+            'entry_date' => $openingDate,
+            'journal' => JournalCode::Opening,
+            'label' => 'Bilan d\'ouverture au '.$openingDate->format('d/m/Y').' — reprise des soldes antérieurs',
+            'reference_type' => self::OPENING_BALANCE_REFERENCE,
+            'reference_id' => $organisationId,
+            'reference_number' => 'OUVERTURE',
+            'user_id' => $userId,
+            'is_generated' => false,
+        ], $lines);
+    }
+
     // ─── ÉCRITURE GÉNÉRIQUE ─────────────────────────────────────────────────
 
     /**

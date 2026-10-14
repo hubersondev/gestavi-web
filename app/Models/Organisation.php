@@ -233,7 +233,7 @@ class Organisation extends Model implements HasCurrentTenantLabel
                 'account_transfers.complete', 'account_transfers.cancel', 'account_transfers.reverse',
                 'expenses.view', 'expenses.create', 'expenses.update', 'expenses.delete',
                 'expenses.mark_paid', 'expenses.cancel',
-                'fiscal_years.view', 'fiscal_years.create', 'fiscal_years.update', 'fiscal_years.close',
+                'fiscal_years.view', 'fiscal_years.create', 'fiscal_years.update', 'fiscal_years.close', 'fiscal_years.opening_balance',
                 // Commercial
                 'customers.view', 'customers.create', 'customers.update', 'customers.delete',
                 'sales.view', 'sales.create', 'sales.update', 'sales.delete',

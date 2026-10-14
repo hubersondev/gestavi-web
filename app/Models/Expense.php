@@ -52,7 +52,7 @@ class Expense extends Model
             }
 
             if (empty($expense->expense_number) && $expense->organisation_id) {
-                $expense->expense_number = self::generateExpenseNumber($expense->organisation_id);
+                $expense->expense_number = self::generateExpenseNumber($expense->organisation_id, $expense->expense_date ? \Illuminate\Support\Carbon::parse($expense->expense_date)->year : null);
             }
 
             if ($expense->balance === null || (float) $expense->balance === 0.0) {
@@ -288,9 +288,10 @@ class Expense extends Model
         });
     }
 
-    public static function generateExpenseNumber(int $organisationId): string
+    public static function generateExpenseNumber(int $organisationId, ?int $year = null): string
     {
-        $year = now()->year;
+        // Numérotation par année du document, pas de la saisie : une pièce de 2025 saisie en 2026 reste en 2025
+        $year ??= now()->year;
         $sequence = app(\App\Services\NumberSequence::class);
 
         return $sequence->nextFormatted(

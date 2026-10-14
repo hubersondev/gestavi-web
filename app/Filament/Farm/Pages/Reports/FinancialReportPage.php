@@ -285,11 +285,14 @@ class FinancialReportPage extends Page implements HasTable
             ->withSum(['transactions as debits_before' => fn (Builder $q) => $q->where('type', $debit)->where('transaction_date', '<', $from)], 'amount')
             ->withSum(['transactions as credits_period' => fn (Builder $q) => $q->where('type', $credit)->whereBetween('transaction_date', [$from, $to])], 'amount')
             ->withSum(['transactions as debits_period' => fn (Builder $q) => $q->where('type', $debit)->whereBetween('transaction_date', [$from, $to])], 'amount')
+            // Le solde initial n'est ajouté que s'il n'est pas déjà porté par une transaction d'ouverture
+            ->withExists(['transactions as carries_opening' => fn (Builder $q) => $q->where('reference_number', Account::OPENING_REFERENCE)])
             ->orderBy('name')
             ->get();
 
         return $this->accountBalancesCache = $accounts->map(function (Account $account): object {
-            $opening = (float) $account->initial_balance + (float) $account->credits_before - (float) $account->debits_before;
+            $initial = $account->carries_opening ? 0.0 : (float) $account->initial_balance;
+            $opening = $initial + (float) $account->credits_before - (float) $account->debits_before;
             $credits = (float) $account->credits_period;
             $debits = (float) $account->debits_period;
 

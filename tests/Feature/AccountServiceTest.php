@@ -27,6 +27,28 @@ it('creates an account with auto code and opening transaction', function () {
         ->and($account->transactions()->first()->category)->toBe(TransactionCategory::Opening);
 });
 
+it('date la transaction d\'ouverture du solde initial et ne recompte pas ce solde au recalcul', function () {
+    $account = $this->service->createAccount([
+        'organisation_id' => $this->organisation->id,
+        'name' => 'Banque reprise 2025',
+        'type' => AccountType::Bank,
+        'initial_balance' => 250000,
+        'initial_balance_date' => '2025-01-01',
+    ]);
+
+    $opening = $account->transactions()->sole();
+
+    expect($opening->transaction_date->toDateString())->toBe('2025-01-01')
+        ->and($opening->reference_number)->toBe(Account::OPENING_REFERENCE)
+        ->and($account->carriesOpeningTransaction())->toBeTrue()
+        ->and((float) $account->current_balance)->toBe(250000.0);
+
+    $account->credit(30000, 'Dépôt', TransactionCategory::Payment);
+    $account->recalculateBalance();
+
+    expect((float) $account->fresh()->current_balance)->toBe(280000.0);
+});
+
 it('credits and debits an account correctly', function () {
     $account = Account::factory()->cash()->create([
         'organisation_id' => $this->organisation->id,

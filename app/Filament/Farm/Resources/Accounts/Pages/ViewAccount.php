@@ -40,7 +40,7 @@ class ViewAccount extends ViewRecord
                 ->color('info')
                 ->visible(fn (): bool => AccountResource::canPerformAction('recalculate_balance'))
                 ->requiresConfirmation()
-                ->modalDescription('Recalcule le solde à partir du solde initial et de toutes les transactions.')
+                ->modalDescription('Recalcule le solde à partir de toutes les transactions, transaction d\'ouverture comprise.')
                 ->action(function (Account $record): void {
                     $record->recalculateBalance();
 

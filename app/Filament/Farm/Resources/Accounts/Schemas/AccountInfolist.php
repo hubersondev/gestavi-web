@@ -46,6 +46,11 @@ class AccountInfolist
                             ->numeric(thousandsSeparator: ' ')
                             ->suffix(' XOF'),
 
+                        TextEntry::make('initial_balance_date')
+                            ->label('Date du solde initial')
+                            ->date('d/m/Y')
+                            ->placeholder('—'),
+
                         TextEntry::make('current_balance')
                             ->label('Solde actuel')
                             ->numeric(thousandsSeparator: ' ')
