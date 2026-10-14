@@ -4,6 +4,7 @@ use App\Console\Commands\Doctor;
 use App\Models\Organisation;
 use Database\Seeders\OrganisationPermissionSeeder;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Process;
 
 /**
  * Diagnostic d'exploitation : chaque prérequis est contrôlé et l'état général est fidèle.
@@ -11,6 +12,18 @@ use Illuminate\Support\Facades\Cache;
 beforeEach(function () {
     $this->seed(OrganisationPermissionSeeder::class);
     Cache::forget(Doctor::SCHEDULER_HEARTBEAT_KEY);
+
+    // composer audit interroge Packagist : simulé pour que le diagnostic reste hors réseau en test
+    $this->advisories = [];
+    Process::fake(['composer audit*' => fn () => Process::result(json_encode(['advisories' => $this->advisories]))]);
+});
+
+it('signale les avis de sécurité remontés par composer audit', function () {
+    $this->advisories = ['vendor/paquet' => [['title' => 'Faille'], ['title' => 'Autre']]];
+
+    $this->artisan('gestavi:doctor')
+        ->expectsOutputToContain('2 avis de sécurité')
+        ->assertSuccessful();
 });
 
 it('signale la file synchrone, le planificateur muet et une organisation à remettre à niveau, sans échouer en développement', function () {

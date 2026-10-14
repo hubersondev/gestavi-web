@@ -16,6 +16,7 @@ use Illuminate\Database\Migrations\Migrator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Process as LaravelProcess;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Symfony\Component\Process\Process;
@@ -59,6 +60,7 @@ class Doctor extends Command
         $this->checkLedger($ledger);
         $this->checkMonitoring();
         $this->checkSecurity();
+        $this->checkDependencies();
         $this->checkTenants();
         $this->checkStorage();
 
@@ -263,6 +265,34 @@ class Doctor extends Command
                 $this->pass('Chaîne du ledger', "{$organisation->name} : {$verification['checked']} écriture(s), ancrée ".$lastAnchor->created_at->diffForHumans());
             }
         }
+    }
+
+    /**
+     * Avis de sécurité sur les dépendances PHP : composer audit, qui interroge le registre Packagist.
+     */
+    private function checkDependencies(): void
+    {
+        try {
+            $result = LaravelProcess::timeout(90)->path(base_path())->run('composer audit --format=json --no-interaction --locked');
+        } catch (Throwable $e) {
+            $this->caution('Dépendances PHP', 'composer audit impossible : '.$e->getMessage());
+
+            return;
+        }
+
+        $report = json_decode($result->output(), true);
+
+        if (! is_array($report)) {
+            $this->caution('Dépendances PHP', 'composer audit : réponse illisible (composer absent du PATH ou registre inaccessible).');
+
+            return;
+        }
+
+        $advisories = collect($report['advisories'] ?? [])->flatten(1)->count();
+
+        $advisories === 0
+            ? $this->pass('Dépendances PHP', 'composer audit : aucun avis de sécurité')
+            : $this->failIfStrict('Dépendances PHP', "{$advisories} avis de sécurité : composer audit, puis composer update sur une branche avec la suite de tests.");
     }
 
     private function checkMonitoring(): void
