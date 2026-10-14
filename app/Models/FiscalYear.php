@@ -33,6 +33,18 @@ class FiscalYear extends Model
         ];
     }
 
+    /**
+     * Un exercice créé ou redaté après coup récupère les écritures de sa période.
+     */
+    protected static function booted(): void
+    {
+        static::saved(function (FiscalYear $fiscalYear): void {
+            if ($fiscalYear->wasRecentlyCreated || $fiscalYear->wasChanged(['starts_on', 'ends_on'])) {
+                app(\App\Services\AccountingService::class)->syncFiscalYearEntries($fiscalYear);
+            }
+        });
+    }
+
     public function organisation(): BelongsTo
     {
         return $this->belongsTo(Organisation::class);

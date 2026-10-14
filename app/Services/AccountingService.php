@@ -88,6 +88,31 @@ class AccountingService
         return FiscalYear::query()->where('organisation_id', $organisationId)->covering($date)->first();
     }
 
+    /**
+     * Rattache à l'exercice les écritures de sa période restées sans exercice, et détache celles
+     * qui n'y appartiennent plus après un changement de dates. Classification seulement : le contenu
+     * comptable et la chaîne de hachage ne sont pas touchés.
+     *
+     * @return array{attached: int, detached: int}
+     */
+    public function syncFiscalYearEntries(FiscalYear $fiscalYear): array
+    {
+        $period = [$fiscalYear->starts_on->toDateString(), $fiscalYear->ends_on->toDateString()];
+
+        $detached = JournalEntry::query()
+            ->where('fiscal_year_id', $fiscalYear->id)
+            ->whereNotBetween('entry_date', $period)
+            ->update(['fiscal_year_id' => null]);
+
+        $attached = JournalEntry::query()
+            ->where('organisation_id', $fiscalYear->organisation_id)
+            ->whereNull('fiscal_year_id')
+            ->whereBetween('entry_date', $period)
+            ->update(['fiscal_year_id' => $fiscalYear->id]);
+
+        return ['attached' => $attached, 'detached' => $detached];
+    }
+
     // ─── ÉCRITURE GÉNÉRIQUE ─────────────────────────────────────────────────
 
     /**

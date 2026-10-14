@@ -121,7 +121,8 @@ Supervision : `sentry/sentry-laravel`, activé dès que `SENTRY_LARAVEL_DSN` est
   exercices et clôture (classes 6 et 7 soldées vers le 131, puis à-nouveaux des comptes de bilan au journal AN
   le lendemain de la fin d'exercice), journal / grand livre / balance / résultat, export « journal Sage »,
   `gestavi:accounting-rebuild` pour initialiser une base existante (les écritures de clôture et d'à-nouveaux
-  sont conservées).
+  sont conservées). Un exercice créé ou redaté après coup récupère les écritures de sa période ; ce rattachement
+  est la seule colonne d'une écriture que le ledger laisse modifier.
 - **Ledger intangible** : triggers PostgreSQL interdisant toute modification ou suppression des écritures,
   de leurs lignes et des transactions de trésorerie (seul le rapprochement bancaire reste modifiable) ;
   chaîne de hachage SHA-256 par organisation (`previous_hash` → `hash`) ; ancrages de la tête de chaîne à

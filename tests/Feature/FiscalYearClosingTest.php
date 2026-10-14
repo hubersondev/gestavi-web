@@ -86,6 +86,43 @@ it('la clôture solde les classes 6 et 7 vers 131 et verrouille la période', fu
     expect(fn () => app(AccountingService::class)->closeFiscalYear($this->fiscalYear->fresh()))->toThrow(AccountingException::class);
 });
 
+it('un exercice créé ou redaté après coup rattache les écritures de sa période et détache les autres', function () {
+    $twoYearsAgo = now()->subYears(2)->setMonth(3)->setDay(10);
+
+    app(SaleService::class)->createSale(
+        ['organisation_id' => $this->organisation->id, 'farm_id' => $this->farm->id, 'sale_date' => $twoYearsAgo->toDateString(), 'status' => SaleStatus::Pending, 'tax_percent' => 0],
+        [['product_name' => 'Œufs', 'quantity' => 10, 'unit_price' => 100]],
+    );
+    $entry = JournalEntry::query()->where('organisation_id', $this->organisation->id)->sole();
+    expect($entry->fiscal_year_id)->toBeNull();
+
+    // Création après coup : l'écriture est rattachée, celles d'une autre organisation ne le sont pas
+    $other = Organisation::factory()->create();
+    $otherFarm = Farm::factory()->create(['organisation_id' => $other->id]);
+    Expense::factory()->create(['organisation_id' => $other->id, 'farm_id' => $otherFarm->id, 'category' => ExpenseCategory::Utilities, 'amount' => 500, 'balance' => 500, 'expense_date' => $twoYearsAgo->toDateString()]);
+
+    $previous = FiscalYear::create([
+        'organisation_id' => $this->organisation->id,
+        'label' => 'N-2',
+        'starts_on' => $twoYearsAgo->copy()->startOfYear()->toDateString(),
+        'ends_on' => $twoYearsAgo->copy()->endOfYear()->toDateString(),
+        'status' => FiscalYearStatus::Open,
+    ]);
+
+    expect($entry->fresh()->fiscal_year_id)->toBe($previous->id)
+        ->and($previous->entries()->count())->toBe(1)
+        ->and(JournalEntry::query()->where('organisation_id', $other->id)->sole()->fiscal_year_id)->toBeNull();
+
+    // Redatage excluant l'écriture : elle est détachée ; le contenu comptable reste intangible
+    $previous->update(['starts_on' => $twoYearsAgo->copy()->setMonth(6)->startOfMonth()->toDateString()]);
+
+    expect($entry->fresh()->fiscal_year_id)->toBeNull()
+        ->and((string) $entry->fresh()->hash)->toBe((string) $entry->hash);
+
+    expect(fn () => JournalEntry::query()->whereKey($entry->id)->update(['label' => 'Altération']))
+        ->toThrow(\Illuminate\Database\QueryException::class);
+});
+
 it('les à-nouveaux s\'enchaînent d\'un exercice à l\'autre sans cumuler les soldes, et survivent à la reconstruction', function () {
     $lastYear = now()->subYear()->setMonth(6)->setDay(15);
 
