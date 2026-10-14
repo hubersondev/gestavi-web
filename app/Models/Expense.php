@@ -192,7 +192,7 @@ class Expense extends Model
      * Enregistre un paiement sur la dépense et débite le compte associé.
      * Si aucun compte n'a été défini au préalable sur la dépense, il faut en fournir un.
      */
-    public function recordPayment(float $amount, ?int $accountId = null): void
+    public function recordPayment(float $amount, ?int $accountId = null, ?\DateTimeInterface $paidAt = null): void
     {
         if ($amount <= 0) {
             throw ExpenseException::invalidAmount();
@@ -218,7 +218,7 @@ class Expense extends Model
             throw ExpenseException::accountRequired($this->expense_number);
         }
 
-        DB::transaction(function () use ($amount, $accountId): void {
+        DB::transaction(function () use ($amount, $accountId, $paidAt): void {
             /** @var Account|null $account */
             $account = Account::lockForUpdate()->find($accountId);
 
@@ -239,6 +239,7 @@ class Expense extends Model
                 referenceType: self::class,
                 referenceId: $this->id,
                 referenceNumber: $this->expense_number,
+                date: $paidAt,
             );
 
             $newPaid = (float) $this->paid_amount + $amount;
@@ -255,7 +256,7 @@ class Expense extends Model
                 'paid_amount' => $newPaid,
                 'balance' => $newBalance,
                 'status' => $newStatus,
-                'paid_at' => $newStatus === ExpenseStatus::Paid ? now() : $this->paid_at,
+                'paid_at' => $newStatus === ExpenseStatus::Paid ? ($paidAt ?? now()) : $this->paid_at,
             ]);
         });
     }

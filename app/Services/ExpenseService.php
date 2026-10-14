@@ -13,13 +13,13 @@ class ExpenseService
      *
      * @param  array<string, mixed>  $data
      */
-    public function recordExpense(array $data, bool $payNow = false): Expense
+    public function recordExpense(array $data, bool $payNow = false, ?\DateTimeInterface $paidAt = null): Expense
     {
-        return DB::transaction(function () use ($data, $payNow): Expense {
+        return DB::transaction(function () use ($data, $payNow, $paidAt): Expense {
             $expense = Expense::create($data);
 
             if ($payNow && $expense->account_id && (float) $expense->amount > 0) {
-                $expense->recordPayment((float) $expense->amount, $expense->account_id);
+                $expense->recordPayment((float) $expense->amount, $expense->account_id, $paidAt);
             }
 
             return $expense->fresh();

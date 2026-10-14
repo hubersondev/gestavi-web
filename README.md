@@ -143,6 +143,13 @@ Supervision : `sentry/sentry-laravel`, activé dès que `SENTRY_LARAVEL_DSN` est
   le contrat, N° CNPS employeur, instantané des charges patronales figé sur chaque bulletin, écriture
   de paie complétée (433 CMU, 6413/4423 FDFP). Le taux accident du travail (2 à 5 % selon le secteur)
   se règle dans le paramétrage de paie de l'organisation.
+- **Import Excel** (Paramètres → Import de données, permission `settings.update`, service `ExcelImportService`,
+  bibliothèque OpenSpout) : clients, fournisseurs, produits, stocks, employés, factures (lignes groupées par numéro,
+  encaissement à la date de la facture) et dépenses (paiement à la date de la dépense). Modèle `.xlsx` par type
+  avec feuille d'aide ; le fichier est rejoué à blanc en entier avant toute écriture, puis importé en une
+  transaction : un fichier en erreur n'importe rien et toutes les erreurs sont listées avec leur ligne.
+  Nouveau type : une classe `ImportDefinition` dans `app/Services/Imports/` enregistrée dans `definitions()`.
+- **Guide de démarrage** (menu « Démarrage ») : étapes ordonnées avec état et liens, badge des étapes restantes.
 - **Exercice actif** (sélecteur dans la barre du haut, service `CurrentFiscalYear`) : filtre d'affichage des listes
   datées (ventes, avoirs, devis, livraisons, dépenses, bons, transactions, transferts, paiements, paie, stocks,
   écritures, relevés, pointages, abattages, journal de ferme), période par défaut des rapports, date proposée dans
