@@ -114,7 +114,10 @@ Supervision : `sentry/sentry-laravel`, activé dès que `SENTRY_LARAVEL_DSN` est
 - **Discriminant unique** : chaque table de faits porte `organisation_id` et `farm_id` (trait `BelongsToOrganisation`,
   clé étrangère composite vers `farms`) ; scopes Filament directs ; règles serveur sur les clés étrangères.
 - **Coût de revient par bande** (`FlockCostService`, page « Coût de revient ») et **tableau de bord groupe**
-  sur agrégats quotidiens (`farm_daily_metrics`, commande `gestavi:aggregate-farm-metrics`).
+  sur agrégats quotidiens (`farm_daily_metrics`, commande `gestavi:aggregate-farm-metrics`). L'agrégateur est
+  ensembliste : six requêtes groupées par lot de 25 fermes sur toute la période, puis upserts ; mesuré sur le
+  banc de charge à 5 650 journées-ferme par seconde (915 000 en 162 s), pic mémoire sous 128 Mo. Un rattrapage
+  d'historique : `php artisan gestavi:aggregate-farm-metrics --from=AAAA-MM-JJ --to=AAAA-MM-JJ`.
 - **Chaîne stock ↔ élevage ↔ ventes** : catalogue produits, déstockage de l'aliment depuis le relevé,
   des médicaments à l'administration, abattages, livraisons avec bon PDF.
 - **Comptabilité SYSCOHADA minimale** : plan de comptes, écritures en partie double générées par écouteurs,

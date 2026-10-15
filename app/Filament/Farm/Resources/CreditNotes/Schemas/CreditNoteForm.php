@@ -41,7 +41,10 @@ class CreditNoteForm
                                     ->where('organisation_id', $tenant?->getKey())
                                     ->tap(fn ($q) => app(CurrentFarm::class)->restrictForCurrentUser($q))
                                     ->whereNotIn('status', ['cancelled', 'draft'])
+                                    // Client chargé d'avance (une requête au lieu d'une par facture) ; les 300 plus récentes suffisent à un avoir
+                                    ->with('customer:id,name')
                                     ->orderByDesc('sale_date')
+                                    ->limit(300)
                                     ->get()
                                     ->mapWithKeys(fn (Sale $sale) => [
                                         $sale->id => "{$sale->invoice_number} — ".($sale->customer?->name ?? 'Comptant').' ('.number_format((float) $sale->total, 0, ',', ' ').' XOF)',

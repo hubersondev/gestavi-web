@@ -135,7 +135,7 @@
                     <tbody>
                         @foreach ($expenses as $expense)
                             <tr class="border-b dark:border-gray-700">
-                                <td class="px-3 py-2 font-medium">{{ \App\Enums\ExpenseCategory::tryFrom($expense->category)?->getLabel() ?? $expense->category }}</td>
+                                <td class="px-3 py-2 font-medium">{{ $expense->category instanceof \App\Enums\ExpenseCategory ? $expense->category->getLabel() : (\App\Enums\ExpenseCategory::tryFrom((string) $expense->category)?->getLabel() ?? $expense->category) }}</td>
                                 <td class="px-3 py-2 text-right">{{ $expense->count }}</td>
                                 <td class="px-3 py-2 text-right font-bold text-danger-600">{{ number_format($expense->total, 0, ',', ' ') }}</td>
                             </tr>

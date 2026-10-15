@@ -33,10 +33,19 @@ class CurrentFiscalYear
             return new Collection;
         }
 
-        return FiscalYear::query()
+        // Mémorisé le temps de la requête (service « scoped ») : chaque ligne de liste et chaque champ de date interrogent l'exercice
+        return $this->optionsCache[$tenant->getKey()] ??= FiscalYear::query()
             ->where('organisation_id', $tenant->getKey())
             ->orderByDesc('starts_on')
             ->get();
+    }
+
+    /** @var array<int|string, Collection<int, FiscalYear>> */
+    private array $optionsCache = [];
+
+    public function forgetCache(): void
+    {
+        $this->optionsCache = [];
     }
 
     /**
@@ -80,6 +89,7 @@ class CurrentFiscalYear
         }
 
         Session::put($key, $fiscalYearId ?? self::ALL);
+        $this->forgetCache();
     }
 
     /**

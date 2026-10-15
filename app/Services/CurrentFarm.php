@@ -18,12 +18,17 @@ class CurrentFarm
      */
     public function getAccessibleFarms(OrganisationUser $membership): Collection
     {
-        return Farm::query()
-            ->where('organisation_id', $membership->organisation_id)
-            ->where('is_active', true)
-            ->accessibleBy($membership)
-            ->orderBy('name')
-            ->get();
+        // Mémorisé sur l'appartenance : une page interroge les fermes accessibles pour chaque ligne et chaque colonne
+        if (! $membership->relationLoaded('accessibleFarmsCache')) {
+            $membership->setRelation('accessibleFarmsCache', Farm::query()
+                ->where('organisation_id', $membership->organisation_id)
+                ->where('is_active', true)
+                ->accessibleBy($membership)
+                ->orderBy('name')
+                ->get());
+        }
+
+        return $membership->getRelation('accessibleFarmsCache');
     }
 
     /**

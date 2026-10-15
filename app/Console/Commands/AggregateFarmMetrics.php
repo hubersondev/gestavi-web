@@ -17,6 +17,9 @@ class AggregateFarmMetrics extends Command
 
     public function handle(FarmMetricsAggregator $aggregator): int
     {
+        // Un rattrapage d'historique sur des milliers de fermes mérite plus que les 128 Mo par défaut
+        ini_set('memory_limit', '512M');
+
         $from = $this->option('from') ? Carbon::parse($this->option('from')) : now()->subDay();
         $to = $this->option('to') ? Carbon::parse($this->option('to')) : now();
 
