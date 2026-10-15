@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\AccountType;
 use App\Enums\PlanFeature;
 use App\Enums\SaleStatus;
 use App\Enums\StockMovementReason;
@@ -19,6 +20,7 @@ use App\Models\Sale;
 use App\Models\Stock;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Services\AccountService;
 use Database\Seeders\OrganisationPermissionSeeder;
 use Filament\Facades\Filament;
 
@@ -174,6 +176,9 @@ it('calcule les KPI commerciaux et les compare par ferme', function () {
 });
 
 it('calcule les KPI stocks (valeur, seuil, mouvements) et la comparaison par ferme', function () {
+    // Les stocks d'œufs créés avec chaque ferme ne font pas partie du jeu de données
+    Stock::query()->where('kind', Stock::KIND_EGGS)->forceDelete();
+
     $stockA = Stock::factory()->create(['organisation_id' => $this->organisation->id, 'farm_id' => $this->farmA->id, 'quantity' => 100, 'min_quantity' => 10, 'unit_price' => 50]);
     $stockB = Stock::factory()->create(['organisation_id' => $this->organisation->id, 'farm_id' => $this->farmB->id, 'quantity' => 5, 'min_quantity' => 20, 'unit_price' => 100]);
 
@@ -199,11 +204,11 @@ it('calcule les KPI stocks (valeur, seuil, mouvements) et la comparaison par fer
 });
 
 it('le solde d\'ouverture du rapport financier ne recompte pas le solde initial porté par la transaction d\'ouverture', function () {
-    app(\App\Services\AccountService::class)->createAccount([
+    app(AccountService::class)->createAccount([
         'organisation_id' => $this->organisation->id,
         'farm_id' => $this->farmA->id,
         'name' => 'Banque reprise',
-        'type' => \App\Enums\AccountType::Bank,
+        'type' => AccountType::Bank,
         'initial_balance' => 100000,
         'initial_balance_date' => now()->subDays(30)->toDateString(),
     ]);

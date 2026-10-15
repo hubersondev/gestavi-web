@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\CreditNoteStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\SaleStatus;
 use App\Enums\TransactionCategory;
@@ -9,12 +10,14 @@ use App\Exceptions\CommercialException;
 use App\Models\Concerns\BelongsToOrganisation;
 use App\Models\Concerns\CalculatesDocumentTotals;
 use App\Models\Concerns\LogsAuditTrail;
+use App\Services\NumberSequence;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class Sale extends Model
@@ -57,7 +60,7 @@ class Sale extends Model
             }
 
             if (empty($sale->invoice_number) && $sale->organisation_id) {
-                $sale->invoice_number = self::generateInvoiceNumber($sale->organisation_id, $sale->sale_date ? \Illuminate\Support\Carbon::parse($sale->sale_date)->year : null);
+                $sale->invoice_number = self::generateInvoiceNumber($sale->organisation_id, $sale->sale_date ? Carbon::parse($sale->sale_date)->year : null);
             }
         });
     }
@@ -231,7 +234,7 @@ class Sale extends Model
     public function getNetTotal(): float
     {
         $creditNotes = (float) $this->creditNotes()
-            ->where('status', \App\Enums\CreditNoteStatus::Applied->value)
+            ->where('status', CreditNoteStatus::Applied->value)
             ->sum('amount');
 
         return max(0, (float) $this->total - $creditNotes);
@@ -295,6 +298,9 @@ class Sale extends Model
     public function cancel(): void
     {
         DB::transaction(function (): void {
+            // Les œufs et produits stockés vendus reviennent en stock (avant le changement de statut)
+            $this->items()->with('product')->get()->each->restock();
+
             foreach ($this->payments()->whereNotNull('account_id')->get() as $payment) {
                 $payment->account?->debit(
                     amount: (float) $payment->amount,
@@ -325,7 +331,7 @@ class Sale extends Model
     {
         // Numérotation par année du document, pas de la saisie : une pièce de 2025 saisie en 2026 reste en 2025
         $year ??= now()->year;
-        $sequence = app(\App\Services\NumberSequence::class);
+        $sequence = app(NumberSequence::class);
 
         // Numérotation continue et verrouillée : exigence SYSCOHADA sur les factures
         return $sequence->nextFormatted(

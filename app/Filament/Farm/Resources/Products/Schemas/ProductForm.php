@@ -55,6 +55,14 @@ class ProductForm
                             ->maxLength(30)
                             ->placeholder('plateau, sujet, kg, sac…'),
 
+                        TextInput::make('stock_units_per_unit')
+                            ->label('Unités de stock par unité vendue')
+                            ->helperText('Ex. 30 œufs par plateau : chaque vente sort cette quantité du stock (œufs de la ferme, ou stock associé)')
+                            ->numeric()
+                            ->minValue(0.01)
+                            ->default(1)
+                            ->required(),
+
                         TextInput::make('default_unit_price')
                             ->label('Prix unitaire par défaut')
                             ->numeric()

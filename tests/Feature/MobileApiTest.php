@@ -5,10 +5,12 @@ use App\Enums\SaleStatus;
 use App\Enums\VaccinationStatus;
 use App\Models\Building;
 use App\Models\Customer;
+use App\Models\DailyRecord;
 use App\Models\Farm;
 use App\Models\Flock;
 use App\Models\Organisation;
 use App\Models\Plan;
+use App\Models\Product;
 use App\Models\Sale;
 use App\Models\Stock;
 use App\Models\StockCategory;
@@ -259,4 +261,27 @@ it('encaisse une vente existante depuis le mobile sans doublon au rejeu', functi
         ->and(Sale::query()->find($id)->payments()->first()->is_recorded)->toBeTrue();
 
     postJson("{$this->base}/sales/{$id}/payments", ['amount' => 50000, 'method' => 'cash'])->assertStatus(422);
+});
+
+it('refuse une vente d\'œufs au-delà du stock de la ferme et expose la conversion des produits et le stock d\'œufs', function () {
+    Sanctum::actingAs($this->owner);
+    $trays = Product::query()->where('organisation_id', $this->organisation->id)->where('code', 'OEUF-P30')->firstOrFail();
+
+    $products = getJson("{$this->base}/products")->assertOk()->json('data');
+    $tray = collect($products)->firstWhere('code', 'OEUF-P30');
+    expect($tray['stock_units_per_unit'])->toEqual(30)
+        ->and($tray['stock_kind'])->toBe('eggs');
+
+    $eggStock = collect(getJson("{$this->base}/stocks?farm_id={$this->farmA->id}")->assertOk()->json('data'))->firstWhere('kind', 'eggs');
+    expect($eggStock)->not->toBeNull()
+        ->and($eggStock['quantity'])->toEqual(0);
+
+    $payload = ['farm_id' => $this->farmA->id, 'sale_date' => now()->toDateString(), 'items' => [['product_id' => $trays->id, 'product_name' => $trays->name, 'quantity' => 2, 'unit_price' => 3000]]];
+    $refused = postJson("{$this->base}/sales", $payload)->assertStatus(422);
+    expect($refused->json('errors.sale.0'))->toContain('Stock insuffisant');
+
+    DailyRecord::create(['organisation_id' => $this->organisation->id, 'farm_id' => $this->farmA->id, 'flock_id' => $this->flockA->id, 'record_date' => now()->toDateString(), 'mortality' => 0, 'culls' => 0, 'eggs_collected' => 90]);
+
+    postJson("{$this->base}/sales", $payload)->assertCreated();
+    expect(collect(getJson("{$this->base}/stocks?farm_id={$this->farmA->id}")->json('data'))->firstWhere('kind', 'eggs')['quantity'])->toEqual(30);
 });

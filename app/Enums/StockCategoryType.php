@@ -12,6 +12,7 @@ enum StockCategoryType: string implements HasColor, HasIcon, HasLabel
     case Medicine = 'medicine';
     case Material = 'material';
     case Packaging = 'packaging';
+    case Production = 'production';
     case Other = 'other';
 
     public function getLabel(): string
@@ -21,6 +22,7 @@ enum StockCategoryType: string implements HasColor, HasIcon, HasLabel
             self::Medicine => 'Médicament / Vaccin',
             self::Material => 'Matériel',
             self::Packaging => 'Emballage',
+            self::Production => 'Production (œufs, carcasses)',
             self::Other => 'Autre',
         };
     }
@@ -32,6 +34,7 @@ enum StockCategoryType: string implements HasColor, HasIcon, HasLabel
             self::Medicine => 'success',
             self::Material => 'gray',
             self::Packaging => 'info',
+            self::Production => 'primary',
             self::Other => 'gray',
         };
     }
@@ -43,6 +46,7 @@ enum StockCategoryType: string implements HasColor, HasIcon, HasLabel
             self::Medicine => 'heroicon-o-heart',
             self::Material => 'heroicon-o-wrench-screwdriver',
             self::Packaging => 'heroicon-o-archive-box',
+            self::Production => 'heroicon-o-sparkles',
             self::Other => 'heroicon-o-tag',
         };
     }

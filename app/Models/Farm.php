@@ -45,6 +45,10 @@ class Farm extends Model
      */
     protected static function booted(): void
     {
+        static::created(function (Farm $farm): void {
+            Stock::eggStockFor($farm->id);
+        });
+
         static::deleting(function (Farm $farm): void {
             $farm->assignedMembers()->detach();
         });

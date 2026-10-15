@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use App\Enums\StockMovementReason;
 use App\Models\Concerns\BelongsToOrganisation;
 use App\Models\Concerns\LogsAuditTrail;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -98,10 +100,64 @@ class DailyRecord extends Model
             $record->refreshBirdsPresentFrom($record->record_date);
         });
 
+        // Les œufs sont suivis sur created/updated : `saved` ne distingue pas une création d'une
+        // correction sur la même instance (wasRecentlyCreated reste vrai)
+        static::created(function (DailyRecord $record): void {
+            $record->syncEggStock(previousNet: 0);
+        });
+
+        static::updated(function (DailyRecord $record): void {
+            $record->syncEggStock();
+        });
+
         static::deleted(function (DailyRecord $record): void {
             $record->flock?->recalculateQuantities();
             $record->refreshBirdsPresentFrom($record->record_date);
+            $record->syncEggStock(deleted: true);
         });
+    }
+
+    /**
+     * Les œufs collectés (moins cassés) entrent dans le stock d'œufs de la ferme ; une correction
+     * ou une suppression du relevé ajuste le stock de l'écart (sans jamais le rendre négatif).
+     */
+    public function syncEggStock(?int $previousNet = null, bool $deleted = false): void
+    {
+        $current = $deleted ? 0 : max(0, (int) $this->eggs_collected - (int) $this->eggs_broken);
+        $previous = $previousNet ?? max(0, (int) $this->getOriginal('eggs_collected') - (int) $this->getOriginal('eggs_broken'));
+        $delta = $current - $previous;
+        $farmId = $this->farm_id ?? $this->flock?->farm_id;
+
+        if ($delta === 0 || ! $farmId) {
+            return;
+        }
+
+        $stock = Stock::eggStockFor($farmId);
+        $reference = 'Relevé du '.Carbon::parse($this->record_date)->format('d/m/Y');
+
+        if ($delta > 0) {
+            $stock->recordIn(
+                quantity: $delta,
+                reason: StockMovementReason::Production,
+                flockId: $this->flock_id,
+                reference: $reference,
+                notes: $deleted ? null : 'Œufs collectés, cassés déduits',
+            );
+
+            return;
+        }
+
+        $out = min(-$delta, (float) $stock->fresh()->quantity);
+
+        if ($out > 0) {
+            $stock->recordOut(
+                quantity: $out,
+                reason: StockMovementReason::Adjustment,
+                flockId: $this->flock_id,
+                reference: $reference,
+                notes: $deleted ? 'Relevé supprimé' : 'Correction du relevé',
+            );
+        }
     }
 
     /**

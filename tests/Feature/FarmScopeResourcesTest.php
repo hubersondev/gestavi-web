@@ -122,7 +122,12 @@ dataset('ressources cloisonnées', [
         fn () => ExpenseResource::scopeEloquentQueryToTenant(Expense::query(), test()->organisation),
     ],
     'Stock' => [
-        fn () => seedPerFarm(fn (?int $farmId) => Stock::factory()->create(['organisation_id' => test()->organisation->id, 'farm_id' => $farmId])),
+        function () {
+            // Les stocks d'œufs créés avec chaque ferme ne font pas partie du jeu de données
+            Stock::query()->where('kind', Stock::KIND_EGGS)->forceDelete();
+
+            return seedPerFarm(fn (?int $farmId) => Stock::factory()->create(['organisation_id' => test()->organisation->id, 'farm_id' => $farmId]));
+        },
         fn () => StockResource::scopeEloquentQueryToTenant(Stock::query(), test()->organisation),
     ],
     'Employee' => [

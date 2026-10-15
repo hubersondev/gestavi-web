@@ -15,6 +15,7 @@ enum StockMovementReason: string implements HasColor, HasLabel
     case TransferIn = 'transfer_in';
     case TransferOut = 'transfer_out';
     case Return = 'return';
+    case Production = 'production';
 
     public function getLabel(): string
     {
@@ -27,6 +28,7 @@ enum StockMovementReason: string implements HasColor, HasLabel
             self::TransferIn => 'Transfert entrant',
             self::TransferOut => 'Transfert sortant',
             self::Return => 'Retour',
+            self::Production => 'Production (collecte, abattage)',
         };
     }
 
@@ -40,6 +42,7 @@ enum StockMovementReason: string implements HasColor, HasLabel
             self::Adjustment => 'warning',
             self::TransferIn, self::TransferOut => 'info',
             self::Return => 'gray',
+            self::Production => 'primary',
         };
     }
 }

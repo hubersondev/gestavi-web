@@ -74,6 +74,24 @@ class CommercialException extends Exception
         return new self("Le devis {$quoteNumber} a déjà été converti en facture.");
     }
 
+    public static function insufficientStock(string $productName, float $requested, float $available, string $unit, float $stockQuantity, string $stockUnit): self
+    {
+        return new self(sprintf(
+            'Stock insuffisant pour « %s » : %s %s demandé(s), %s disponible(s) (%s %s en stock).',
+            $productName,
+            self::formatQuantity($requested),
+            $unit,
+            self::formatQuantity($available),
+            self::formatQuantity($stockQuantity),
+            $stockUnit,
+        ));
+    }
+
+    private static function formatQuantity(float $value): string
+    {
+        return rtrim(rtrim(number_format($value, 2, ',', ' '), '0'), ',');
+    }
+
     public static function emptyItems(): self
     {
         return new self('Impossible de créer le document : aucune ligne article n\'a été renseignée.');

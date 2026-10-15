@@ -10,7 +10,7 @@ use App\Enums\StockMovementType;
 test('stock category type enum lists all category types', function () {
     $values = array_map(fn (StockCategoryType $t) => $t->value, StockCategoryType::cases());
 
-    expect($values)->toBe(['feed', 'medicine', 'material', 'packaging', 'other'])
+    expect($values)->toBe(['feed', 'medicine', 'material', 'packaging', 'production', 'other'])
         ->and(StockCategoryType::Feed->getLabel())->toBe('Aliment')
         ->and(StockCategoryType::Medicine->getLabel())->toBe('Médicament / Vaccin');
 });
