@@ -21,11 +21,12 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
+use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable implements FilamentUser, HasAppAuthentication, HasAppAuthenticationRecovery, HasTenants
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable, SoftDeletes;
+    use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
 
     protected $fillable = [
         'name',
@@ -247,12 +248,28 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
     //  Helpers organisation
     // ──────────────────────────────────────────────
 
+    /** @var array<int, OrganisationUser|null> */
+    private array $membershipCache = [];
+
+    /**
+     * Appartenance de l'utilisateur à une organisation, mémorisée sur l'instance : une page du panel
+     * l'interroge des dizaines de fois (cloisonnement, permissions, colonnes) pour un même résultat.
+     */
     public function membershipIn(Organisation $organisation): ?OrganisationUser
     {
-        return $this->organisations()
-            ->where('organisation_users.organisation_id', $organisation->id)
-            ->first()
-            ?->pivot;
+        if (! array_key_exists($organisation->id, $this->membershipCache)) {
+            $this->membershipCache[$organisation->id] = $this->organisations()
+                ->where('organisation_users.organisation_id', $organisation->id)
+                ->first()
+                ?->pivot;
+        }
+
+        return $this->membershipCache[$organisation->id];
+    }
+
+    public function forgetMembershipCache(): void
+    {
+        $this->membershipCache = [];
     }
 
     public function roleInOrganisation(Organisation $organisation): ?OrganisationRole

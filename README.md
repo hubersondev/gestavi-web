@@ -155,6 +155,14 @@ Supervision : `sentry/sentry-laravel`, activé dès que `SENTRY_LARAVEL_DSN` est
   écritures, relevés, pointages, abattages, journal de ferme), période par défaut des rapports, date proposée dans
   les formulaires avec avertissement non bloquant hors exercice. Jamais une règle de gestion : les services
   (clôture, à-nouveaux, reconstruction, API, synchronisation terrain) l'ignorent, et « Tous les exercices » lève le filtre.
+- **API v1 pour l'application mobile** (`routes/api.php`, contrôleurs `app/Http/Controllers/Api/V1`, ressources
+  `app/Http/Resources/Api/V1`) : jetons Sanctum par appareil (`POST /api/v1/auth/token`, `GET /api/v1/me`,
+  `DELETE /api/v1/auth/token`), puis sous `/api/v1/organisations/{slug}` : fermes et bâtiments, bandes, relevés
+  (lecture incrémentale `since`, `POST /sync` idempotent par `client_uuid`, même traitement que la page terrain),
+  clients, produits, ventes (création avec encaissement immédiat, idempotente par `client_uuid`, paiements),
+  stocks et mouvements (idempotents), notifications. Appartenance active vérifiée par `offline.member`,
+  cloisonnement par ferme et permissions d'organisation identiques au panel. Débit : 120 appels/min par jeton,
+  5 demandes de jeton/min par adresse. `php artisan route:list --path=api/v1` liste les points d'entrée.
 - **Saisie terrain hors-ligne** : page `/farm/{organisation}/terrain` (PWA, IndexedDB, synchronisation idempotente).
 - **SMS et mobile money** : pilotes SMS (log, Africa's Talking, Orange), webhooks signés Orange/MTN/Moov/Wave,
   rapprochement automatique et manuel des encaissements (`config/sms.php`, `config/mobilemoney.php`).
