@@ -2,9 +2,12 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Farm\Pages\Appearance;
 use App\Filament\Farm\Pages\Tenancy\EditOrganisationProfile;
 use App\Http\Middleware\EnsurePlanFeature;
 use App\Models\Organisation;
+use App\Services\UserAppearance;
+use Filament\Actions\Action;
 use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Filament\Facades\Filament;
 use Filament\Http\Middleware\Authenticate;
@@ -15,7 +18,7 @@ use Filament\Navigation\NavigationGroup;
 use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
-use Filament\Support\Colors\Color;
+use Filament\Support\Icons\Heroicon;
 use Filament\View\PanelsRenderHook;
 use Filament\Widgets\AccountWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
@@ -24,6 +27,7 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use Illuminate\View\View;
 
 class FarmPanelProvider extends PanelProvider
 {
@@ -41,11 +45,18 @@ class FarmPanelProvider extends PanelProvider
             )
             ->tenant(Organisation::class, slugAttribute: 'slug')
             ->tenantProfile(EditOrganisationProfile::class)
-            ->colors([
-                'primary' => Color::Green,
-                'danger' => Color::Rose,
-                'warning' => Color::Orange,
-                'success' => Color::Emerald,
+            // Charte GESTAVI, résolue par utilisateur à chaque requête (thème, couleur principale)
+            ->colors(fn (): array => UserAppearance::panelColors())
+            ->darkMode(fn (): bool => UserAppearance::currentIsDark(), isForced: fn (): bool => UserAppearance::currentIsDark())
+            ->themeSwitcher(false)
+            ->font('Figtree')
+            // Barre latérale repliable sur les icônes seules (bouton dans l'en-tête, choix mémorisé par le navigateur)
+            ->sidebarCollapsibleOnDesktop()
+            ->userMenuItems([
+                Action::make('appearance')
+                    ->label('Apparence')
+                    ->icon(Heroicon::OutlinedSwatch)
+                    ->url(fn (): string => Appearance::getUrl()),
             ])
             ->databaseNotifications()
             ->navigationGroups([
@@ -89,21 +100,21 @@ class FarmPanelProvider extends PanelProvider
             // Exercice comptable actif : filtre d'affichage des journaux datés et défaut des dates
             ->renderHook(
                 PanelsRenderHook::USER_MENU_BEFORE,
-                fn (): \Illuminate\View\View => view('partials.fiscal-year-selector-hook'),
+                fn (): View => view('partials.fiscal-year-selector-hook'),
             )
             ->renderHook(
                 PanelsRenderHook::USER_MENU_BEFORE,
-                fn (): \Illuminate\View\View => view('partials.farm-selector-hook'),
+                fn (): View => view('partials.farm-selector-hook'),
             )
             // Lien vers la page mobile « Saisie terrain » (PWA hors-ligne)
             ->renderHook(
                 PanelsRenderHook::USER_MENU_BEFORE,
-                fn (): \Illuminate\View\View => view('offline.terrain-link'),
+                fn (): View => view('offline.terrain-link'),
             )
             // Manifest PWA + enregistrement du service worker
             ->renderHook(
                 PanelsRenderHook::HEAD_END,
-                fn (): \Illuminate\View\View => view('offline.pwa-head'),
+                fn (): View => view('offline.pwa-head'),
             );
     }
 }

@@ -3,7 +3,10 @@
 namespace App\Models;
 
 use App\Enums\MemberStatus;
+use App\Enums\UiTheme;
 use App\Enums\UserType;
+use App\Services\Sms\PhoneNumber;
+use Database\Factories\UserFactory;
 use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthentication;
 use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthenticationRecovery;
 use Filament\Models\Contracts\FilamentUser;
@@ -21,7 +24,7 @@ use Illuminate\Support\Str;
 
 class User extends Authenticatable implements FilamentUser, HasAppAuthentication, HasAppAuthenticationRecovery, HasTenants
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
+    /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable, SoftDeletes;
 
     protected $fillable = [
@@ -33,6 +36,8 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
         'is_active',
         'avatar_url',
         'sms_alerts_enabled',
+        'ui_theme',
+        'ui_primary_color',
     ];
 
     /**
@@ -40,7 +45,7 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
      */
     public function routeNotificationForSms(): ?string
     {
-        return \App\Services\Sms\PhoneNumber::normalize($this->phone);
+        return PhoneNumber::normalize($this->phone);
     }
 
     protected $hidden = [
@@ -56,6 +61,7 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
             'is_active' => 'boolean',
             'sms_alerts_enabled' => 'boolean',
             'type' => UserType::class,
+            'ui_theme' => UiTheme::class,
             'app_authentication_secret' => 'encrypted',
             'app_authentication_recovery_codes' => 'encrypted:array',
         ];

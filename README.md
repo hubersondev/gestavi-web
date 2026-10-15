@@ -184,6 +184,13 @@ Le rapport d'audit complet et le plan d'action sont dans `AUDIT.md`.
   chaque `git pull`) : ses `@source` couvrent `app/Filament/Farm` et `resources/views/filament/farm`, ce qui rend
   disponibles les classes Tailwind des vues personnalisées (rapports, tableau de bord groupe). Une vue placée
   ailleurs n'en bénéficie pas.
+- **Charte graphique** (canevas « Charte graphique GESTAVI ») : police Figtree, vert GESTAVI `#15803d` comme couleur
+  principale, neutres verdis (`UserAppearance::GRAY`), arrondis 10 px (contrôles) et 14 px (surfaces). Deux thèmes au
+  choix de chaque utilisateur, mémorisés en base (`users.ui_theme`, `users.ui_primary_color`) et appliqués par les
+  closures du panel (`colors`, `darkMode`, `themeSwitcher`) : **Sous-bois** (clair, barre latérale vert profond,
+  fond sable) et **Nuit** (sombre forcé). Couleur principale parmi cinq présélections (`UserAppearance::PRIMARY_PRESETS`).
+  Réglage : menu utilisateur → « Apparence » (`/farm/{organisation}/apparence`). Le sélecteur clair/sombre de Filament
+  est désactivé, le thème Nuit en tient lieu.
 - Toute évolution est couverte par un test Pest (Feature de préférence) ; `vendor/bin/pint` avant commit.
 - Factories des tables de faits : `organisation_id` et `farm_id` suivent le parent passé en attribut (trait
   `Database\Factories\Concerns\InheritsOrganisationFromParent`) ; `Model::factory()->create(['organisation_id' => $org->id, 'farm_id' => $farm->id])`

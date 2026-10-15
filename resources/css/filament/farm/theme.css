@@ -1,11 +1,192 @@
 /*
- * Thème du panel Farm : reprend la feuille de style Filament et y ajoute les classes
- * utilitaires Tailwind employées par les vues personnalisées (rapports, tableau de bord
- * groupe, frise des vaccinations, page de mise à niveau). Sans ce thème, ces classes
- * sont absentes du CSS servi et les pages s'affichent sans mise en page.
+ * Thème du panel Farm — charte GESTAVI.
+ *
+ * Deux thèmes au choix de chaque utilisateur (voir App\Services\UserAppearance) :
+ *   - Sous-bois (clair) : barre latérale vert profond, fond sable, cartes blanches ;
+ *   - Nuit (sombre)     : fond vert nuit, surfaces vert sombre, accent vert clair.
+ * Les neutres sont la palette « gray » verdie enregistrée sur le panel ; la couleur principale
+ * vient des présélections de la charte. Ce fichier ne porte que ce que les palettes ne
+ * peuvent pas exprimer : la barre latérale, les arrondis, la typographie et quelques accents.
+ *
+ * Les @source couvrent les vues personnalisées (rapports, tableau de bord groupe, guide, import)
+ * pour que leurs classes Tailwind soient compilées.
  */
 @import '../../../../vendor/filament/filament/resources/css/theme.css';
 
 @source '../../../../app/Filament/Farm/**/*';
 @source '../../../../resources/views/filament/farm/**/*';
 @source '../../../../resources/views/livewire/**/*';
+
+/* ─── Formes et typographie communes ─────────────────────────────────────── */
+
+:root {
+    --gestavi-radius-control: 10px;
+    --gestavi-radius-surface: 14px;
+    --gestavi-sidebar-bg: #14532d;
+    --gestavi-sidebar-fg: #e8f5ec;
+    --gestavi-sidebar-muted: #86efac;
+    --gestavi-sidebar-hover: rgba(255, 255, 255, 0.08);
+    --gestavi-sidebar-active-bg: #ffffff;
+    --gestavi-sidebar-active-fg: #14532d;
+}
+
+.dark {
+    --gestavi-sidebar-bg: #0f1a14;
+    --gestavi-sidebar-fg: #e6ebe7;
+    --gestavi-sidebar-muted: #9fb3a7;
+    --gestavi-sidebar-hover: rgba(255, 255, 255, 0.06);
+    --gestavi-sidebar-active-bg: #1f3a2a;
+    --gestavi-sidebar-active-fg: #86efac;
+}
+
+.fi-body {
+    font-variant-numeric: tabular-nums;
+}
+
+.fi-header-heading {
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+.fi-section,
+.fi-ta-ctn,
+.fi-wi-stats-overview-stat,
+.fi-modal-window,
+.fi-dropdown-panel,
+.fi-no-notification {
+    border-radius: var(--gestavi-radius-surface);
+}
+
+.fi-btn,
+.fi-input-wrp,
+.fi-select-input,
+.fi-fo-file-upload,
+.fi-tabs {
+    border-radius: var(--gestavi-radius-control);
+}
+
+.fi-btn {
+    font-weight: 600;
+}
+
+.fi-badge {
+    font-weight: 600;
+}
+
+/* ─── Barre latérale : la signature du thème Sous-bois ───────────────────── */
+
+.fi-sidebar {
+    background-color: var(--gestavi-sidebar-bg);
+    color: var(--gestavi-sidebar-fg);
+}
+
+.fi-sidebar.fi-sidebar-open {
+    box-shadow: none;
+}
+
+.fi-sidebar-header {
+    background-color: var(--gestavi-sidebar-bg);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.fi-sidebar .fi-logo,
+.fi-sidebar .fi-tenant-menu-trigger-tenant-name,
+.fi-sidebar .fi-sidebar-item-label,
+.fi-sidebar .fi-sidebar-group-btn,
+.fi-sidebar .fi-sidebar-group-dropdown-trigger-btn {
+    color: var(--gestavi-sidebar-fg);
+}
+
+.fi-sidebar .fi-sidebar-group-label,
+.fi-sidebar .fi-tenant-menu-trigger-current-tenant-label {
+    color: var(--gestavi-sidebar-muted);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.fi-sidebar .fi-sidebar-item-btn > .fi-icon,
+.fi-sidebar .fi-sidebar-group-btn > .fi-icon,
+.fi-sidebar .fi-sidebar-group-collapse-btn,
+.fi-sidebar .fi-sidebar-close-btn,
+.fi-sidebar .fi-sidebar-collapse-btn {
+    color: var(--gestavi-sidebar-muted);
+}
+
+.fi-sidebar .fi-sidebar-item-btn,
+.fi-sidebar .fi-tenant-menu-trigger,
+.fi-sidebar .fi-sidebar-group-dropdown-trigger-btn {
+    border-radius: var(--gestavi-radius-control);
+}
+
+.fi-sidebar .fi-sidebar-item-btn:hover,
+.fi-sidebar .fi-sidebar-item-btn:focus-visible,
+.fi-sidebar .fi-tenant-menu-trigger:hover,
+.fi-sidebar .fi-tenant-menu-trigger:focus-visible,
+.fi-sidebar .fi-sidebar-group-dropdown-trigger-btn:hover {
+    background-color: var(--gestavi-sidebar-hover);
+}
+
+.fi-sidebar .fi-sidebar-item.fi-active > .fi-sidebar-item-btn,
+.fi-sidebar .fi-sidebar-item-active > .fi-sidebar-item-btn {
+    background-color: var(--gestavi-sidebar-active-bg);
+}
+
+.fi-sidebar .fi-sidebar-item.fi-active .fi-sidebar-item-label,
+.fi-sidebar .fi-sidebar-item.fi-active > .fi-sidebar-item-btn > .fi-icon,
+.fi-sidebar .fi-sidebar-item-active .fi-sidebar-item-label,
+.fi-sidebar .fi-sidebar-item-active > .fi-sidebar-item-btn > .fi-icon {
+    color: var(--gestavi-sidebar-active-fg);
+}
+
+.fi-sidebar .fi-sidebar-item-grouped-border {
+    border-color: rgba(255, 255, 255, 0.16);
+}
+
+.fi-sidebar .fi-badge {
+    background-color: rgba(255, 255, 255, 0.14);
+    color: var(--gestavi-sidebar-fg);
+}
+
+/* Recherche globale et notifications quand elles sont dans la barre latérale (petits écrans) */
+.fi-sidebar .fi-global-search-field .fi-input-wrp {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: transparent;
+}
+
+.fi-sidebar .fi-global-search-field .fi-input,
+.fi-sidebar .fi-global-search-field .fi-input::placeholder,
+.fi-sidebar .fi-sidebar-database-notifications-btn-label {
+    color: var(--gestavi-sidebar-fg);
+}
+
+/* ─── Barre du haut ──────────────────────────────────────────────────────── */
+
+.fi-topbar {
+    box-shadow: none;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.dark .fi-topbar {
+    border-bottom-color: var(--gray-800);
+}
+
+/* ─── Surfaces ───────────────────────────────────────────────────────────── */
+
+.fi-section,
+.fi-ta-ctn,
+.fi-wi-stats-overview-stat {
+    box-shadow: 0 1px 2px rgba(28, 43, 34, 0.06);
+}
+
+.fi-section-header-heading {
+    font-weight: 700;
+}
+
+.fi-ta-header-cell-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
