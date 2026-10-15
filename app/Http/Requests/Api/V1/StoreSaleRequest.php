@@ -35,7 +35,7 @@ class StoreSaleRequest extends FormRequest
             'items.*.unit' => ['nullable', 'string', 'max:30'],
             'items.*.quantity' => ['required', 'numeric', 'gt:0'],
             'items.*.unit_price' => ['required', 'numeric', 'min:0'],
-            'items.*.flock_id' => ['nullable', 'integer'],
+            'items.*.flock_id' => ['nullable', 'integer', 'required_if:items.*.is_live_birds,true'],
             'items.*.is_live_birds' => ['nullable', 'boolean'],
             'payment' => ['nullable', 'array'],
             'payment.method' => ['required_with:payment', Rule::enum(PaymentMethod::class)],
@@ -56,6 +56,7 @@ class StoreSaleRequest extends FormRequest
             'items.required' => 'Une vente contient au moins une ligne.',
             'items.*.product_name.required' => 'Chaque ligne doit nommer le produit vendu.',
             'items.*.quantity.gt' => 'La quantité doit être positive.',
+            'items.*.flock_id.required_if' => 'Une ligne de sujets vivants doit indiquer la bande vendue, sinon l\'effectif ne bouge pas.',
             'payment.method.required_with' => 'Le mode de paiement est obligatoire pour un encaissement.',
         ];
     }

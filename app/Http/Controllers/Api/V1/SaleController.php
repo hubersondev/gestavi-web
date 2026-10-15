@@ -8,7 +8,9 @@ use App\Exceptions\CommercialException;
 use App\Http\Requests\Api\V1\StorePaymentRequest;
 use App\Http\Requests\Api\V1\StoreSaleRequest;
 use App\Http\Resources\Api\V1\SaleResource;
+use App\Models\Account;
 use App\Models\Customer;
+use App\Models\Flock;
 use App\Models\OfflineSyncEntry;
 use App\Models\Organisation;
 use App\Models\Product;
@@ -87,6 +89,8 @@ class SaleController extends ApiController
             abort_unless(Customer::query()->where('organisation_id', $organisation->id)->whereKey($data['customer_id'])->exists(), 422, 'Client inconnu dans cette organisation.');
         }
 
+        $this->assertFlocksBelongToFarm($organisation, (int) $data['farm_id'], $data['items']);
+
         // Unité de chaque ligne : celle fournie, sinon celle du produit du catalogue, sinon « unité »
         $productUnits = Product::query()
             ->where('organisation_id', $organisation->id)
@@ -123,7 +127,7 @@ class SaleController extends ApiController
                     $sale,
                     (float) ($data['payment']['amount'] ?? $sale->total),
                     PaymentMethod::from($data['payment']['method']),
-                    $data['payment']['account_id'] ?? null,
+                    $data['payment']['account_id'] ?? $this->defaultAccountId($organisation, $sale->farm_id),
                     $data['payment']['reference'] ?? null,
                     Carbon::parse($data['sale_date']),
                 );
@@ -165,7 +169,7 @@ class SaleController extends ApiController
                 $sale,
                 (float) $data['amount'],
                 PaymentMethod::from($data['method']),
-                $data['account_id'] ?? null,
+                $data['account_id'] ?? $this->defaultAccountId($organisation, $sale->farm_id),
                 $data['reference'] ?? null,
                 isset($data['paid_at']) ? Carbon::parse($data['paid_at']) : null,
             );
@@ -174,5 +178,41 @@ class SaleController extends ApiController
         }
 
         return new SaleResource($sale->fresh()->load(['customer:id,name', 'items', 'payments']));
+    }
+
+    /**
+     * Compte d'encaissement quand le mobile n'en précise pas : le compte par défaut de la ferme,
+     * sinon celui de l'organisation, pour que l'argent reçu apparaisse bien en trésorerie.
+     */
+    private function defaultAccountId(Organisation $organisation, int $farmId): ?int
+    {
+        return Account::query()
+            ->forOrganisation($organisation->id)
+            ->active()
+            ->where(fn ($query) => $query->where('farm_id', $farmId)->orWhereNull('farm_id'))
+            ->orderByDesc('is_default')
+            ->orderByRaw('farm_id IS NULL')
+            ->value('id');
+    }
+
+    /**
+     * Les bandes citées par les lignes doivent appartenir à la ferme qui vend.
+     *
+     * @param  array<int, array<string, mixed>>  $items
+     */
+    private function assertFlocksBelongToFarm(Organisation $organisation, int $farmId, array $items): void
+    {
+        $flockIds = collect($items)->pluck('flock_id')->filter()->unique()->values();
+
+        if ($flockIds->isEmpty()) {
+            return;
+        }
+
+        $known = Flock::query()
+            ->whereIn('id', $flockIds)
+            ->whereHas('building.farm', fn ($query) => $query->where('organisation_id', $organisation->id)->where('id', $farmId))
+            ->count();
+
+        abort_if($known !== $flockIds->count(), 422, 'Une bande citée n\'appartient pas à la ferme qui vend.');
     }
 }

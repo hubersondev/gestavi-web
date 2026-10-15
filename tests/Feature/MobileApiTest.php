@@ -191,3 +191,27 @@ it('répond en JSON 401 à un navigateur sans jeton plutôt que de chercher une 
         ->assertHeader('Content-Type', 'application/json')
         ->assertJsonPath('message', 'Unauthenticated.');
 });
+
+it('exige la bande pour des sujets vivants, décrémente son effectif et encaisse dans la caisse par défaut de la ferme', function () {
+    Sanctum::actingAs($this->owner);
+    $caisse = app(AccountService::class)->createAccount(['organisation_id' => $this->organisation->id, 'farm_id' => $this->farmA->id, 'name' => 'Caisse Ferme A', 'type' => 'cash', 'initial_balance' => 0, 'is_default' => true]);
+
+    $base = ['farm_id' => $this->farmA->id, 'sale_date' => now()->toDateString()];
+
+    postJson("{$this->base}/sales", $base + ['items' => [['product_name' => 'Poulet vif', 'quantity' => 50, 'unit_price' => 3000, 'is_live_birds' => true]]])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['items.0.flock_id']);
+
+    postJson("{$this->base}/sales", $base + ['items' => [['product_name' => 'Poulet vif', 'quantity' => 50, 'unit_price' => 3000, 'is_live_birds' => true, 'flock_id' => $this->flockB->id]]])
+        ->assertStatus(422);
+
+    $created = postJson("{$this->base}/sales", $base + [
+        'items' => [['product_name' => 'Poulet vif', 'quantity' => 50, 'unit_price' => 3000, 'is_live_birds' => true, 'flock_id' => $this->flockA->id]],
+        'payment' => ['method' => 'orange_money', 'amount' => 100000],
+    ])->assertCreated();
+
+    expect($this->flockA->fresh()->quantity_current)->toBe(950)
+        ->and($created->json('data.status'))->toBe(SaleStatus::Partial->value)
+        ->and($created->json('data.payments.0.account_id'))->toBe($caisse->id)
+        ->and($caisse->fresh()->current_balance)->toEqual(100000);
+});
