@@ -2,6 +2,8 @@
 
 namespace App\Notifications;
 
+use App\Enums\NotificationCategory;
+use App\Models\User;
 use App\Notifications\Channels\SmsChannel;
 use App\Services\Sms\PhoneNumber;
 use App\Services\Sms\SmsManager;
@@ -43,16 +45,26 @@ class OrganisationAlertNotification extends Notification
      */
     public function via(object $notifiable): array
     {
-        $channels = ['database'];
+        $category = NotificationCategory::fromAlertKey($this->alertKey);
+        $preferences = $notifiable instanceof User ? $notifiable->notificationPreferencesOrDefault() : null;
+        $channels = [];
 
-        if (static::mailEnabled() && filled($notifiable->email ?? null)) {
+        if ($preferences === null || $preferences->wantsInApp($category)) {
+            $channels[] = 'database';
+        }
+
+        if (static::mailEnabled() && filled($notifiable->email ?? null)
+            && ($preferences === null || $preferences->wantsEmail($category))) {
             $channels[] = 'mail';
         }
 
-        // SMS : pilote réel configuré (ou tests), destinataire opt-in avec un numéro valide
+        // SMS : pilote réel configuré (ou tests), destinataire opt-in avec un numéro valide,
+        // et sujet voulu par SMS (alertes critiques, paiements)
         if (SmsManager::enabled()
             && (bool) ($notifiable->sms_alerts_enabled ?? false)
-            && PhoneNumber::normalize($notifiable->phone ?? null) !== null) {
+            && PhoneNumber::normalize($notifiable->phone ?? null) !== null
+            && $preferences !== null
+            && $preferences->wantsSms($category, critical: $this->status === 'danger')) {
             $channels[] = SmsChannel::class;
         }
 

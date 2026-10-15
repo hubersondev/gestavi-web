@@ -4,9 +4,8 @@ namespace App\Console\Commands\Concerns;
 
 use App\Models\AlertDispatch;
 use App\Models\Organisation;
-use App\Models\OrganisationUser;
-use App\Models\User;
 use App\Notifications\OrganisationAlertNotification;
+use App\Services\AlertRecipients;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Notification;
 
@@ -23,16 +22,7 @@ trait DispatchesOrganisationAlerts
      */
     protected function globalAccessRecipients(Organisation $organisation): Collection
     {
-        return OrganisationUser::query()
-            ->where('organisation_id', $organisation->id)
-            ->where('status', 'active')
-            ->with(['user', 'organisationRole'])
-            ->get()
-            ->filter(fn (OrganisationUser $membership): bool => $membership->canAccessAllFarms())
-            ->map(fn (OrganisationUser $membership): ?User => $membership->user)
-            ->filter()
-            ->unique('id')
-            ->values();
+        return AlertRecipients::globalAccess($organisation->id);
     }
 
     /**

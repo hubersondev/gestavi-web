@@ -13,7 +13,10 @@ use App\Models\Quote;
 use App\Models\QuoteItem;
 use App\Models\Sale;
 use App\Models\SaleItem;
+use App\Notifications\OrganisationAlertNotification;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 
 class SaleService
 {
@@ -157,7 +160,7 @@ class SaleService
      * @param  array<int, array<string, mixed>>  $items
      * @param  list<string>  $columns
      */
-    private function syncLines(\Illuminate\Database\Eloquent\Relations\HasMany $relation, array $items, array $columns): void
+    private function syncLines(HasMany $relation, array $items, array $columns): void
     {
         /** @var class-string<SaleItem|QuoteItem> $lineModel */
         $lineModel = get_class($relation->getRelated());
@@ -244,7 +247,40 @@ class SaleService
             throw CommercialException::paymentExceedsBalance($sale->invoice_number, $balance, $amount);
         }
 
-        return $sale->addPayment($amount, $method, $accountId, $reference, $paidAt);
+        $payment = $sale->addPayment($amount, $method, $accountId, $reference, $paidAt);
+
+        $this->notifyPaymentReceived($sale->fresh(), $amount, $method);
+
+        return $payment;
+    }
+
+    /**
+     * Les responsables de l'organisation sont prévenus d'un encaissement (selon leurs préférences).
+     */
+    private function notifyPaymentReceived(Sale $sale, float $amount, PaymentMethod $method): void
+    {
+        $recipients = AlertRecipients::globalAccess($sale->organisation_id);
+
+        if ($recipients->isEmpty()) {
+            return;
+        }
+
+        $lines = [
+            sprintf('• %s XOF encaissés par %s', number_format($amount, 0, ',', ' '), $method->getLabel()),
+            '• '.($sale->customer?->name ?? 'Client comptant'),
+            (float) $sale->balance > 0
+                ? sprintf('• Reste dû : %s XOF', number_format((float) $sale->balance, 0, ',', ' '))
+                : '• Facture soldée',
+        ];
+
+        Notification::send($recipients, new OrganisationAlertNotification(
+            title: 'Paiement reçu sur '.$sale->invoice_number,
+            lines: $lines,
+            alertKey: 'payment_received',
+            organisationId: (int) $sale->organisation_id,
+            status: 'success',
+            icon: 'heroicon-o-banknotes',
+        ));
     }
 
     /**

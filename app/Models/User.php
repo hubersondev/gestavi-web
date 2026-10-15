@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -139,6 +140,19 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
     // ──────────────────────────────────────────────
     //  Relations
     // ──────────────────────────────────────────────
+
+    public function notificationPreferences(): HasOne
+    {
+        return $this->hasOne(NotificationPreference::class);
+    }
+
+    /**
+     * Préférences de notification, valeurs par défaut si l'utilisateur n'en a jamais enregistré.
+     */
+    public function notificationPreferencesOrDefault(): NotificationPreference
+    {
+        return $this->notificationPreferences ?? new NotificationPreference(['user_id' => $this->id]);
+    }
 
     public function platformRoles(): BelongsToMany
     {

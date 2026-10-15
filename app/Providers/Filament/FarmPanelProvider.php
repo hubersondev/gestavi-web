@@ -3,6 +3,7 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Farm\Pages\Appearance;
+use App\Filament\Farm\Pages\NotificationPreferences;
 use App\Filament\Farm\Pages\Tenancy\EditOrganisationProfile;
 use App\Http\Middleware\EnsurePlanFeature;
 use App\Models\Organisation;
@@ -57,6 +58,10 @@ class FarmPanelProvider extends PanelProvider
                     ->label('Apparence')
                     ->icon(Heroicon::OutlinedSwatch)
                     ->url(fn (): string => Appearance::getUrl()),
+                Action::make('notifications')
+                    ->label('Notifications')
+                    ->icon(Heroicon::OutlinedBell)
+                    ->url(fn (): string => NotificationPreferences::getUrl()),
             ])
             ->databaseNotifications()
             ->navigationGroups([

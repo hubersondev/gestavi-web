@@ -65,6 +65,7 @@ it('n\'ajoute le canal SMS qu\'aux destinataires opt-in avec un numéro valide',
         lines: ['• Gumboro — bande BND-2026-001'],
         alertKey: 'overdue_vaccinations',
         organisationId: $organisation->id,
+        status: 'danger',
     );
 
     Notification::send([$optIn, $optOut, $noPhone], $notification);
