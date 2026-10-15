@@ -184,3 +184,10 @@ it('expose les notifications de l\'utilisateur et permet de les marquer lues', f
     postJson('/api/v1/notifications/'.$list->json('data.0.id').'/read')->assertOk();
     expect(getJson('/api/v1/notifications?unread=1')->json('data'))->toHaveCount(0);
 });
+
+it('répond en JSON 401 à un navigateur sans jeton plutôt que de chercher une route login', function () {
+    $this->get('/api/v1/me', ['Accept' => 'text/html'])
+        ->assertUnauthorized()
+        ->assertHeader('Content-Type', 'application/json')
+        ->assertJsonPath('message', 'Unauthenticated.');
+});

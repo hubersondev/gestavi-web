@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Middleware\EnsureApiPlanFeature;
+use App\Http\Middleware\EnsureOfflineMember;
+use App\Http\Middleware\ForceJsonResponse;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -13,9 +16,13 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->api(prepend: [
+            ForceJsonResponse::class,
+        ]);
+
         $middleware->alias([
-            'plan.feature' => \App\Http\Middleware\EnsureApiPlanFeature::class,
-            'offline.member' => \App\Http\Middleware\EnsureOfflineMember::class,
+            'plan.feature' => EnsureApiPlanFeature::class,
+            'offline.member' => EnsureOfflineMember::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
