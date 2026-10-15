@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\ProductController;
 use App\Http\Controllers\Api\V1\SaleController;
 use App\Http\Controllers\Api\V1\StockController;
+use App\Http\Controllers\Api\V1\VaccinationController;
 use App\Http\Controllers\Webhooks\MobileMoneyWebhookController;
 use Illuminate\Support\Facades\Route;
 
@@ -42,6 +43,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
                 Route::get('/flocks/{flock}', [FlockController::class, 'show'])->name('flocks.show');
 
                 Route::get('/daily-records', [DailyRecordController::class, 'index'])->name('daily-records.index');
+                Route::get('/vaccinations', [VaccinationController::class, 'index'])->name('vaccinations.index');
                 Route::post('/sync', [DailyRecordController::class, 'sync'])->name('sync');
 
                 Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');

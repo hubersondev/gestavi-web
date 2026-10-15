@@ -13,6 +13,7 @@ use App\Models\Customer;
 use App\Models\Flock;
 use App\Models\OfflineSyncEntry;
 use App\Models\Organisation;
+use App\Models\Payment;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Services\SaleService;
@@ -155,7 +156,7 @@ class SaleController extends ApiController
         return (new SaleResource($sale->fresh()->load(['customer:id,name', 'items', 'payments'])))->response()->setStatusCode(201);
     }
 
-    public function storePayment(StorePaymentRequest $request, Organisation $organisation, Sale $sale): SaleResource
+    public function storePayment(StorePaymentRequest $request, Organisation $organisation, Sale $sale): JsonResponse
     {
         $membership = $this->membership($request);
         $this->authorizePermission($membership, 'sales.record_payment');
@@ -164,8 +165,13 @@ class SaleController extends ApiController
 
         $data = $request->validated();
 
+        // Rejeu d'un encaissement hors-ligne déjà reçu : la facture est renvoyée telle quelle
+        if (! empty($data['client_uuid']) && OfflineSyncEntry::query()->where('client_uuid', $data['client_uuid'])->exists()) {
+            return (new SaleResource($sale->fresh()->load(['customer:id,name', 'items', 'payments'])))->response()->setStatusCode(200);
+        }
+
         try {
-            $this->sales->recordPayment(
+            $payment = $this->sales->recordPayment(
                 $sale,
                 (float) $data['amount'],
                 PaymentMethod::from($data['method']),
@@ -177,7 +183,23 @@ class SaleController extends ApiController
             throw ValidationException::withMessages(['amount' => $e->getMessage()]);
         }
 
-        return new SaleResource($sale->fresh()->load(['customer:id,name', 'items', 'payments']));
+        if (! empty($data['client_uuid'])) {
+            OfflineSyncEntry::query()->create([
+                'organisation_id' => $organisation->id,
+                'user_id' => $request->user()->id,
+                'client_uuid' => $data['client_uuid'],
+                'type' => 'sale_payment',
+                'payload' => $data,
+                'status' => OfflineSyncEntry::STATUS_CREATED,
+                'message' => 'Encaissement enregistré.',
+                'subject_type' => Payment::class,
+                'subject_id' => $payment->id,
+                'recorded_at' => isset($data['paid_at']) ? Carbon::parse($data['paid_at']) : now(),
+                'processed_at' => now(),
+            ]);
+        }
+
+        return (new SaleResource($sale->fresh()->load(['customer:id,name', 'items', 'payments'])))->response()->setStatusCode(201);
     }
 
     /**

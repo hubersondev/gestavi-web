@@ -2,6 +2,7 @@
 
 use App\Enums\PlanFeature;
 use App\Enums\SaleStatus;
+use App\Enums\VaccinationStatus;
 use App\Models\Building;
 use App\Models\Customer;
 use App\Models\Farm;
@@ -12,6 +13,7 @@ use App\Models\Sale;
 use App\Models\Stock;
 use App\Models\StockCategory;
 use App\Models\User;
+use App\Models\Vaccination;
 use App\Services\AccountService;
 use Database\Seeders\ChartAccountSeeder;
 use Database\Seeders\ChickenTypeSeeder;
@@ -214,4 +216,47 @@ it('exige la bande pour des sujets vivants, décrémente son effectif et encaiss
         ->and($created->json('data.status'))->toBe(SaleStatus::Partial->value)
         ->and($created->json('data.payments.0.account_id'))->toBe($caisse->id)
         ->and($caisse->fresh()->current_balance)->toEqual(100000);
+});
+
+it('liste les vaccinations à faire des fermes accessibles et valide une vaccination sans doublon', function () {
+    $due = Vaccination::factory()->create(['flock_id' => $this->flockA->id, 'treatment_name' => 'Gumboro', 'status' => VaccinationStatus::Pending, 'scheduled_date' => now()->subDay()]);
+    Vaccination::factory()->create(['flock_id' => $this->flockA->id, 'treatment_name' => 'Newcastle', 'status' => VaccinationStatus::Done, 'scheduled_date' => now()->subDays(5), 'administered_date' => now()->subDays(5)]);
+    Vaccination::factory()->create(['flock_id' => $this->flockB->id, 'treatment_name' => 'Bronchite', 'status' => VaccinationStatus::Delayed, 'scheduled_date' => now()->addDays(2)]);
+
+    Sanctum::actingAs($this->owner);
+    $all = getJson("{$this->base}/vaccinations")->assertOk();
+    expect($all->json('data'))->toHaveCount(2)
+        ->and($all->json('data.0.treatment_name'))->toBe('Gumboro')
+        ->and($all->json('data.0.is_overdue'))->toBeTrue()
+        ->and($all->json('data.0.flock_code'))->toBe($this->flockA->code);
+
+    Sanctum::actingAs($this->employee);
+    expect(getJson("{$this->base}/vaccinations")->assertOk()->json('data'))->toHaveCount(1);
+    getJson("{$this->base}/vaccinations?farm_id={$this->farmB->id}")->assertForbidden();
+
+    Sanctum::actingAs($this->owner);
+    $uuid = (string) Str::uuid();
+    $entry = ['client_uuid' => $uuid, 'type' => 'vaccination_done', 'payload' => ['vaccination_id' => $due->id, 'administered_date' => now()->toDateString(), 'birds_treated' => 980]];
+    postJson("{$this->base}/sync", ['entries' => [$entry]])->assertOk()->assertJsonPath('results.0.status', 'created');
+    postJson("{$this->base}/sync", ['entries' => [$entry]])->assertOk()->assertJsonPath('results.0.status', 'duplicate');
+
+    expect($due->fresh()->status)->toBe(VaccinationStatus::Done)
+        ->and($due->fresh()->birds_treated)->toBe(980)
+        ->and(getJson("{$this->base}/vaccinations")->json('data'))->toHaveCount(1);
+});
+
+it('encaisse une vente existante depuis le mobile sans doublon au rejeu', function () {
+    Sanctum::actingAs($this->owner);
+    app(AccountService::class)->createAccount(['organisation_id' => $this->organisation->id, 'farm_id' => $this->farmA->id, 'name' => 'Caisse A', 'type' => 'cash', 'initial_balance' => 0, 'is_default' => true]);
+    $sale = postJson("{$this->base}/sales", ['farm_id' => $this->farmA->id, 'sale_date' => now()->toDateString(), 'items' => [['product_name' => 'Plateau', 'quantity' => 10, 'unit_price' => 3000]]])->assertCreated();
+    $id = $sale->json('data.id');
+
+    $payment = ['amount' => 10000, 'method' => 'wave', 'client_uuid' => (string) Str::uuid()];
+    postJson("{$this->base}/sales/{$id}/payments", $payment)->assertCreated()->assertJsonPath('data.status', SaleStatus::Partial->value)->assertJsonPath('data.paid', 10000);
+    postJson("{$this->base}/sales/{$id}/payments", $payment)->assertOk()->assertJsonPath('data.paid', 10000);
+
+    expect(Sale::query()->find($id)->payments()->count())->toBe(1)
+        ->and(Sale::query()->find($id)->payments()->first()->is_recorded)->toBeTrue();
+
+    postJson("{$this->base}/sales/{$id}/payments", ['amount' => 50000, 'method' => 'cash'])->assertStatus(422);
 });

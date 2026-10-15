@@ -27,6 +27,7 @@ class StorePaymentRequest extends FormRequest
             'account_id' => ['nullable', 'integer'],
             'reference' => ['nullable', 'string', 'max:100'],
             'paid_at' => ['nullable', 'date'],
+            'client_uuid' => ['nullable', 'uuid'],
         ];
     }
 
