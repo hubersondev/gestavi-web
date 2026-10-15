@@ -263,6 +263,32 @@ it('encaisse une vente existante depuis le mobile sans doublon au rejeu', functi
     postJson("{$this->base}/sales/{$id}/payments", ['amount' => 50000, 'method' => 'cash'])->assertStatus(422);
 });
 
+it('complète le relevé du jour existant quand le mobile l\'a pré-rempli, et le protège sinon', function () {
+    Sanctum::actingAs($this->owner);
+    $date = now()->toDateString();
+    $entry = fn (array $payload) => ['client_uuid' => (string) Str::uuid(), 'type' => 'daily_record', 'payload' => ['flock_id' => $this->flockA->id, 'record_date' => $date] + $payload];
+
+    postJson("{$this->base}/sync", ['entries' => [$entry(['mortality' => 3, 'eggs_collected' => 400])]])->assertOk()->assertJsonPath('results.0.status', 'created');
+
+    // Sans pré-remplissage : la version en ligne est protégée
+    postJson("{$this->base}/sync", ['entries' => [$entry(['mortality' => 10, 'eggs_collected' => 850])]])->assertOk()->assertJsonPath('results.0.status', 'duplicate');
+    expect($this->flockA->fresh()->quantity_current)->toBe(997);
+
+    // Pré-rempli puis complété : les totaux du jour remplacent les valeurs, l'effectif suit l'écart
+    $merged = postJson("{$this->base}/sync", ['entries' => [$entry(['mortality' => 5, 'eggs_collected' => 850, 'merge' => true])]])->assertOk();
+    expect($merged->json('results.0.status'))->toBe('created')
+        ->and($merged->json('results.0.message'))->toContain('complété');
+
+    $record = DailyRecord::query()->where('flock_id', $this->flockA->id)->whereDate('record_date', $date)->sole();
+    expect((int) $record->mortality)->toBe(5)
+        ->and((int) $record->eggs_collected)->toBe(850)
+        ->and($this->flockA->fresh()->quantity_current)->toBe(995)
+        ->and(DailyRecord::query()->where('flock_id', $this->flockA->id)->count())->toBe(1);
+
+    // Des pertes au-delà de l'effectif restent refusées, même en complément
+    postJson("{$this->base}/sync", ['entries' => [$entry(['mortality' => 5000, 'merge' => true])]])->assertOk()->assertJsonPath('results.0.status', 'rejected');
+});
+
 it('refuse une vente d\'œufs au-delà du stock de la ferme et expose la conversion des produits et le stock d\'œufs', function () {
     Sanctum::actingAs($this->owner);
     $trays = Product::query()->where('organisation_id', $this->organisation->id)->where('code', 'OEUF-P30')->firstOrFail();

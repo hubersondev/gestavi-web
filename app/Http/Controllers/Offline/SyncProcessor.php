@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Offline;
 
 use App\Enums\VaccinationStatus;
+use App\Exceptions\StockException;
 use App\Models\DailyRecord;
 use App\Models\Flock;
 use App\Models\OfflineSyncEntry;
@@ -110,6 +111,8 @@ class SyncProcessor
                 'temperature_max' => ['nullable', 'numeric'],
                 'humidity_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
                 'notes' => ['nullable', 'string', 'max:2000'],
+                // Le mobile a pré-rempli un relevé existant et renvoie les totaux du jour
+                'merge' => ['nullable', 'boolean'],
             ], [
                 'record_date.before_or_equal' => 'La date du relevé ne peut pas être dans le futur.',
             ])->validate();
@@ -124,9 +127,17 @@ class SyncProcessor
         }
 
         $recordDate = Carbon::parse($data['record_date'])->toDateString();
+        $merge = (bool) ($data['merge'] ?? false);
+        unset($data['merge']);
 
-        if (DailyRecord::query()->where('flock_id', $flock->id)->whereDate('record_date', $recordDate)->exists()) {
+        $existing = DailyRecord::query()->where('flock_id', $flock->id)->whereDate('record_date', $recordDate)->first();
+
+        if ($existing && ! $merge) {
             return [OfflineSyncEntry::STATUS_DUPLICATE, "Un relevé existe déjà pour la bande {$flock->code} au {$recordDate} : la saisie hors-ligne n'a pas écrasé la version en ligne.", DailyRecord::class, null];
+        }
+
+        if ($existing) {
+            return $this->completeDailyRecord($existing, $flock, $user, $data, $recordDate);
         }
 
         try {
@@ -134,12 +145,43 @@ class SyncProcessor
                 array_filter($data, fn ($value) => $value !== null),
                 ['record_date' => $recordDate, 'recorded_by' => $user->id],
             )));
-        } catch (\InvalidArgumentException|\App\Exceptions\StockException $e) {
+        } catch (\InvalidArgumentException|StockException $e) {
             // Règle métier (pertes > effectif, stock d'aliment insuffisant…) : saisie refusée, message explicite
             return [OfflineSyncEntry::STATUS_REJECTED, $e->getMessage(), null, null];
         }
 
         return [OfflineSyncEntry::STATUS_CREATED, "Relevé du {$recordDate} enregistré pour la bande {$flock->code}.", DailyRecord::class, $record->id];
+    }
+
+    /**
+     * Le relevé du jour existe déjà (saisi sur le web ou par une précédente synchronisation) et le
+     * mobile l'avait pré-rempli : ses totaux remplacent les valeurs en place. Les règles métier
+     * s'appliquent comme à une correction (pertes dans l'effectif, aliment régularisé sur le stock).
+     *
+     * @param  array<string, mixed>  $data
+     * @return array{0: string, 1: string|null, 2: string|null, 3: int|null}
+     */
+    private function completeDailyRecord(DailyRecord $existing, Flock $flock, User $user, array $data, string $recordDate): array
+    {
+        $values = array_filter($data, fn ($value) => $value !== null);
+        unset($values['flock_id'], $values['record_date']);
+
+        try {
+            DB::transaction(function () use ($existing, $values, $user): void {
+                $previousKg = (float) $existing->feed_consumed_kg;
+
+                $existing->update($values + ['recorded_by' => $user->id]);
+                $existing->refresh();
+
+                if ($existing->feed_movement_id) {
+                    $this->flockService->adjustFeedConsumption($existing, $previousKg, (float) $existing->feed_consumed_kg);
+                }
+            });
+        } catch (\InvalidArgumentException|StockException $e) {
+            return [OfflineSyncEntry::STATUS_REJECTED, $e->getMessage(), null, null];
+        }
+
+        return [OfflineSyncEntry::STATUS_CREATED, "Relevé du {$recordDate} complété pour la bande {$flock->code}.", DailyRecord::class, $existing->id];
     }
 
     /**
