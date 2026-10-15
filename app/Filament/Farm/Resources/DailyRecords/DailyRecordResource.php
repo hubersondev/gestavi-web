@@ -44,7 +44,7 @@ class DailyRecordResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'record_date';
 
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 2;
 
     protected static string $permissionGroup = 'daily_records';
 

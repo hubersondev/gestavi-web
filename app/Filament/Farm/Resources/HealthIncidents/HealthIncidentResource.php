@@ -44,7 +44,7 @@ class HealthIncidentResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'title';
 
-    protected static ?int $navigationSort = 7;
+    protected static ?int $navigationSort = 5;
 
     protected static string $permissionGroup = 'health_incidents';
 

@@ -44,7 +44,7 @@ class FarmLogResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'title';
 
-    protected static ?int $navigationSort = 8;
+    protected static ?int $navigationSort = 7;
 
     protected static string $permissionGroup = 'farm_logs';
 

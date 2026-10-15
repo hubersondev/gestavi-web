@@ -39,7 +39,7 @@ class SlaughterResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Abattages';
 
-    protected static ?int $navigationSort = 7;
+    protected static ?int $navigationSort = 6;
 
     protected static string $permissionGroup = 'slaughters';
 

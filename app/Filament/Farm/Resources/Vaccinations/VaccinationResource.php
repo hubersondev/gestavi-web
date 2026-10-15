@@ -44,7 +44,7 @@ class VaccinationResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'treatment_name';
 
-    protected static ?int $navigationSort = 6;
+    protected static ?int $navigationSort = 3;
 
     protected static string $permissionGroup = 'vaccinations';
 
