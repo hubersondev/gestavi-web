@@ -103,7 +103,8 @@ class FlockCostReportPage extends Page implements HasTable
      */
     public function breakdownFor(Flock $flock): array
     {
-        $this->breakdownCache ??= [];
+        // Toutes les bandes du rapport sont calculées d'un coup (lectures groupées), à la première demande
+        $this->breakdownCache ??= app(FlockCostService::class)->breakdownMany($this->baseQuery()->get());
 
         return $this->breakdownCache[$flock->getKey()] ??= app(FlockCostService::class)->breakdown($flock);
     }
