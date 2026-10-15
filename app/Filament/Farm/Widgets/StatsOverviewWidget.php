@@ -3,6 +3,7 @@
 namespace App\Filament\Farm\Widgets;
 
 use App\Enums\SaleStatus;
+use App\Filament\Farm\Concerns\RequiresOrganisationPermission;
 use App\Models\Account;
 use App\Models\DailyRecord;
 use App\Models\Flock;
@@ -16,7 +17,7 @@ use Illuminate\Database\Eloquent\Builder;
 
 class StatsOverviewWidget extends BaseWidget
 {
-    use \App\Filament\Farm\Concerns\RequiresOrganisationPermission;
+    use RequiresOrganisationPermission;
 
     protected static string $requiredPermission = 'flocks.view';
 
@@ -103,7 +104,7 @@ class StatsOverviewWidget extends BaseWidget
             ->pluck('id');
 
         if ($activeFlockIds->isEmpty()) {
-            return Stat::make('Production', '-')
+            return Stat::make('Production œufs', '-')
                 ->description('Aucune bande active')
                 ->descriptionIcon('heroicon-o-chart-bar')
                 ->color('gray');
@@ -118,7 +119,7 @@ class StatsOverviewWidget extends BaseWidget
         $lastDate = $latestRecords->first()?->record_date;
 
         if (! $lastDate) {
-            return Stat::make('Production', '-')
+            return Stat::make('Production œufs', '-')
                 ->description('Aucun relevé récent')
                 ->descriptionIcon('heroicon-o-chart-bar')
                 ->color('gray');
@@ -139,7 +140,7 @@ class StatsOverviewWidget extends BaseWidget
             ->toArray();
 
         if ($totalEggs > 0) {
-            return Stat::make('Production oeufs', number_format($totalEggs))
+            return Stat::make('Production œufs', number_format($totalEggs))
                 ->description("Relevé du {$dayLabel}")
                 ->descriptionIcon('heroicon-o-chart-bar')
                 ->color('success')
@@ -153,8 +154,8 @@ class StatsOverviewWidget extends BaseWidget
                 ->color('success');
         }
 
-        return Stat::make('Production', '-')
-            ->description('Aucune donnée')
+        return Stat::make('Production œufs', '-')
+            ->description("Aucun œuf dans le relevé du {$dayLabel}")
             ->descriptionIcon('heroicon-o-chart-bar')
             ->color('gray');
     }
