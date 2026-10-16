@@ -379,6 +379,19 @@ class Organisation extends Model implements HasCurrentTenantLabel
         return $this->belongsTo(Plan::class);
     }
 
+    public function subscriptions(): HasMany
+    {
+        return $this->hasMany(Subscription::class);
+    }
+
+    /**
+     * Abonnement donnant accès au plan aujourd'hui (essai, actif ou annulé non échu), s'il existe.
+     */
+    public function currentSubscription(): ?Subscription
+    {
+        return $this->subscriptions()->current()->orderByDesc('ends_at')->orderByDesc('id')->first();
+    }
+
     public function organisationRoles(): HasMany
     {
         return $this->hasMany(OrganisationRole::class);

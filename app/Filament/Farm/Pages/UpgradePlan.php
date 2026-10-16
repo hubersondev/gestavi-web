@@ -3,8 +3,10 @@
 namespace App\Filament\Farm\Pages;
 
 use App\Models\Plan;
+use App\Models\Subscription;
 use Filament\Facades\Filament;
 use Filament\Pages\Page;
+use Illuminate\Database\Eloquent\Collection;
 
 class UpgradePlan extends Page
 {
@@ -18,13 +20,16 @@ class UpgradePlan extends Page
 
     public ?Plan $currentPlan = null;
 
-    /** @var \Illuminate\Database\Eloquent\Collection<int, Plan> */
+    public ?Subscription $currentSubscription = null;
+
+    /** @var Collection<int, Plan> */
     public $availablePlans;
 
     public function mount(): void
     {
         $tenant = Filament::getTenant();
         $this->currentPlan = $tenant?->plan;
+        $this->currentSubscription = $tenant?->currentSubscription();
         $this->availablePlans = Plan::query()
             ->where('is_active', true)
             ->orderBy('sort_order')

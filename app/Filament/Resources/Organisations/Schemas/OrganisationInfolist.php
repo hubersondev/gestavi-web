@@ -27,6 +27,15 @@ class OrganisationInfolist
                 TextEntry::make('plan.name')
                     ->label('Plan souscrit')
                     ->placeholder('Aucun'),
+                TextEntry::make('current_subscription')
+                    ->label('Abonnement en cours')
+                    ->state(function ($record): string {
+                        $subscription = $record->currentSubscription();
+
+                        return $subscription
+                            ? ucfirst($subscription->summaryLabel()).' · '.$subscription->status->getLabel().' jusqu\'au '.$subscription->ends_at->format('d/m/Y').' ('.$subscription->daysRemaining().' j)'
+                            : 'Aucun';
+                    }),
                 TextEntry::make('country.name')
                     ->label('Pays')
                     ->placeholder('-'),

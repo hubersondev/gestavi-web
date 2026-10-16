@@ -28,6 +28,19 @@
             </h2>
             <div class="mt-3 rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900">
                 @if ($currentPlan)
+                    @if ($currentSubscription)
+                        <div class="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                            <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {{ $currentSubscription->isExpiringSoon() ? 'bg-warning-100 text-warning-800 dark:bg-warning-900 dark:text-warning-200' : 'bg-success-100 text-success-800 dark:bg-success-900 dark:text-success-200' }}">
+                                {{ $currentSubscription->status->getLabel() }}
+                            </span>
+                            <span class="text-gray-600 dark:text-gray-300">
+                                {{ ucfirst($currentSubscription->summaryLabel()) }} · {{ $currentSubscription->periodLabel() }}
+                            </span>
+                            <span class="font-medium {{ $currentSubscription->isExpiringSoon() ? 'text-warning-700 dark:text-warning-300' : 'text-gray-700 dark:text-gray-200' }}">
+                                {{ $currentSubscription->daysRemaining() }} jour(s) restant(s)
+                            </span>
+                        </div>
+                    @endif
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-xl font-bold text-primary-600 dark:text-primary-400">

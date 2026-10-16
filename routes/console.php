@@ -29,6 +29,11 @@ Schedule::command('gestavi:fetch-weather')
     ->runInBackground()
     ->withoutOverlapping();
 
+Schedule::command('gestavi:subscriptions')
+    ->dailyAt('06:00')
+    ->runInBackground()
+    ->withoutOverlapping();
+
 Schedule::command('gestavi:forecast')
     ->dailyAt('05:30')
     ->runInBackground()

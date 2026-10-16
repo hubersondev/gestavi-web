@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\BillingCycle;
 use App\Enums\FlockStatus;
 use App\Models\Building;
 use App\Models\ChickenType;
@@ -14,6 +15,7 @@ use App\Models\Organisation;
 use App\Models\OrganisationUser;
 use App\Models\Plan;
 use App\Models\User;
+use App\Services\SubscriptionService;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -107,6 +109,16 @@ class DatabaseSeeder extends Seeder
         // Rattacher les membres via slug de rôle
         $organisation->addMember($owner, 'owner');
         $organisation->addMember($employee, 'employee');
+
+        // Abonnement Pro annuel payé (le plan de l'organisation suit l'abonnement)
+        if ($proPlan) {
+            app(SubscriptionService::class)->start(
+                organisation: $organisation,
+                plan: $proPlan,
+                cycle: BillingCycle::Yearly,
+                payment: ['payment_method' => 'bank_transfer', 'payment_reference' => 'VIR-DEMO-2026'],
+            );
+        }
 
         // Ferme principale
         $anyama = City::where('name', 'Anyama')

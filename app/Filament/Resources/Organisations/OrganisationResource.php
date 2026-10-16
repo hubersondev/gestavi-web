@@ -6,6 +6,7 @@ use App\Filament\Resources\Organisations\Pages\CreateOrganisation;
 use App\Filament\Resources\Organisations\Pages\EditOrganisation;
 use App\Filament\Resources\Organisations\Pages\ListOrganisations;
 use App\Filament\Resources\Organisations\Pages\ViewOrganisation;
+use App\Filament\Resources\Organisations\RelationManagers\SubscriptionsRelationManager;
 use App\Filament\Resources\Organisations\Schemas\OrganisationForm;
 use App\Filament\Resources\Organisations\Schemas\OrganisationInfolist;
 use App\Filament\Resources\Organisations\Tables\OrganisationsTable;
@@ -51,7 +52,7 @@ class OrganisationResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            SubscriptionsRelationManager::class,
         ];
     }
 

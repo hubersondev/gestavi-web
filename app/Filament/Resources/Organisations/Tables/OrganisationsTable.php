@@ -31,6 +31,26 @@ class OrganisationsTable
                     ->label('Plan')
                     ->placeholder('Aucun')
                     ->sortable(),
+                TextColumn::make('subscription_ends_at')
+                    ->label('Abonnement')
+                    ->state(function ($record): string {
+                        $subscription = $record->currentSubscription();
+
+                        return $subscription
+                            ? $subscription->status->getLabel().' jusqu\'au '.$subscription->ends_at->format('d/m/Y')
+                            : 'Aucun';
+                    })
+                    ->color(function ($record): string {
+                        $subscription = $record->currentSubscription();
+
+                        return match (true) {
+                            $subscription === null => 'gray',
+                            $subscription->isExpiringSoon() => 'warning',
+                            default => 'success',
+                        };
+                    })
+                    ->badge()
+                    ->toggleable(),
                 TextColumn::make('country.name')
                     ->label('Pays')
                     ->searchable(),

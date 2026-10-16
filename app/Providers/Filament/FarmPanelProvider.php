@@ -120,6 +120,10 @@ class FarmPanelProvider extends PanelProvider
             ->renderHook(
                 PanelsRenderHook::HEAD_END,
                 fn (): View => view('offline.pwa-head'),
+            )
+            ->renderHook(
+                PanelsRenderHook::CONTENT_START,
+                fn (): View => view('partials.subscription-banner'),
             );
     }
 }
