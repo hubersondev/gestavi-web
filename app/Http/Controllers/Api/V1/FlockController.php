@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Resources\Api\V1\FlockResource;
 use App\Models\Flock;
 use App\Models\Organisation;
+use App\Services\Forecast\ForecastService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
@@ -20,7 +21,11 @@ class FlockController extends ApiController
 
         $query = Flock::query()
             ->where('flocks.organisation_id', $organisation->id)
-            ->with(['farm:id,name', 'building:id,name', 'chickenType:id,name,production_kind'])
+            ->with([
+                'farm:id,name', 'building:id,name', 'chickenType:id,name,production_kind',
+                // Seule la prévision la plus lointaine par grandeur sert au mobile
+                'predictions' => fn ($q) => $q->whereDate('target_date', now()->addDays(ForecastService::HORIZON_DAYS)->toDateString()),
+            ])
             ->withMax('dailyRecords as last_record_date', 'record_date')
             ->orderBy('flocks.code');
 
@@ -45,7 +50,10 @@ class FlockController extends ApiController
         abort_if($flock->organisation_id !== $organisation->id, 404);
         $this->authorizeFarm($membership, $flock->farm_id);
 
-        $flock->load(['farm:id,name', 'building:id,name', 'chickenType:id,name,production_kind']);
+        $flock->load([
+            'farm:id,name', 'building:id,name', 'chickenType:id,name,production_kind',
+            'predictions' => fn ($q) => $q->whereDate('target_date', now()->addDays(ForecastService::HORIZON_DAYS)->toDateString()),
+        ]);
         $flock->setAttribute('last_record_date', $flock->dailyRecords()->max('record_date'));
 
         return new FlockResource($flock);

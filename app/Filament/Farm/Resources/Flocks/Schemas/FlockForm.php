@@ -3,6 +3,7 @@
 namespace App\Filament\Farm\Resources\Flocks\Schemas;
 
 use App\Enums\FlockStatus;
+use App\Models\BreedStandard;
 use App\Models\Building;
 use App\Models\Farm;
 use App\Models\Supplier;
@@ -17,6 +18,7 @@ use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class FlockForm
@@ -120,7 +122,7 @@ class FlockForm
                                                     Rule::unique('flocks', 'code')
                                                         ->where(function ($query) use ($tenant) {
                                                             $query->whereExists(function ($sub) use ($tenant) {
-                                                                $sub->select(\Illuminate\Support\Facades\DB::raw(1))
+                                                                $sub->select(DB::raw(1))
                                                                     ->from('buildings')
                                                                     ->join('farms', 'buildings.farm_id', '=', 'farms.id')
                                                                     ->whereColumn('flocks.building_id', 'buildings.id')
@@ -143,8 +145,10 @@ class FlockForm
                                             ->preload(),
 
                                         TextInput::make('breed')
-                                            ->label('Race')
+                                            ->label('Souche')
                                             ->maxLength(100)
+                                            ->datalist(fn (): array => BreedStandard::breeds())
+                                            ->helperText('Une souche connue (Cobb 500, Ross 308, ISA Brown, Lohmann Brown…) permet les prévisions comparées à sa courbe de référence')
                                             ->placeholder('Ex: Ross 308, Cobb 500, ISA Brown...'),
 
                                         Select::make('status')

@@ -2,7 +2,10 @@
 
 namespace App\Filament\Farm\Resources\Flocks\Schemas;
 
+use App\Models\Flock;
 use App\Services\CurrentFarm;
+use App\Services\FlockCostService;
+use App\Services\FlockService;
 use Filament\Facades\Filament;
 use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\TextEntry;
@@ -158,6 +161,27 @@ class FlockInfolist
                                                 : 'Aucun')
                                             ->color(fn ($record) => $record->isUnderWithdrawal() ? 'danger' : 'success')
                                             ->badge(),
+                                    ]),
+
+                                Section::make('Prévisions à 7 jours')
+                                    ->description('Calculées chaque nuit à partir des 14 derniers relevés et de la courbe de la souche ; détail dans Production → Prévisions')
+                                    ->columns(4)
+                                    ->visible(fn ($record) => $record->predictions()->exists())
+                                    ->schema([
+                                        TextEntry::make('forecast_mortality')
+                                            ->label('Mortalité cumulée')
+                                            ->state(fn ($record) => self::forecast($record, 'mortality')),
+                                        TextEntry::make('forecast_laying')
+                                            ->label('Taux de ponte')
+                                            ->state(fn ($record) => self::forecast($record, 'laying_rate'))
+                                            ->visible(fn ($record) => $record->productionKind()->tracksEggs()),
+                                        TextEntry::make('forecast_weight')
+                                            ->label('Poids moyen')
+                                            ->state(fn ($record) => self::forecast($record, 'weight'))
+                                            ->visible(fn ($record) => $record->productionKind()->tracksWeight()),
+                                        TextEntry::make('forecast_feed')
+                                            ->label('Aliment par sujet')
+                                            ->state(fn ($record) => self::forecast($record, 'feed_per_bird')),
                                     ]),
 
                                 Section::make('Phase de production actuelle')
@@ -322,11 +346,37 @@ class FlockInfolist
     /**
      * Formate un indicateur calculé par FlockService (null → « — »).
      */
-    private static function indicator(\App\Models\Flock $flock, string $key, string $suffix = ''): string
+    /**
+     * « 91,2 % le 23/10 · confiance 74 % · souche 93,0 % », ou un tiret sans prévision.
+     */
+    private static function forecast(Flock $flock, string $type): string
     {
         static $cache = [];
 
-        $cache[$flock->getKey()] ??= app(\App\Services\FlockService::class)->calculatePerformanceIndicators($flock);
+        $cache[$flock->getKey()] ??= $flock->horizonForecasts();
+        $prediction = $cache[$flock->getKey()]->get($type);
+
+        if (! $prediction) {
+            return '—';
+        }
+
+        $decimals = $prediction->type->unit() === '%' ? 1 : 0;
+        $text = number_format((float) $prediction->predicted_value, $decimals, ',', ' ').' '.$prediction->type->unit()
+            .' le '.$prediction->target_date->format('d/m')
+            .' · confiance '.number_format((float) $prediction->confidence, 0).' %';
+
+        if ($prediction->standard_value !== null) {
+            $text .= ' · souche '.number_format((float) $prediction->standard_value, $decimals, ',', ' ').' '.$prediction->type->unit();
+        }
+
+        return $text;
+    }
+
+    private static function indicator(Flock $flock, string $key, string $suffix = ''): string
+    {
+        static $cache = [];
+
+        $cache[$flock->getKey()] ??= app(FlockService::class)->calculatePerformanceIndicators($flock);
         $value = $cache[$flock->getKey()][$key] ?? null;
 
         return $value === null ? '—' : number_format((float) $value, 2, ',', ' ').$suffix;
@@ -337,14 +387,14 @@ class FlockInfolist
      *
      * @return array<string, mixed>
      */
-    private static function breakdown(\App\Models\Flock $flock): array
+    private static function breakdown(Flock $flock): array
     {
         static $cache = [];
 
-        return $cache[$flock->getKey()] ??= app(\App\Services\FlockCostService::class)->breakdown($flock);
+        return $cache[$flock->getKey()] ??= app(FlockCostService::class)->breakdown($flock);
     }
 
-    private static function cost(\App\Models\Flock $flock, string $path, int $decimals = 0): string
+    private static function cost(Flock $flock, string $path, int $decimals = 0): string
     {
         $value = data_get(self::breakdown($flock), $path);
 

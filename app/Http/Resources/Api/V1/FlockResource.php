@@ -40,6 +40,20 @@ class FlockResource extends JsonResource
             'start_date' => $this->start_date?->toDateString(),
             'expected_end_date' => $this->expected_end_date?->toDateString(),
             'last_record_date' => $this->when(isset($this->last_record_date), fn () => $this->last_record_date),
+            // Prévisions à J+7 (calculées chaque nuit) : valeur, confiance, référence de la souche
+            'forecast' => $this->whenLoaded('predictions', function (): array {
+                return $this->predictions
+                    ->sortByDesc('target_date')
+                    ->unique(fn ($p) => $p->type->value)
+                    ->mapWithKeys(fn ($p): array => [$p->type->value => [
+                        'value' => (float) $p->predicted_value,
+                        'unit' => $p->type->unit(),
+                        'confidence' => (float) $p->confidence,
+                        'standard' => $p->standard_value !== null ? (float) $p->standard_value : null,
+                        'target_date' => $p->target_date->toDateString(),
+                    ]])
+                    ->all();
+            }),
         ];
     }
 }

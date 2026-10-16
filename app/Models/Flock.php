@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Collection;
 
 class Flock extends Model
 {
@@ -88,6 +89,26 @@ class Flock extends Model
     public function dailyRecords(): HasMany
     {
         return $this->hasMany(DailyRecord::class);
+    }
+
+    public function predictions(): HasMany
+    {
+        return $this->hasMany(FlockPrediction::class);
+    }
+
+    /**
+     * Prévisions à l'horizon (la plus lointaine de chaque grandeur), pour la fiche et l'API.
+     *
+     * @return Collection<string, FlockPrediction>
+     */
+    public function horizonForecasts(): Collection
+    {
+        return $this->predictions()
+            ->whereDate('target_date', '>', now()->toDateString())
+            ->orderByDesc('target_date')
+            ->get()
+            ->unique(fn (FlockPrediction $p): string => $p->type->value)
+            ->keyBy(fn (FlockPrediction $p): string => $p->type->value);
     }
 
     public function vaccinations(): HasMany

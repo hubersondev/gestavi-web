@@ -6,6 +6,7 @@ use App\Enums\PayrollStatus;
 use App\Models\Organisation;
 use App\Models\Payroll;
 use App\Services\PayrollService;
+use Database\Seeders\BreedStandardSeeder;
 use Database\Seeders\ChartAccountSeeder;
 use Database\Seeders\ChickenTypeSeeder;
 use Database\Seeders\CitySeeder;
@@ -43,6 +44,7 @@ class UpgradeTenants extends Command
         PlanSeeder::class,
         HealthProgramSeeder::class,
         ChartAccountSeeder::class,
+        BreedStandardSeeder::class,
         PayrollParameterSeeder::class,
     ];
 

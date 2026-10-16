@@ -33,6 +33,7 @@ class DatabaseSeeder extends Seeder
         // Plan comptable SYSCOHADA de référence et imputations par défaut
         $this->call([
             ChartAccountSeeder::class,
+            BreedStandardSeeder::class,
         ]);
 
         // Devises, pays, villes et types d'élevage
