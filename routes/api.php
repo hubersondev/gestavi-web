@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\CompareController;
 use App\Http\Controllers\Api\V1\CustomerController;
 use App\Http\Controllers\Api\V1\DailyRecordController;
 use App\Http\Controllers\Api\V1\FarmController;
@@ -40,6 +41,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             ->group(function (): void {
                 Route::get('/farms', [FarmController::class, 'index'])->name('farms.index');
                 Route::get('/farms/{farm}/weather', [WeatherController::class, 'show'])->name('farms.weather');
+                Route::get('/compare', [CompareController::class, 'index'])->middleware('plan.feature:multi_farm_comparison')->name('compare');
 
                 Route::get('/flocks', [FlockController::class, 'index'])->name('flocks.index');
                 Route::get('/flocks/{flock}', [FlockController::class, 'show'])->name('flocks.show');

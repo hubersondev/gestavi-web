@@ -51,6 +51,7 @@ class PlanSeeder extends Seeder
             // Prévisions à 7 jours par bande (page Production → Prévisions)
             PlanFeature::AiPredictions->value,
             PlanFeature::WeatherIntegration->value,
+            PlanFeature::MultiFarmComparison->value,
         ]);
 
         $enterpriseFeatures = collect(PlanFeature::cases())

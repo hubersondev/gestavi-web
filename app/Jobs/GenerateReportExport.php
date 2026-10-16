@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Filament\Farm\Pages\Reports\AccountingReportPage;
 use App\Filament\Farm\Pages\Reports\CommercialReportPage;
+use App\Filament\Farm\Pages\Reports\FarmComparisonPage;
 use App\Filament\Farm\Pages\Reports\FinancialReportPage;
 use App\Filament\Farm\Pages\Reports\HrReportPage;
 use App\Filament\Farm\Pages\Reports\ProductionReportPage;
@@ -46,6 +47,7 @@ class GenerateReportExport implements ShouldQueue
         'stocks' => StockReportPage::class,
         'comptabilite' => AccountingReportPage::class,
         'rh' => HrReportPage::class,
+        'comparaison-fermes' => FarmComparisonPage::class,
         'paie' => [HrReportPage::class, 'buildPayrollXlsx'],
     ];
 

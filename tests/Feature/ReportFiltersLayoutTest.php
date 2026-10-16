@@ -1,14 +1,17 @@
 <?php
 
+use App\Enums\PlanFeature;
 use App\Filament\Farm\Pages\GroupDashboard;
 use App\Filament\Farm\Pages\Reports\AccountingReportPage;
 use App\Filament\Farm\Pages\Reports\CommercialReportPage;
+use App\Filament\Farm\Pages\Reports\FarmComparisonPage;
 use App\Filament\Farm\Pages\Reports\FinancialReportPage;
 use App\Filament\Farm\Pages\Reports\FlockCostReportPage;
 use App\Filament\Farm\Pages\Reports\HrReportPage;
 use App\Filament\Farm\Pages\Reports\ProductionReportPage;
 use App\Filament\Farm\Pages\Reports\StockReportPage;
 use App\Models\Organisation;
+use App\Models\Plan;
 use App\Models\User;
 use Database\Seeders\OrganisationPermissionSeeder;
 use Filament\Facades\Filament;
@@ -22,7 +25,9 @@ use function Pest\Laravel\actingAs;
  */
 beforeEach(function () {
     $this->seed(OrganisationPermissionSeeder::class);
-    $organisation = Organisation::factory()->create();
+    // Plan complet : certaines pages (comparaison des fermes) sont réservées à une fonctionnalité de plan
+    $plan = Plan::factory()->create(['features' => collect(PlanFeature::cases())->map->value->all()]);
+    $organisation = Organisation::factory()->create(['plan_id' => $plan->id]);
     $owner = User::factory()->create();
     $organisation->addMember($owner, 'owner');
 
@@ -43,4 +48,5 @@ it('dispose les filtres de chaque rapport sur une grille responsive', function (
     'coût de revient' => FlockCostReportPage::class,
     'comptabilité' => AccountingReportPage::class,
     'ressources humaines' => HrReportPage::class,
+    'comparaison des fermes' => FarmComparisonPage::class,
 ]);
