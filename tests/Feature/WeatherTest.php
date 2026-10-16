@@ -137,7 +137,9 @@ it('signale canicule, humidité, vent et pluie d\'après les seuils de la phase,
     ]);
     $phase->update(['max_temperature' => 30, 'min_temperature' => 20, 'humidity_max' => 60]);
 
-    fakeWeather(forecastPayload(days: 3, tempMax: 41, humidity: 85, rain: 30, wind: 16));
+    // Seuils de phase : 30 °C / 60 % (confort intérieur). Extérieur prévu : 43 °C (+13 → critique),
+    // 95 % (+35 → humidité extrême) ; 37 °C ou 85 % n'alerteraient pas (marges 8 °C / 30 points)
+    fakeWeather(forecastPayload(days: 3, tempMax: 43, humidity: 95, rain: 30, wind: 16));
 
     $this->artisan('gestavi:fetch-weather')->assertSuccessful();
 
@@ -146,7 +148,11 @@ it('signale canicule, humidité, vent et pluie d\'après les seuils de la phase,
 
     expect($kinds)->toContain('heat', 'humidity', 'wind', 'rain')
         ->and(collect($anomalies)->firstWhere('kind', 'heat')['critical'])->toBeTrue()
-        ->and(collect($anomalies)->firstWhere('kind', 'heat')['message'])->toContain('Canicule', '41 °C', 'seuil 30 °C');
+        ->and(collect($anomalies)->firstWhere('kind', 'heat')['message'])->toContain('Canicule', '43 °C', 'seuil 30 °C');
+
+    // Une journée tropicale ordinaire (37 °C, 85 %) ne déclenche rien face à un confort intérieur de 30 °C / 60 %
+    $ordinary = WeatherForecast::query()->create(['organisation_id' => $this->organisation->id, 'farm_id' => $this->farm->id, 'forecast_date' => now()->addDays(10)->toDateString(), 'temp_max' => 37, 'temp_min' => 24, 'humidity' => 85]);
+    expect($this->service->evaluate($ordinary, 30.0, 20.0, 60.0, 'Ponte'))->toBe([]);
 
     Notification::assertSentTo($this->owner, OrganisationAlertNotification::class, fn (OrganisationAlertNotification $n): bool => $n->alertKey === 'weather_critical'
         && $n->status === 'danger'

@@ -23,6 +23,23 @@ class WeatherService
     /** Jours de prévision comparés aux seuils des phases. */
     public const ALERT_HORIZON_DAYS = 3;
 
+    /**
+     * Les seuils des phases de production décrivent le confort À L'INTÉRIEUR du bâtiment (ils
+     * seront alimentés par les capteurs). La prévision, elle, est EXTÉRIEURE : sous les
+     * tropiques elle dépasse ce confort presque chaque jour. On n'alerte donc qu'au-delà d'une
+     * marge, signe d'une journée vraiment anormale pour la région.
+     */
+    public const HEAT_MARGIN_WARNING = 8.0;
+
+    public const HEAT_MARGIN_CRITICAL = 12.0;
+
+    public const COLD_MARGIN_WARNING = 5.0;
+
+    public const COLD_MARGIN_CRITICAL = 10.0;
+
+    /** Points d'humidité au-dessus du maximum de la phase (80 % extérieurs sont la norme en saison des pluies). */
+    public const HUMIDITY_MARGIN = 30.0;
+
     /** Vent fort : 13,9 m/s = 50 km/h. */
     public const WIND_ALERT_MS = 13.9;
 
@@ -174,10 +191,10 @@ class WeatherService
         if ($forecast->temp_max !== null && $maxTemp !== null) {
             $gap = (float) $forecast->temp_max - $maxTemp;
 
-            if ($gap >= 5) {
+            if ($gap >= self::HEAT_MARGIN_WARNING) {
                 $found[] = [
                     'kind' => 'heat',
-                    'critical' => $gap >= 10,
+                    'critical' => $gap >= self::HEAT_MARGIN_CRITICAL,
                     'message' => sprintf('Canicule le %s : %s °C prévus, seuil %s °C%s', $date, self::n($forecast->temp_max), self::n($maxTemp), $phase),
                 ];
             }
@@ -186,16 +203,16 @@ class WeatherService
         if ($forecast->temp_min !== null && $minTemp !== null) {
             $gap = $minTemp - (float) $forecast->temp_min;
 
-            if ($gap >= 5) {
+            if ($gap >= self::COLD_MARGIN_WARNING) {
                 $found[] = [
                     'kind' => 'cold',
-                    'critical' => $gap >= 10,
+                    'critical' => $gap >= self::COLD_MARGIN_CRITICAL,
                     'message' => sprintf('Froid le %s : %s °C prévus, seuil %s °C%s', $date, self::n($forecast->temp_min), self::n($minTemp), $phase),
                 ];
             }
         }
 
-        if ($forecast->humidity !== null && $maxHumidity !== null && (float) $forecast->humidity - $maxHumidity >= 20) {
+        if ($forecast->humidity !== null && $maxHumidity !== null && (float) $forecast->humidity - $maxHumidity >= self::HUMIDITY_MARGIN) {
             $found[] = [
                 'kind' => 'humidity',
                 'critical' => false,
