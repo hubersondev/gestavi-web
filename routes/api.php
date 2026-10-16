@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\ProductController;
 use App\Http\Controllers\Api\V1\SaleController;
 use App\Http\Controllers\Api\V1\StockController;
 use App\Http\Controllers\Api\V1\VaccinationController;
+use App\Http\Controllers\Api\V1\WeatherController;
 use App\Http\Controllers\Webhooks\MobileMoneyWebhookController;
 use Illuminate\Support\Facades\Route;
 
@@ -38,6 +39,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             ->name('organisations.')
             ->group(function (): void {
                 Route::get('/farms', [FarmController::class, 'index'])->name('farms.index');
+                Route::get('/farms/{farm}/weather', [WeatherController::class, 'show'])->name('farms.weather');
 
                 Route::get('/flocks', [FlockController::class, 'index'])->name('flocks.index');
                 Route::get('/flocks/{flock}', [FlockController::class, 'show'])->name('flocks.show');

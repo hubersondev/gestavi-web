@@ -69,6 +69,11 @@ class Farm extends Model
         return $this->belongsTo(ChickenType::class);
     }
 
+    public function weatherForecasts(): HasMany
+    {
+        return $this->hasMany(WeatherForecast::class);
+    }
+
     public function buildings(): HasMany
     {
         return $this->hasMany(Building::class);

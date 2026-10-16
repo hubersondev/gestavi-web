@@ -15,8 +15,8 @@ class NotificationPreference extends Model
 {
     protected $fillable = [
         'user_id',
-        'email_daily_report', 'email_alerts', 'email_stock', 'email_vaccinations', 'email_payments',
-        'app_enabled', 'app_alerts', 'app_stock', 'app_payments',
+        'email_daily_report', 'email_alerts', 'email_stock', 'email_vaccinations', 'email_weather', 'email_payments',
+        'app_enabled', 'app_alerts', 'app_stock', 'app_weather', 'app_payments',
         'sms_critical_alerts', 'sms_payments',
     ];
 
@@ -26,10 +26,12 @@ class NotificationPreference extends Model
         'email_alerts' => true,
         'email_stock' => true,
         'email_vaccinations' => true,
+        'email_weather' => true,
         'email_payments' => true,
         'app_enabled' => true,
         'app_alerts' => true,
         'app_stock' => true,
+        'app_weather' => true,
         'app_payments' => false,
         'sms_critical_alerts' => true,
         'sms_payments' => false,
@@ -37,8 +39,8 @@ class NotificationPreference extends Model
 
     /** Champs du formulaire, dans l'ordre de la page. */
     public const TOGGLES = [
-        'email_daily_report', 'email_alerts', 'email_stock', 'email_vaccinations', 'email_payments',
-        'app_enabled', 'app_alerts', 'app_stock', 'app_payments',
+        'email_daily_report', 'email_alerts', 'email_stock', 'email_vaccinations', 'email_weather', 'email_payments',
+        'app_enabled', 'app_alerts', 'app_stock', 'app_weather', 'app_payments',
         'sms_critical_alerts', 'sms_payments',
     ];
 
@@ -60,6 +62,7 @@ class NotificationPreference extends Model
             NotificationCategory::Alerts => (bool) $this->email_alerts,
             NotificationCategory::Stock => (bool) $this->email_stock,
             NotificationCategory::Vaccinations => (bool) $this->email_vaccinations,
+            NotificationCategory::Weather => (bool) $this->email_weather,
             NotificationCategory::Payments => (bool) $this->email_payments,
         };
     }
@@ -82,6 +85,7 @@ class NotificationPreference extends Model
             NotificationCategory::DailyReport => false,
             NotificationCategory::Alerts, NotificationCategory::Vaccinations => (bool) $this->app_alerts,
             NotificationCategory::Stock => (bool) $this->app_stock,
+            NotificationCategory::Weather => (bool) $this->app_weather,
             NotificationCategory::Payments => (bool) $this->app_payments,
         };
     }
@@ -95,6 +99,7 @@ class NotificationPreference extends Model
         return match ($category) {
             null, NotificationCategory::DailyReport => false,
             NotificationCategory::Payments => (bool) $this->sms_payments,
+            // Météo : seules les conditions critiques (canicule ou froid extrêmes) méritent un SMS
             default => $critical && (bool) $this->sms_critical_alerts,
         };
     }

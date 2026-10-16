@@ -24,6 +24,11 @@ Schedule::command('gestavi:expire-stock-lots')
     ->withoutOverlapping();
 
 // Notifie les admins des lots qui vont périmer sous 7 jours.
+Schedule::command('gestavi:fetch-weather')
+    ->everyThreeHours()
+    ->runInBackground()
+    ->withoutOverlapping();
+
 Schedule::command('gestavi:forecast')
     ->dailyAt('05:30')
     ->runInBackground()

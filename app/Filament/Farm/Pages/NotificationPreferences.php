@@ -75,6 +75,9 @@ class NotificationPreferences extends Page
                         Toggle::make('email_vaccinations')
                             ->label('Rappels vaccination')
                             ->helperText('Vaccinations en retard ou à administrer.'),
+                        Toggle::make('email_weather')
+                            ->label('Alertes météo')
+                            ->helperText('Canicule, froid, humidité, vent fort ou fortes pluies prévus sur vos fermes.'),
                         Toggle::make('email_payments')
                             ->label('Paiements reçus')
                             ->helperText('Confirmation des encaissements clients et factures échues.'),
@@ -95,6 +98,10 @@ class NotificationPreferences extends Page
                         Toggle::make('app_stock')
                             ->label('Alertes stock')
                             ->helperText('Stock bas et lots bientôt périmés.')
+                            ->visible(fn (Get $get): bool => (bool) $get('app_enabled')),
+                        Toggle::make('app_weather')
+                            ->label('Alertes météo')
+                            ->helperText('Conditions à risque prévues pour vos bandes.')
                             ->visible(fn (Get $get): bool => (bool) $get('app_enabled')),
                         Toggle::make('app_payments')
                             ->label('Paiements reçus')

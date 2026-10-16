@@ -12,6 +12,7 @@ enum NotificationCategory: string
     case Stock = 'stock';
     case Vaccinations = 'vaccinations';
     case Payments = 'payments';
+    case Weather = 'weather';
 
     /**
      * Sujet d'une alerte d'après sa clé ; null = message de service (export demandé…) qui passe
@@ -25,6 +26,7 @@ enum NotificationCategory: string
             'low_stock', 'expiring_stock_lots', 'expired_stock_lots' => self::Stock,
             'overdue_vaccinations', 'upcoming_vaccinations' => self::Vaccinations,
             'payment_received' => self::Payments,
+            'weather_warning', 'weather_critical' => self::Weather,
             'report_export' => null,
             default => self::Alerts,
         };
@@ -38,6 +40,7 @@ enum NotificationCategory: string
             self::Stock => 'Alertes stock',
             self::Vaccinations => 'Rappels vaccination',
             self::Payments => 'Paiements reçus',
+            self::Weather => 'Alertes météo',
         };
     }
 }

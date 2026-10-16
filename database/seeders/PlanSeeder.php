@@ -50,6 +50,7 @@ class PlanSeeder extends Seeder
             PlanFeature::ExcelExports->value,
             // Prévisions à 7 jours par bande (page Production → Prévisions)
             PlanFeature::AiPredictions->value,
+            PlanFeature::WeatherIntegration->value,
         ]);
 
         $enterpriseFeatures = collect(PlanFeature::cases())
