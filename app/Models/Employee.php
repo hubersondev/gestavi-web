@@ -7,6 +7,8 @@ use App\Enums\Gender;
 use App\Enums\MaritalStatus;
 use App\Models\Concerns\BelongsToOrganisation;
 use App\Models\Concerns\LogsAuditTrail;
+use App\Services\NumberSequence;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -18,6 +20,16 @@ class Employee extends Model
 {
     use BelongsToOrganisation, HasFactory, LogsAuditTrail;
     use SoftDeletes;
+
+    /** Départements proposés dans les formulaires et les rapports. */
+    public const DEPARTMENTS = [
+        'production' => 'Production',
+        'maintenance' => 'Maintenance',
+        'administration' => 'Administration',
+        'securite' => 'Sécurité',
+        'logistique' => 'Logistique',
+        'vente' => 'Vente',
+    ];
 
     protected $fillable = [
         'organisation_id', 'farm_id', 'user_id',
@@ -196,7 +208,7 @@ class Employee extends Model
 
     // ─── ACTIONS ─────────────────────────────────────────────────────────────
 
-    public function terminate(string $reason, ?\Carbon\Carbon $date = null): void
+    public function terminate(string $reason, ?Carbon $date = null): void
     {
         $this->update([
             'status' => EmployeeStatus::Terminated,
@@ -218,7 +230,7 @@ class Employee extends Model
     public static function generateNumber(int $organisationId): string
     {
         $year = now()->year;
-        $sequence = app(\App\Services\NumberSequence::class);
+        $sequence = app(NumberSequence::class);
 
         return $sequence->nextFormatted(
             prefix: 'EMP-',

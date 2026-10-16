@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Filament\Farm\Pages\Reports\AccountingReportPage;
 use App\Filament\Farm\Pages\Reports\CommercialReportPage;
 use App\Filament\Farm\Pages\Reports\FinancialReportPage;
+use App\Filament\Farm\Pages\Reports\HrReportPage;
 use App\Filament\Farm\Pages\Reports\ProductionReportPage;
 use App\Filament\Farm\Pages\Reports\StockReportPage;
 use App\Models\Organisation;
@@ -32,12 +33,20 @@ class GenerateReportExport implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    /**
+     * Clé d'export → page de rapport, ou [page, méthode XLSX] quand l'export n'est pas
+     * le classeur standard de la page (ex. détail de la paie depuis le rapport RH).
+     *
+     * @var array<string, class-string|array{0: class-string, 1: string}>
+     */
     public const REPORTS = [
         'production' => ProductionReportPage::class,
         'financier' => FinancialReportPage::class,
         'commercial' => CommercialReportPage::class,
         'stocks' => StockReportPage::class,
         'comptabilite' => AccountingReportPage::class,
+        'rh' => HrReportPage::class,
+        'paie' => [HrReportPage::class, 'buildPayrollXlsx'],
     ];
 
     public int $tries = 2;
@@ -62,9 +71,34 @@ class GenerateReportExport implements ShouldQueue
             : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
     }
 
+    /**
+     * @return class-string
+     */
+    public static function pageClass(string $report): string
+    {
+        $definition = self::REPORTS[$report] ?? throw new \InvalidArgumentException("Rapport inconnu : {$report}");
+
+        return is_array($definition) ? $definition[0] : $definition;
+    }
+
+    /**
+     * Génère le contenu demandé à partir d'une page déjà munie de ses filtres.
+     */
+    public static function build(object $page, string $report, string $format): string
+    {
+        if ($format === 'pdf') {
+            return $page->buildPdf();
+        }
+
+        $definition = self::REPORTS[$report] ?? throw new \InvalidArgumentException("Rapport inconnu : {$report}");
+        $method = is_array($definition) ? $definition[1] : 'buildXlsx';
+
+        return $page->{$method}();
+    }
+
     public function handle(): string
     {
-        $pageClass = self::REPORTS[$this->report] ?? throw new \InvalidArgumentException("Rapport inconnu : {$this->report}");
+        $pageClass = self::pageClass($this->report);
 
         $user = User::query()->findOrFail($this->userId);
         $organisation = Organisation::query()->findOrFail($this->organisationId);
@@ -77,7 +111,7 @@ class GenerateReportExport implements ShouldQueue
         $page = app($pageClass);
         $page->filters = $this->filters;
 
-        $content = $this->format === 'pdf' ? $page->buildPdf() : $page->buildXlsx();
+        $content = self::build($page, $this->report, $this->format);
 
         $path = sprintf('exports/%d/%s.%s', $organisation->id, Str::uuid(), $this->format);
         Storage::disk('local')->put($path, $content);

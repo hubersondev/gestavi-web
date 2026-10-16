@@ -5,6 +5,7 @@ namespace App\Filament\Farm\Resources\Employees\Schemas;
 use App\Enums\EmployeeStatus;
 use App\Enums\Gender;
 use App\Enums\MaritalStatus;
+use App\Models\Employee;
 use App\Models\Farm;
 use App\Services\CurrentFarm;
 use Filament\Facades\Filament;
@@ -198,14 +199,7 @@ class EmployeeForm
 
                                         Select::make('department')
                                             ->label('Département')
-                                            ->options([
-                                                'production' => 'Production',
-                                                'maintenance' => 'Maintenance',
-                                                'administration' => 'Administration',
-                                                'securite' => 'Sécurité',
-                                                'logistique' => 'Logistique',
-                                                'vente' => 'Vente',
-                                            ])
+                                            ->options(Employee::DEPARTMENTS)
                                             ->native(false),
 
                                         Select::make('status')

@@ -44,12 +44,17 @@ trait ExportsReport
         return $this->dispatchOrStream('pdf');
     }
 
-    protected function dispatchOrStream(string $format): ?StreamedResponse
+    /**
+     * `$report` permet à une page de proposer un export secondaire (ex. « paie » depuis le
+     * rapport RH) ; par défaut, la clé de la page.
+     */
+    protected function dispatchOrStream(string $format, ?string $report = null): ?StreamedResponse
     {
-        $filename = sprintf('rapport-%s-%s.%s', $this->reportKey(), $this->normalizedFilters()['date_from'], $format);
+        $report ??= $this->reportKey();
+        $filename = sprintf('rapport-%s-%s.%s', $report, $this->normalizedFilters()['date_from'], $format);
 
         if (config('queue.default') === 'sync') {
-            $content = $format === 'pdf' ? $this->buildPdf() : $this->buildXlsx();
+            $content = GenerateReportExport::build($this, $report, $format);
 
             return response()->streamDownload(
                 fn () => print ($content),
@@ -59,7 +64,7 @@ trait ExportsReport
         }
 
         GenerateReportExport::dispatch(
-            report: $this->reportKey(),
+            report: $report,
             format: $format,
             filters: $this->normalizedFilters(),
             organisationId: (int) Filament::getTenant()?->getKey(),

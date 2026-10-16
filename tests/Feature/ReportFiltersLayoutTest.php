@@ -5,6 +5,7 @@ use App\Filament\Farm\Pages\Reports\AccountingReportPage;
 use App\Filament\Farm\Pages\Reports\CommercialReportPage;
 use App\Filament\Farm\Pages\Reports\FinancialReportPage;
 use App\Filament\Farm\Pages\Reports\FlockCostReportPage;
+use App\Filament\Farm\Pages\Reports\HrReportPage;
 use App\Filament\Farm\Pages\Reports\ProductionReportPage;
 use App\Filament\Farm\Pages\Reports\StockReportPage;
 use App\Models\Organisation;
@@ -41,4 +42,5 @@ it('dispose les filtres de chaque rapport sur une grille responsive', function (
     'stocks' => StockReportPage::class,
     'coût de revient' => FlockCostReportPage::class,
     'comptabilité' => AccountingReportPage::class,
+    'ressources humaines' => HrReportPage::class,
 ]);
