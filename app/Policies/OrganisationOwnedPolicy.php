@@ -2,7 +2,9 @@
 
 namespace App\Policies;
 
+use App\Models\Organisation;
 use App\Models\User;
+use Filament\Facades\Filament;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -35,27 +37,37 @@ abstract class OrganisationOwnedPolicy
 
     public function create(User $user): bool
     {
-        return true;
+        return $this->tenantAllowsWrites();
     }
 
     public function update(User $user, Model $record): bool
     {
-        return $this->belongsToUserOrganisation($user, $record);
+        return $this->tenantAllowsWrites() && $this->belongsToUserOrganisation($user, $record);
     }
 
     public function delete(User $user, Model $record): bool
     {
-        return $this->belongsToUserOrganisation($user, $record);
+        return $this->tenantAllowsWrites() && $this->belongsToUserOrganisation($user, $record);
     }
 
     public function restore(User $user, Model $record): bool
     {
-        return $this->belongsToUserOrganisation($user, $record);
+        return $this->tenantAllowsWrites() && $this->belongsToUserOrganisation($user, $record);
     }
 
     public function forceDelete(User $user, Model $record): bool
     {
-        return $this->belongsToUserOrganisation($user, $record);
+        return $this->tenantAllowsWrites() && $this->belongsToUserOrganisation($user, $record);
+    }
+
+    /**
+     * Dans l'espace d'une organisation en lecture seule ou suspendue, aucune écriture.
+     */
+    protected function tenantAllowsWrites(): bool
+    {
+        $tenant = Filament::getTenant();
+
+        return ! ($tenant instanceof Organisation) || $tenant->allowsWrites();
     }
 
     protected function belongsToUserOrganisation(User $user, Model $record): bool

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Farm\Concerns;
 
+use App\Models\Organisation;
 use Filament\Facades\Filament;
 use Illuminate\Database\Eloquent\Model;
 
@@ -74,6 +75,11 @@ trait ChecksOrganisationPermissions
         $tenant = Filament::getTenant();
 
         if (! $user || ! $tenant) {
+            return false;
+        }
+
+        // Organisation en lecture seule : seules les consultations restent permises
+        if ($action !== 'view' && $tenant instanceof Organisation && ! $tenant->allowsWrites()) {
             return false;
         }
 

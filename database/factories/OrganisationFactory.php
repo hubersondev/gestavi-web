@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\OrganisationStatus;
 use App\Models\City;
 use App\Models\Country;
 use App\Models\Organisation;
@@ -9,7 +10,7 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Organisation>
+ * @extends Factory<Organisation>
  */
 class OrganisationFactory extends Factory
 {
@@ -35,6 +36,16 @@ class OrganisationFactory extends Factory
             'description' => fake()->sentence(),
             'is_active' => true,
         ];
+    }
+
+    public function readOnly(string $reason = 'Impayé en cours de régularisation'): static
+    {
+        return $this->state(fn (): array => ['status' => OrganisationStatus::ReadOnly, 'status_reason' => $reason]);
+    }
+
+    public function suspended(string $reason = 'Compte suspendu par la plateforme'): static
+    {
+        return $this->state(fn (): array => ['status' => OrganisationStatus::Suspended, 'is_active' => false, 'status_reason' => $reason]);
     }
 
     public function inactive(): static

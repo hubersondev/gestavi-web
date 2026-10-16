@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\MemberStatus;
+use App\Enums\OrganisationStatus;
 use App\Enums\PlanFeature;
 use Filament\Models\Contracts\HasCurrentTenantLabel;
 use Illuminate\Database\Eloquent\Builder;
@@ -325,6 +326,9 @@ class Organisation extends Model implements HasCurrentTenantLabel
         'logo_url',
         'description',
         'is_active',
+        'status',
+        'status_reason',
+        'status_changed_at',
         'plan_id',
     ];
 
@@ -332,11 +336,32 @@ class Organisation extends Model implements HasCurrentTenantLabel
     {
         return [
             'is_active' => 'boolean',
+            'status' => OrganisationStatus::class,
+            'status_changed_at' => 'datetime',
         ];
     }
 
     protected static function booted(): void
     {
+        // Statut à trois valeurs et drapeau is_active toujours cohérents : suspendue ⇔ inactive
+        static::saving(function (Organisation $organisation): void {
+            if ($organisation->status === null) {
+                $organisation->status = $organisation->is_active === false ? OrganisationStatus::Suspended : OrganisationStatus::Active;
+            }
+
+            if ($organisation->isDirty('status')) {
+                $organisation->is_active = $organisation->status !== OrganisationStatus::Suspended;
+                $organisation->status_changed_at = now();
+
+                if ($organisation->status === OrganisationStatus::Active) {
+                    $organisation->status_reason = null;
+                }
+            } elseif ($organisation->isDirty('is_active')) {
+                $organisation->status = $organisation->is_active ? OrganisationStatus::Active : OrganisationStatus::Suspended;
+                $organisation->status_changed_at = now();
+            }
+        });
+
         static::creating(function (Organisation $organisation) {
             if (empty($organisation->slug)) {
                 $organisation->slug = Str::slug($organisation->name);
@@ -368,6 +393,38 @@ class Organisation extends Model implements HasCurrentTenantLabel
     public function getCurrentTenantLabel(): string
     {
         return 'Organisation active';
+    }
+
+    // ──────────────────────────────────────────────
+    //  Statut (plateforme)
+    // ──────────────────────────────────────────────
+
+    public function isReadOnly(): bool
+    {
+        return $this->status === OrganisationStatus::ReadOnly;
+    }
+
+    public function isSuspended(): bool
+    {
+        return $this->status === OrganisationStatus::Suspended;
+    }
+
+    /** Les membres peuvent-ils créer, modifier ou supprimer des données ? */
+    public function allowsWrites(): bool
+    {
+        return ($this->status ?? OrganisationStatus::Active)->allowsWrites();
+    }
+
+    /**
+     * Change le statut (administration de la plateforme) avec son motif ; `is_active`,
+     * la date du changement et l'effacement du motif à la réactivation suivent.
+     */
+    public function setStatus(OrganisationStatus $status, ?string $reason = null): void
+    {
+        $this->forceFill([
+            'status' => $status,
+            'status_reason' => $status === OrganisationStatus::Active ? null : $reason,
+        ])->save();
     }
 
     // ──────────────────────────────────────────────

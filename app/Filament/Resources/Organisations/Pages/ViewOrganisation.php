@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Organisations\Pages;
 
+use App\Filament\Resources\Organisations\Actions\OrganisationStatusActions;
 use App\Filament\Resources\Organisations\OrganisationResource;
 use Filament\Actions\EditAction;
 use Filament\Resources\Pages\ViewRecord;
@@ -13,6 +14,7 @@ class ViewOrganisation extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            ...OrganisationStatusActions::make(),
             EditAction::make(),
         ];
     }

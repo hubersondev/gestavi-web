@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Services\CurrentFiscalYear;
+use App\Services\OrganisationWriteGuard;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -32,6 +33,9 @@ class AppServiceProvider extends ServiceProvider
         // API mobile : 120 requêtes par minute par jeton (ou adresse IP), 5 demandes de jeton par minute et par adresse
         RateLimiter::for('api', fn (Request $request): Limit => Limit::perMinute(120)->by($request->user()?->getAuthIdentifier() ?: $request->ip()));
         RateLimiter::for('api-token', fn (Request $request): Limit => Limit::perMinute(5)->by($request->ip()));
+
+        // Organisation en lecture seule ou suspendue : aucune écriture dans ses données depuis son espace
+        OrganisationWriteGuard::register();
 
         $this->configureDefaults();
     }

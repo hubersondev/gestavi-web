@@ -35,7 +35,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
         Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
 
-        Route::middleware('offline.member')
+        Route::middleware(['offline.member', 'organisation.status'])
             ->prefix('organisations/{organisation:slug}')
             ->name('organisations.')
             ->group(function (): void {

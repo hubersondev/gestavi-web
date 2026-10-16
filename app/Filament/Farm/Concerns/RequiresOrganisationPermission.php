@@ -2,6 +2,7 @@
 
 namespace App\Filament\Farm\Concerns;
 
+use App\Models\Organisation;
 use Filament\Facades\Filament;
 
 /**
@@ -35,6 +36,11 @@ trait RequiresOrganisationPermission
         $tenant = Filament::getTenant();
 
         if (! $user || ! $tenant) {
+            return false;
+        }
+
+        // Organisation en lecture seule : une page ou un widget d'écriture (import, saisie) est masqué
+        if (! str_ends_with($permission, '.view') && $tenant instanceof Organisation && ! $tenant->allowsWrites()) {
             return false;
         }
 

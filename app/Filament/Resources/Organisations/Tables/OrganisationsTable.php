@@ -2,12 +2,13 @@
 
 namespace App\Filament\Resources\Organisations\Tables;
 
+use App\Enums\OrganisationStatus;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
-use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 
 class OrganisationsTable
@@ -57,9 +58,10 @@ class OrganisationsTable
                 TextColumn::make('city.name')
                     ->label('Ville')
                     ->searchable(),
-                IconColumn::make('is_active')
-                    ->label('statut')
-                    ->boolean(),
+                TextColumn::make('status')
+                    ->label('Statut')
+                    ->badge()
+                    ->sortable(),
                 TextColumn::make('created_at')
                     ->label('Date de création')
                     ->dateTime()
@@ -71,7 +73,10 @@ class OrganisationsTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                //
+                SelectFilter::make('status')
+                    ->label('Statut')
+                    ->options(OrganisationStatus::class)
+                    ->multiple(),
             ])
             ->recordActions([
                 ViewAction::make(),

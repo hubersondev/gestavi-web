@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\Organisations\Schemas;
 
-use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Schema;
 
@@ -48,9 +47,17 @@ class OrganisationInfolist
                 TextEntry::make('description')
                     ->placeholder('-')
                     ->columnSpanFull(),
-                IconEntry::make('is_active')
-                    ->label('Actif')
-                    ->boolean(),
+                TextEntry::make('status')
+                    ->label('Statut')
+                    ->badge(),
+                TextEntry::make('status_changed_at')
+                    ->label('Statut depuis le')
+                    ->dateTime('d/m/Y H:i')
+                    ->placeholder('—'),
+                TextEntry::make('status_reason')
+                    ->label('Motif du statut')
+                    ->placeholder('—')
+                    ->columnSpanFull(),
                 TextEntry::make('created_at')
                     ->label('Date de création')
                     ->dateTime()

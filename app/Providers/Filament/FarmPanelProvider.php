@@ -5,6 +5,7 @@ namespace App\Providers\Filament;
 use App\Filament\Farm\Pages\Appearance;
 use App\Filament\Farm\Pages\NotificationPreferences;
 use App\Filament\Farm\Pages\Tenancy\EditOrganisationProfile;
+use App\Http\Middleware\EnsureOrganisationStatus;
 use App\Http\Middleware\EnsurePlanFeature;
 use App\Models\Organisation;
 use App\Services\UserAppearance;
@@ -97,6 +98,7 @@ class FarmPanelProvider extends PanelProvider
                 DispatchServingFilamentEvent::class,
             ])
             ->tenantMiddleware([
+                EnsureOrganisationStatus::class,
                 EnsurePlanFeature::class,
             ], isPersistent: true)
             ->authMiddleware([
@@ -120,6 +122,10 @@ class FarmPanelProvider extends PanelProvider
             ->renderHook(
                 PanelsRenderHook::HEAD_END,
                 fn (): View => view('offline.pwa-head'),
+            )
+            ->renderHook(
+                PanelsRenderHook::CONTENT_START,
+                fn (): View => view('partials.organisation-status-banner'),
             )
             ->renderHook(
                 PanelsRenderHook::CONTENT_START,

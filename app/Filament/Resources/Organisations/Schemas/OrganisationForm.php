@@ -2,12 +2,12 @@
 
 namespace App\Filament\Resources\Organisations\Schemas;
 
+use App\Enums\OrganisationStatus;
 use App\Models\City;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Builder;
@@ -75,9 +75,19 @@ class OrganisationForm
                     ->placeholder('Aucun plan'),
                 Textarea::make('description')
                     ->columnSpanFull(),
-                Toggle::make('is_active')
-                    ->label('Actif')
-                    ->required(),
+                Select::make('status')
+                    ->label('Statut')
+                    ->options(OrganisationStatus::class)
+                    ->default(OrganisationStatus::Active->value)
+                    ->required()
+                    ->live()
+                    ->native(false)
+                    ->helperText(fn ($state): ?string => ($state instanceof OrganisationStatus ? $state : OrganisationStatus::tryFrom((string) $state))?->getDescription()),
+                Textarea::make('status_reason')
+                    ->label('Motif (affiché aux membres)')
+                    ->rows(2)
+                    ->visible(fn ($get): bool => ($get('status') instanceof OrganisationStatus ? $get('status')->value : $get('status')) !== OrganisationStatus::Active->value)
+                    ->columnSpanFull(),
             ]);
     }
 }

@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\EnsureApiPlanFeature;
 use App\Http\Middleware\EnsureOfflineMember;
+use App\Http\Middleware\EnsureOrganisationWritable;
 use App\Http\Middleware\ForceJsonResponse;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -23,6 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'plan.feature' => EnsureApiPlanFeature::class,
             'offline.member' => EnsureOfflineMember::class,
+            'organisation.status' => EnsureOrganisationWritable::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
