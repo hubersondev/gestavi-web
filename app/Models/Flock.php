@@ -3,8 +3,13 @@
 namespace App\Models;
 
 use App\Enums\FlockStatus;
+use App\Enums\ProductionKind;
+use App\Enums\SaleStatus;
+use App\Enums\VaccinationStatus;
 use App\Models\Concerns\BelongsToOrganisation;
 use App\Models\Concerns\LogsAuditTrail;
+use Carbon\Carbon;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -202,7 +207,7 @@ class Flock extends Model
         return (int) SaleItem::query()
             ->where('flock_id', $this->id)
             ->where('is_live_birds', true)
-            ->whereHas('sale', fn (Builder $q) => $q->where('status', '!=', \App\Enums\SaleStatus::Cancelled->value))
+            ->whereHas('sale', fn (Builder $q) => $q->where('status', '!=', SaleStatus::Cancelled->value))
             ->sum('quantity');
     }
 
@@ -223,12 +228,21 @@ class Flock extends Model
     }
 
     /**
+     * Sujets disparus par vol (somme des relevés quotidiens) : décomptés de l'effectif,
+     * jamais du taux de mortalité.
+     */
+    public function getTotalThefts(): int
+    {
+        return (int) $this->dailyRecords()->sum('thefts');
+    }
+
+    /**
      * Sujets abattus (cumul des abattages enregistrés).
      */
     public function getSlaughteredCount(mixed $upToDate = null): int
     {
         return (int) $this->slaughters()
-            ->when($upToDate !== null, fn (Builder $q) => $q->whereDate('slaughter_date', '<=', \Carbon\Carbon::parse($upToDate)->toDateString()))
+            ->when($upToDate !== null, fn (Builder $q) => $q->whereDate('slaughter_date', '<=', Carbon::parse($upToDate)->toDateString()))
             ->sum('birds_count');
     }
 
@@ -240,7 +254,7 @@ class Flock extends Model
     {
         $sold = $this->getSoldCount();
         $slaughtered = $this->getSlaughteredCount();
-        $current = max(0, (int) $this->quantity_started - $this->getTotalMortality() - $this->getTotalCulls() - $sold - $slaughtered);
+        $current = max(0, (int) $this->quantity_started - $this->getTotalMortality() - $this->getTotalCulls() - $this->getTotalThefts() - $sold - $slaughtered);
 
         static::withoutEvents(fn () => static::query()
             ->whereKey($this->id)
@@ -257,18 +271,18 @@ class Flock extends Model
      */
     public function birdsPresentOn(mixed $date): int
     {
-        $date = \Carbon\Carbon::parse($date)->toDateString();
+        $date = Carbon::parse($date)->toDateString();
 
         $losses = (int) $this->dailyRecords()
             ->whereDate('record_date', '<=', $date)
-            ->selectRaw('COALESCE(SUM(mortality + culls), 0) AS losses')
+            ->selectRaw('COALESCE(SUM(mortality + culls + thefts), 0) AS losses')
             ->value('losses');
 
         $sold = (int) SaleItem::query()
             ->where('flock_id', $this->id)
             ->where('is_live_birds', true)
             ->whereHas('sale', fn (Builder $q) => $q
-                ->where('status', '!=', \App\Enums\SaleStatus::Cancelled->value)
+                ->where('status', '!=', SaleStatus::Cancelled->value)
                 ->whereDate('sale_date', '<=', $date))
             ->sum('quantity');
 
@@ -312,7 +326,7 @@ class Flock extends Model
      */
     public function getLossCount(): int
     {
-        return $this->getTotalMortality() + $this->getTotalCulls();
+        return $this->getTotalMortality() + $this->getTotalCulls() + $this->getTotalThefts();
     }
 
     // ===== DÉLAI D'ATTENTE =====
@@ -320,14 +334,14 @@ class Flock extends Model
     /**
      * Date de fin du délai d'attente le plus lointain parmi les traitements administrés.
      */
-    public function getWithdrawalUntil(): ?\Carbon\CarbonInterface
+    public function getWithdrawalUntil(): ?CarbonInterface
     {
         $date = $this->vaccinations()
-            ->where('status', \App\Enums\VaccinationStatus::Done->value)
+            ->where('status', VaccinationStatus::Done->value)
             ->whereNotNull('withdrawal_until')
             ->max('withdrawal_until');
 
-        return $date ? \Carbon\Carbon::parse($date) : null;
+        return $date ? Carbon::parse($date) : null;
     }
 
     /**
@@ -341,7 +355,7 @@ class Flock extends Model
             return false;
         }
 
-        $reference = $onDate ? \Carbon\Carbon::parse($onDate) : now();
+        $reference = $onDate ? Carbon::parse($onDate) : now();
 
         return $until->endOfDay()->greaterThanOrEqualTo($reference->startOfDay());
     }
@@ -349,9 +363,9 @@ class Flock extends Model
     /**
      * Orientation zootechnique du type de volaille (chair, pondeuse, reproducteur, mixte).
      */
-    public function productionKind(): \App\Enums\ProductionKind
+    public function productionKind(): ProductionKind
     {
-        return $this->chickenType?->productionKind() ?? \App\Enums\ProductionKind::Mixed;
+        return $this->chickenType?->productionKind() ?? ProductionKind::Mixed;
     }
 
     /**

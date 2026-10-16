@@ -23,6 +23,7 @@ use App\Models\Sale;
 use App\Models\Transaction;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -354,6 +355,8 @@ class AccountingService
             TransactionCategory::TransferIn, TransactionCategory::TransferOut => [$this->mapper->codeFor('transfer.internal', $organisationId), null],
             TransactionCategory::Opening => [$this->mapper->codeFor('treasury.opening', $organisationId), null],
             TransactionCategory::Adjustment => [$this->mapper->codeFor('treasury.adjustment', $organisationId), null],
+            // Vol ou perte de caisse : charge exceptionnelle, pas un simple ajustement
+            TransactionCategory::Theft => [$this->mapper->codeFor('treasury.theft', $organisationId), null],
             TransactionCategory::Refund => $transaction->type === TransactionType::Debit
                 ? [$this->mapper->codeFor('sale.customer', $organisationId), $reference instanceof Sale ? $reference->customer?->name : null]
                 : [$this->mapper->codeFor('expense.supplier', $organisationId), null],
@@ -737,9 +740,9 @@ class AccountingService
     /**
      * Balance des comptes : totaux débit/crédit et solde par compte sur une période.
      *
-     * @return \Illuminate\Support\Collection<int, object{chart_account_code: string, chart_account_label: string, debit: string, credit: string}>
+     * @return Collection<int, object{chart_account_code: string, chart_account_label: string, debit: string, credit: string}>
      */
-    public function trialBalance(int $organisationId, CarbonInterface $from, CarbonInterface $to, ?int $farmId = null): \Illuminate\Support\Collection
+    public function trialBalance(int $organisationId, CarbonInterface $from, CarbonInterface $to, ?int $farmId = null): Collection
     {
         return JournalLine::query()
             ->where('organisation_id', $organisationId)

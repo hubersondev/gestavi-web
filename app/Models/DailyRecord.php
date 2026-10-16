@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\StockMovementReason;
 use App\Models\Concerns\BelongsToOrganisation;
 use App\Models\Concerns\LogsAuditTrail;
+use App\Services\TheftAlert;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -27,6 +28,7 @@ class DailyRecord extends Model
         'mortality',
         'mortality_cause',
         'culls',
+        'thefts',
         'birds_present',
         'eggs_collected',
         'eggs_broken',
@@ -83,13 +85,13 @@ class DailyRecord extends Model
     protected static function booted(): void
     {
         static::creating(function (DailyRecord $record): void {
-            $record->assertLossesFit((int) $record->mortality + (int) $record->culls);
+            $record->assertLossesFit((int) $record->mortality + (int) $record->culls + (int) $record->thefts);
         });
 
         static::updating(function (DailyRecord $record): void {
-            if ($record->isDirty(['mortality', 'culls'])) {
-                $delta = ((int) $record->mortality + (int) $record->culls)
-                    - ((int) $record->getOriginal('mortality') + (int) $record->getOriginal('culls'));
+            if ($record->isDirty(['mortality', 'culls', 'thefts'])) {
+                $delta = ((int) $record->mortality + (int) $record->culls + (int) $record->thefts)
+                    - ((int) $record->getOriginal('mortality') + (int) $record->getOriginal('culls') + (int) $record->getOriginal('thefts'));
 
                 $record->assertLossesFit($delta);
             }
@@ -104,10 +106,12 @@ class DailyRecord extends Model
         // correction sur la même instance (wasRecentlyCreated reste vrai)
         static::created(function (DailyRecord $record): void {
             $record->syncEggStock(previousNet: 0);
+            $record->alertTheft(previousThefts: 0);
         });
 
         static::updated(function (DailyRecord $record): void {
             $record->syncEggStock();
+            $record->alertTheft(previousThefts: (int) $record->getOriginal('thefts'));
         });
 
         static::deleted(function (DailyRecord $record): void {
@@ -115,6 +119,35 @@ class DailyRecord extends Model
             $record->refreshBirdsPresentFrom($record->record_date);
             $record->syncEggStock(deleted: true);
         });
+    }
+
+    /**
+     * Des sujets disparus (vol) déclarés sur ce relevé alertent aussitôt les responsables.
+     */
+    public function alertTheft(int $previousThefts): void
+    {
+        $added = (int) $this->thefts - $previousThefts;
+
+        if ($added <= 0) {
+            return;
+        }
+
+        $flock = $this->flock;
+        $organisationId = (int) ($this->organisation_id ?? $flock?->organisation_id ?? 0);
+
+        if ($organisationId === 0) {
+            return;
+        }
+
+        TheftAlert::dispatch(
+            $organisationId,
+            sprintf('Vol de %d sujet(s) déclaré sur la bande %s', $added, $flock?->code ?? '?'),
+            [
+                '• Relevé du '.Carbon::parse($this->record_date)->format('d/m/Y').($flock?->farm ? ' — '.$flock->farm->name : ''),
+                sprintf('• Effectif restant : %s sujets', number_format((int) ($flock?->quantity_current ?? 0), 0, ',', ' ')),
+                ...(filled($this->notes) ? ['• '.$this->notes] : []),
+            ],
+        );
     }
 
     /**
@@ -198,7 +231,7 @@ class DailyRecord extends Model
             ->where('flock_id', $flock->id)
             ->whereDate('record_date', '>=', $fromDate)
             ->orderBy('record_date')
-            ->get(['id', 'record_date', 'mortality', 'culls']);
+            ->get(['id', 'record_date', 'mortality', 'culls', 'thefts']);
 
         foreach ($records as $record) {
             static::withoutEvents(fn () => static::query()

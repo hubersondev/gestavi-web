@@ -74,6 +74,7 @@ class AccountingMapper
         'treasury.opening' => '101',
         'treasury.adjustment' => '471',
         'treasury.other' => '471',
+        'treasury.theft' => '658',
         'closing.result' => '131',
         'closing.retained_earnings' => '121',
         'closing.retained_loss' => '129',

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToOrganisation;
+use App\Services\TheftAlert;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -31,6 +32,34 @@ class EquipmentMovement extends Model
         return [
             'movement_date' => 'datetime',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::created(function (EquipmentMovement $movement): void {
+            if (! $movement->isTheft()) {
+                return;
+            }
+
+            $equipment = $movement->equipment;
+
+            if (! $equipment) {
+                return;
+            }
+
+            // Le matériel volé sort du parc (réformé) sans attendre une saisie séparée
+            $equipment->dispose();
+
+            TheftAlert::dispatch(
+                (int) ($movement->organisation_id ?? $equipment->organisation_id),
+                'Vol de matériel : '.$equipment->name,
+                [
+                    '• '.($equipment->inventory_number ? 'N° '.$equipment->inventory_number.' — ' : '').'valeur '.TheftAlert::number((float) ($equipment->current_value ?? $equipment->purchase_price ?? 0)).' XOF',
+                    '• '.($movement->fromBuilding?->name ? 'Depuis '.$movement->fromBuilding->name : 'Lieu non précisé').($movement->movement_date ? ' le '.$movement->movement_date->format('d/m/Y') : ''),
+                    ...(filled($movement->reason) ? ['• '.$movement->reason] : []),
+                ],
+            );
+        });
     }
 
     // ===== RELATIONS =====
@@ -104,6 +133,11 @@ class EquipmentMovement extends Model
         return $this->movement_type === 'return';
     }
 
+    public function isTheft(): bool
+    {
+        return $this->movement_type === 'theft';
+    }
+
     public function getTypeLabel(): string
     {
         return match ($this->movement_type) {
@@ -112,6 +146,7 @@ class EquipmentMovement extends Model
             'exit' => 'Sortie',
             'loan' => 'Prêt',
             'return' => 'Retour',
+            'theft' => 'Vol',
             default => $this->movement_type,
         };
     }
@@ -127,6 +162,7 @@ class EquipmentMovement extends Model
             'exit' => "Sortie de {$from}",
             'loan' => "Prêt depuis {$from}",
             'return' => "Retour vers {$to}",
+            'theft' => "Vol depuis {$from}",
             default => $this->movement_type,
         };
     }

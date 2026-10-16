@@ -16,6 +16,7 @@ enum TransactionCategory: string implements HasColor, HasLabel
     case Adjustment = 'adjustment';
     case Payroll = 'payroll';
     case Refund = 'refund';
+    case Theft = 'theft';
     case Other = 'other';
 
     public function getLabel(): string
@@ -30,6 +31,7 @@ enum TransactionCategory: string implements HasColor, HasLabel
             self::Adjustment => 'Ajustement',
             self::Payroll => 'Paie',
             self::Refund => 'Remboursement',
+            self::Theft => 'Vol / perte de caisse',
             self::Other => 'Autre',
         };
     }
@@ -46,6 +48,7 @@ enum TransactionCategory: string implements HasColor, HasLabel
             self::Adjustment => 'gray',
             self::Payroll => 'danger',
             self::Refund => 'info',
+            self::Theft => 'danger',
             self::Other => 'gray',
         };
     }

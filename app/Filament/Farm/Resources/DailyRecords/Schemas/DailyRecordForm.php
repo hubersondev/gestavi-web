@@ -2,11 +2,14 @@
 
 namespace App\Filament\Farm\Resources\DailyRecords\Schemas;
 
+use App\Enums\StockCategoryType;
 use App\Filament\Farm\Components\FiscalYearDatePicker;
 use App\Models\DailyRecord;
 use App\Models\Farm;
 use App\Models\Flock;
+use App\Models\Stock;
 use App\Services\CurrentFarm;
+use Carbon\Carbon;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -177,6 +180,23 @@ class DailyRecordForm
                                             ->helperText('Sujets sortis vivants du lot (tri, réforme), distincts de la mortalité')
                                             ->suffix('sujets'),
 
+                                        TextInput::make('thefts')
+                                            ->label('Disparitions / vol')
+                                            ->numeric()
+                                            ->default(0)
+                                            ->minValue(0)
+                                            ->maxValue(function (Get $get, ?DailyRecord $record): ?int {
+                                                $flock = Flock::query()->find($get('flock_id'));
+
+                                                if (! $flock) {
+                                                    return null;
+                                                }
+
+                                                return (int) $flock->quantity_current + (int) ($record?->thefts ?? 0);
+                                            })
+                                            ->helperText('Sujets volés ou disparus : retirés de l\'effectif, hors taux de mortalité ; les responsables sont alertés')
+                                            ->suffix('sujets'),
+
                                         Textarea::make('mortality_cause')
                                             ->label('Cause de mortalité')
                                             ->rows(4)
@@ -250,16 +270,16 @@ class DailyRecordForm
                                                 $tenant = Filament::getTenant();
                                                 $flock = Flock::query()->find($get('flock_id'));
 
-                                                $query = \App\Models\Stock::query()
+                                                $query = Stock::query()
                                                     ->where('organisation_id', $tenant?->getKey())
                                                     ->active()
-                                                    ->whereHas('category', fn (Builder $q) => $q->where('type', \App\Enums\StockCategoryType::Feed->value))
+                                                    ->whereHas('category', fn (Builder $q) => $q->where('type', StockCategoryType::Feed->value))
                                                     ->when($flock?->farm_id, fn (Builder $q, $farmId) => $q->where(fn (Builder $w) => $w->where('farm_id', $farmId)->orWhereNull('farm_id')))
                                                     ->orderBy('name');
 
                                                 return app(CurrentFarm::class)->restrictForCurrentUser($query, 'farm_id', allowOrganisationLevel: true)
                                                     ->get()
-                                                    ->mapWithKeys(fn (\App\Models\Stock $s) => [$s->id => $s->name.' ('.number_format((float) $s->quantity, 1, ',', ' ').' '.$s->unit.')'])
+                                                    ->mapWithKeys(fn (Stock $s) => [$s->id => $s->name.' ('.number_format((float) $s->quantity, 1, ',', ' ').' '.$s->unit.')'])
                                                     ->toArray();
                                             })
                                             ->rules(fn (): array => [Rule::exists('stocks', 'id')->where('organisation_id', Filament::getTenant()?->getKey())])
@@ -387,7 +407,7 @@ class DailyRecordForm
             return;
         }
 
-        $date = \Carbon\Carbon::parse($recordDate);
+        $date = Carbon::parse($recordDate);
         $ageDays = (int) $flock->start_date->diffInDays($date) + ($flock->age_at_arrival ?? 0);
         $set('age_days', max(0, $ageDays));
     }

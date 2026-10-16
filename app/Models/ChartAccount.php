@@ -55,6 +55,7 @@ class ChartAccount extends Model
         '6031' => ['Variation des stocks de marchandises', ChartAccountType::Expense],
         '6041' => ['Achats de matières et fournitures (médicaments, litière)', ChartAccountType::Expense],
         '605' => ['Autres achats (fournitures, carburant, eau, électricité)', ChartAccountType::Expense],
+        '658' => ['Charges diverses (pertes, vols)', ChartAccountType::Expense],
         '61' => ['Transports', ChartAccountType::Expense],
         '622' => ['Locations et charges locatives', ChartAccountType::Expense],
         '624' => ['Entretien, réparations et maintenance', ChartAccountType::Expense],

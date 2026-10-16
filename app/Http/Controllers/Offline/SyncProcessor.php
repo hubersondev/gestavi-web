@@ -101,6 +101,7 @@ class SyncProcessor
                 'record_date' => ['required', 'date', 'before_or_equal:today'],
                 'mortality' => ['nullable', 'integer', 'min:0'],
                 'culls' => ['nullable', 'integer', 'min:0'],
+                'thefts' => ['nullable', 'integer', 'min:0'],
                 'eggs_collected' => ['nullable', 'integer', 'min:0'],
                 'eggs_broken' => ['nullable', 'integer', 'min:0'],
                 'feed_consumed_kg' => ['nullable', 'numeric', 'min:0'],

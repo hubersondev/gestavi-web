@@ -110,7 +110,7 @@ it('synchronise des relevés hors-ligne de façon idempotente puis les relit', f
         'client_uuid' => $uuid,
         'type' => 'daily_record',
         'recorded_at' => now()->toIso8601String(),
-        'payload' => ['flock_id' => $this->flockA->id, 'record_date' => now()->toDateString(), 'mortality' => 3, 'eggs_collected' => 0, 'feed_consumed_kg' => 120],
+        'payload' => ['flock_id' => $this->flockA->id, 'record_date' => now()->toDateString(), 'mortality' => 3, 'thefts' => 2, 'eggs_collected' => 0, 'feed_consumed_kg' => 120],
     ]]];
 
     $first = postJson("{$this->base}/sync", $entries)->assertOk();
@@ -119,7 +119,8 @@ it('synchronise des relevés hors-ligne de façon idempotente puis les relit', f
     $second = postJson("{$this->base}/sync", $entries)->assertOk();
     expect($second->json('results.0.status'))->toBe('duplicate')
         ->and($this->flockA->dailyRecords()->count())->toBe(1)
-        ->and((int) $this->flockA->fresh()->quantity_current)->toBe(997);
+        ->and((int) $this->flockA->fresh()->quantity_current)->toBe(995)
+        ->and((int) $this->flockA->dailyRecords()->first()->thefts)->toBe(2);
 
     $records = getJson("{$this->base}/daily-records?flock_id={$this->flockA->id}")->assertOk();
     expect($records->json('data'))->toHaveCount(1)

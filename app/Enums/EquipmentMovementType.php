@@ -13,6 +13,7 @@ enum EquipmentMovementType: string implements HasColor, HasIcon, HasLabel
     case Exit = 'exit';
     case Loan = 'loan';
     case Return = 'return';
+    case Theft = 'theft';
 
     public function getLabel(): string
     {
@@ -22,6 +23,7 @@ enum EquipmentMovementType: string implements HasColor, HasIcon, HasLabel
             self::Exit => 'Sortie',
             self::Loan => 'Prêt',
             self::Return => 'Retour',
+            self::Theft => 'Vol',
         };
     }
 
@@ -33,6 +35,7 @@ enum EquipmentMovementType: string implements HasColor, HasIcon, HasLabel
             self::Exit => 'danger',
             self::Loan => 'warning',
             self::Return => 'primary',
+            self::Theft => 'danger',
         };
     }
 
@@ -44,6 +47,7 @@ enum EquipmentMovementType: string implements HasColor, HasIcon, HasLabel
             self::Exit => 'heroicon-o-arrow-up-circle',
             self::Loan => 'heroicon-o-arrow-top-right-on-square',
             self::Return => 'heroicon-o-arrow-uturn-left',
+            self::Theft => 'heroicon-o-shield-exclamation',
         };
     }
 }

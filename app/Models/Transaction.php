@@ -6,6 +6,7 @@ use App\Enums\TransactionCategory;
 use App\Enums\TransactionType;
 use App\Models\Concerns\BelongsToOrganisation;
 use App\Models\Concerns\LogsAuditTrail;
+use App\Services\TheftAlert;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -14,6 +15,27 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class Transaction extends Model
 {
+    protected static function booted(): void
+    {
+        static::created(function (Transaction $transaction): void {
+            if ($transaction->category !== TransactionCategory::Theft) {
+                return;
+            }
+
+            $account = $transaction->account;
+
+            TheftAlert::dispatch(
+                (int) ($transaction->organisation_id ?? $account?->organisation_id),
+                'Vol ou perte de caisse : '.TheftAlert::number((float) $transaction->amount).' XOF',
+                [
+                    '• Compte '.($account?->name ?? '?').($account?->farm ? ' — '.$account->farm->name : ''),
+                    '• '.$transaction->description,
+                    sprintf('• Solde après : %s XOF', TheftAlert::number((float) $transaction->balance_after)),
+                ],
+            );
+        });
+    }
+
     use BelongsToOrganisation, HasFactory, LogsAuditTrail;
 
     /** Parent métier dont héritent organisation_id et farm_id. */

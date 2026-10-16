@@ -24,6 +24,7 @@ class DailyRecordResource extends JsonResource
             'mortality' => (int) $this->mortality,
             'mortality_cause' => $this->mortality_cause,
             'culls' => (int) $this->culls,
+            'thefts' => (int) $this->thefts,
             'birds_present' => $this->birds_present,
             'eggs_collected' => (int) $this->eggs_collected,
             'eggs_broken' => (int) $this->eggs_broken,

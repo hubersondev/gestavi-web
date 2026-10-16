@@ -12,6 +12,7 @@ use App\Exceptions\StockException;
 use App\Models\Concerns\BelongsToOrganisation;
 use App\Models\Concerns\LogsAuditTrail;
 use App\Services\NumberSequence;
+use App\Services\TheftAlert;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -326,6 +327,18 @@ class Stock extends Model
 
             $locked->decrement('quantity', $quantity);
             $this->syncQuantityFrom($locked);
+
+            if ($reason === StockMovementReason::Theft) {
+                TheftAlert::dispatch(
+                    (int) $locked->organisation_id,
+                    sprintf('Vol de stock : %s %s de %s', TheftAlert::number($quantity), $locked->unit, $locked->name),
+                    [
+                        '• Valeur estimée : '.TheftAlert::number($quantity * (float) $locked->unit_price).' XOF'.($locked->farm ? ' — '.$locked->farm->name : ''),
+                        sprintf('• Reste en stock : %s %s', TheftAlert::number((float) $locked->fresh()->quantity), $locked->unit),
+                        ...(filled($notes) ? ['• '.$notes] : []),
+                    ],
+                );
+            }
 
             return $movement;
         });

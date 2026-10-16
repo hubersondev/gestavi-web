@@ -36,7 +36,7 @@ test('transaction category enum lists accounting categories', function () {
     expect($values)->toBe([
         'opening', 'sale', 'payment', 'expense',
         'transfer_in', 'transfer_out', 'adjustment',
-        'payroll', 'refund', 'other',
+        'payroll', 'refund', 'theft', 'other',
     ]);
 });
 
