@@ -3,6 +3,7 @@
 namespace App\Filament\Farm\Resources\Sales;
 
 use App\Enums\PlanFeature;
+use App\Filament\Audit\AuditTrailRelationManager;
 use App\Filament\Farm\Concerns\ChecksOrganisationPermissions;
 use App\Filament\Farm\Concerns\RequiresPlanFeatures;
 use App\Filament\Farm\Concerns\ScopesToMemberFarms;
@@ -81,6 +82,7 @@ class SaleResource extends Resource
     {
         return [
             PaymentsRelationManager::class,
+            AuditTrailRelationManager::class,
         ];
     }
 

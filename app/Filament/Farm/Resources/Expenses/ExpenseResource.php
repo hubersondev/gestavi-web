@@ -3,6 +3,7 @@
 namespace App\Filament\Farm\Resources\Expenses;
 
 use App\Enums\PlanFeature;
+use App\Filament\Audit\AuditTrailRelationManager;
 use App\Filament\Farm\Concerns\ChecksOrganisationPermissions;
 use App\Filament\Farm\Concerns\RequiresPlanFeatures;
 use App\Filament\Farm\Concerns\ScopesToMemberFarms;
@@ -64,6 +65,11 @@ class ExpenseResource extends Resource
     public static function table(Table $table): Table
     {
         return ExpensesTable::configure($table);
+    }
+
+    public static function getRelations(): array
+    {
+        return [AuditTrailRelationManager::class];
     }
 
     public static function getPages(): array

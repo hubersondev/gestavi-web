@@ -3,6 +3,7 @@
 namespace App\Filament\Farm\Resources\Flocks;
 
 use App\Enums\PlanFeature;
+use App\Filament\Audit\AuditTrailRelationManager;
 use App\Filament\Farm\Concerns\ChecksOrganisationPermissions;
 use App\Filament\Farm\Concerns\RequiresPlanFeatures;
 use App\Filament\Farm\Concerns\ScopesToMemberFarms;
@@ -68,9 +69,7 @@ class FlockResource extends Resource
 
     public static function getRelations(): array
     {
-        return [
-            //
-        ];
+        return [AuditTrailRelationManager::class];
     }
 
     public static function getPages(): array

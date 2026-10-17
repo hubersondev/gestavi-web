@@ -3,6 +3,7 @@
 namespace App\Filament\Farm\Resources\Transactions;
 
 use App\Enums\PlanFeature;
+use App\Filament\Audit\AuditTrailRelationManager;
 use App\Filament\Farm\Concerns\ChecksOrganisationPermissions;
 use App\Filament\Farm\Concerns\RequiresPlanFeatures;
 use App\Filament\Farm\Concerns\ScopesToMemberFarms;
@@ -79,6 +80,11 @@ class TransactionResource extends Resource
     public static function table(Table $table): Table
     {
         return TransactionsTable::configure($table);
+    }
+
+    public static function getRelations(): array
+    {
+        return [AuditTrailRelationManager::class];
     }
 
     public static function getPages(): array

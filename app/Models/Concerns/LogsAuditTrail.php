@@ -2,6 +2,7 @@
 
 namespace App\Models\Concerns;
 
+use Spatie\Activitylog\Contracts\Activity;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
@@ -22,5 +23,15 @@ trait LogsAuditTrail
             ->logExcept(['updated_at', 'created_at', 'remember_token', 'password'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs();
+    }
+
+    /**
+     * Chaque entrée porte l'organisation du sujet : le journal se consulte par organisation.
+     */
+    public function tapActivity(Activity $activity, string $eventName): void
+    {
+        $activity->organisation_id = $this->getAttribute('organisation_id')
+            ?? ($activity->getExtraProperty('attributes', [])['organisation_id'] ?? null)
+            ?? ($activity->getExtraProperty('old', [])['organisation_id'] ?? null);
     }
 }
