@@ -41,6 +41,8 @@ class FarmPanelProvider extends PanelProvider
             ->viteTheme('resources/css/filament/farm/theme.css')
             ->brandName('GESTAVI')
             ->login()
+            // Profil : mot de passe, courriel, et gestion de la double authentification par l'utilisateur
+            ->profile()
             ->passwordReset()
             ->multiFactorAuthentication(
                 [AppAuthentication::make()->recoverable()],

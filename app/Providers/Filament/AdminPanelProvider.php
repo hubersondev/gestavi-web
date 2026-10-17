@@ -30,6 +30,8 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->brandName('GESTAVI · Administration')
             ->login()
+            // Profil : mot de passe, courriel, et gestion de la double authentification par l'utilisateur
+            ->profile()
             ->passwordReset()
             ->multiFactorAuthentication(
                 [AppAuthentication::make()->recoverable()],
