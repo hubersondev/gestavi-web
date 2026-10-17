@@ -42,6 +42,8 @@ class AuditLog extends Activity
         Transaction::class => 'Transaction de trésorerie',
         Vaccination::class => 'Vaccination',
         User::class => 'Utilisateur',
+        Announcement::class => 'Annonce',
+        SubscriptionPayment::class => 'Encaissement d\'abonnement',
     ];
 
     /** Événements de support (hors création / modification / suppression). */

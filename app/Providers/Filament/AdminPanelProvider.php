@@ -28,6 +28,7 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
+            ->brandName('GESTAVI · Administration')
             ->login()
             ->passwordReset()
             ->multiFactorAuthentication(

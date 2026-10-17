@@ -27,6 +27,7 @@ enum NotificationCategory: string
             'overdue_vaccinations', 'upcoming_vaccinations' => self::Vaccinations,
             'payment_received' => self::Payments,
             'weather_warning', 'weather_critical' => self::Weather,
+            'announcement' => self::Alerts,
             'report_export' => null,
             default => self::Alerts,
         };

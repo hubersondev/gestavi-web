@@ -6,6 +6,7 @@ use App\Filament\Resources\Subscriptions\Pages\CreateSubscription;
 use App\Filament\Resources\Subscriptions\Pages\EditSubscription;
 use App\Filament\Resources\Subscriptions\Pages\ListSubscriptions;
 use App\Filament\Resources\Subscriptions\Pages\ViewSubscription;
+use App\Filament\Resources\Subscriptions\RelationManagers\PaymentsRelationManager;
 use App\Filament\Resources\Subscriptions\Schemas\SubscriptionForm;
 use App\Filament\Resources\Subscriptions\Schemas\SubscriptionInfolist;
 use App\Filament\Resources\Subscriptions\Tables\SubscriptionsTable;
@@ -91,6 +92,11 @@ class SubscriptionResource extends Resource
             'Statut' => $record->status?->getLabel(),
             'Échéance' => $record->ends_at?->format('d/m/Y'),
         ]);
+    }
+
+    public static function getRelations(): array
+    {
+        return [PaymentsRelationManager::class];
     }
 
     public static function getPages(): array

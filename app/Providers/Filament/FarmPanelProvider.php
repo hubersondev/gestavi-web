@@ -39,6 +39,7 @@ class FarmPanelProvider extends PanelProvider
             ->id('farm')
             ->path('farm')
             ->viteTheme('resources/css/filament/farm/theme.css')
+            ->brandName('GESTAVI')
             ->login()
             ->passwordReset()
             ->multiFactorAuthentication(
@@ -126,6 +127,10 @@ class FarmPanelProvider extends PanelProvider
             ->renderHook(
                 PanelsRenderHook::CONTENT_START,
                 fn (): View => view('partials.impersonation-banner'),
+            )
+            ->renderHook(
+                PanelsRenderHook::CONTENT_START,
+                fn (): View => view('partials.announcements-banner'),
             )
             ->renderHook(
                 PanelsRenderHook::CONTENT_START,

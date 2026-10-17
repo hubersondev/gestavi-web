@@ -14,6 +14,6 @@
         @if ($tenant->status_reason)
             <span class="font-medium">Motif :</span> {{ $tenant->status_reason }}.
         @endif
-        Contactez <a href="mailto:support@gestavi.com" class="font-medium underline">support@gestavi.com</a> pour rétablir la saisie.
+        Contactez <a href="mailto:{{ \App\Services\PlatformSettings::supportEmail() }}" class="font-medium underline">{{ \App\Services\PlatformSettings::supportEmail() }}</a> pour rétablir la saisie.
     </div>
 @endif

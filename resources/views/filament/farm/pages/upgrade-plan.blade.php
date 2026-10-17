@@ -147,8 +147,8 @@
         <div class="rounded-xl border border-gray-200 bg-gray-50 p-6 text-center dark:border-gray-700 dark:bg-gray-900">
             <p class="text-sm text-gray-600 dark:text-gray-400">
                 Pour changer de plan, contactez votre administrateur ou écrivez-nous à
-                <a href="mailto:support@gestavi.com" class="font-medium text-primary-600 hover:underline dark:text-primary-400">
-                    support@gestavi.com
+                <a href="mailto:{{ \App\Services\PlatformSettings::supportEmail() }}" class="font-medium text-primary-600 hover:underline dark:text-primary-400">
+                    {{ \App\Services\PlatformSettings::supportEmail() }}
                 </a>
             </p>
         </div>

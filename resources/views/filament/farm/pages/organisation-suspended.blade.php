@@ -26,7 +26,7 @@
                     @endif
                     <p class="mt-4 text-sm text-danger-700 dark:text-danger-300">
                         Pour régulariser la situation, écrivez à
-                        <a href="mailto:support@gestavi.com" class="font-medium underline">support@gestavi.com</a>.
+                        <a href="mailto:{{ \App\Services\PlatformSettings::supportEmail() }}" class="font-medium underline">{{ \App\Services\PlatformSettings::supportEmail() }}</a>.
                     </p>
                 @else
                     <h3 class="text-lg font-semibold text-success-800 dark:text-success-200">Cette organisation n'est pas suspendue</h3>

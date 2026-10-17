@@ -9,6 +9,7 @@ use App\Exceptions\SubscriptionException;
 use App\Models\Organisation;
 use App\Models\Plan;
 use App\Models\Subscription;
+use App\Models\SubscriptionPayment;
 use App\Models\User;
 use App\Notifications\OrganisationAlertNotification;
 use Carbon\CarbonInterface;
@@ -84,6 +85,10 @@ class SubscriptionService
             $this->syncPlan($organisation, $plan);
             $this->liftAutomaticReadOnly($organisation);
 
+            if (! $isTrial && (float) $subscription->price > 0) {
+                $this->recordPayment($subscription, (float) $subscription->price, $payment, $by, $starts);
+            }
+
             return $subscription;
         });
     }
@@ -103,7 +108,7 @@ class SubscriptionService
         $plan = $subscription->plan ?? throw SubscriptionException::notRenewable('sans plan');
         $cycle ??= $subscription->billing_cycle ?? BillingCycle::Monthly;
 
-        return DB::transaction(function () use ($subscription, $plan, $cycle, $payment): Subscription {
+        return DB::transaction(function () use ($subscription, $plan, $cycle, $payment, $by): Subscription {
             $base = $subscription->renewalBase()->toImmutable();
             $wasEnded = $subscription->isEnded();
 
@@ -122,8 +127,14 @@ class SubscriptionService
 
             $this->syncPlan($subscription->organisation, $plan);
             $this->liftAutomaticReadOnly($subscription->organisation);
+            $subscription->refresh();
 
-            return $subscription->refresh();
+            if ((float) $subscription->price > 0) {
+                $payment = $this->recordPayment($subscription, (float) $subscription->price, $payment, $by);
+                $payment->forceFill(['period_from' => $base->toDateString()])->save();
+            }
+
+            return $subscription;
         });
     }
 
@@ -218,7 +229,34 @@ class SubscriptionService
 
     public static function graceDays(): int
     {
-        return max(0, (int) config('subscriptions.grace_days', 7));
+        $override = PlatformSettings::get('subscription_grace_days');
+
+        return max(0, (int) ($override ?? config('subscriptions.grace_days', 7)));
+    }
+
+    /**
+     * Enregistre un encaissement (facture numérotée) pour la période courante de l'abonnement.
+     *
+     * @param  array{payment_method?: ?string, payment_reference?: ?string, notes?: ?string}  $payment
+     */
+    public function recordPayment(Subscription $subscription, float $amount, array $payment = [], ?User $by = null, ?CarbonInterface $paidAt = null): SubscriptionPayment
+    {
+        return SubscriptionPayment::query()->create([
+            'organisation_id' => $subscription->organisation_id,
+            'subscription_id' => $subscription->id,
+            'invoice_number' => SubscriptionPayment::nextInvoiceNumber(),
+            'plan_name' => $subscription->plan_name,
+            'billing_cycle' => $subscription->billing_cycle?->value ?? BillingCycle::Monthly->value,
+            'period_from' => $subscription->starts_at->toDateString(),
+            'period_to' => $subscription->ends_at->toDateString(),
+            'amount' => $amount,
+            'currency' => $subscription->currency ?? 'XOF',
+            'paid_at' => ($paidAt ?? today())->toDateString(),
+            'payment_method' => $payment['payment_method'] ?? $subscription->payment_method?->value,
+            'payment_reference' => $payment['payment_reference'] ?? $subscription->payment_reference,
+            'notes' => $payment['notes'] ?? null,
+            'created_by' => $by?->id,
+        ]);
     }
 
     /**
