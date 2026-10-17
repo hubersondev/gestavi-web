@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\BillingCycle;
+use App\Enums\OrganisationStatus;
 use App\Enums\SubscriptionStatus;
 use App\Exceptions\SubscriptionException;
 use App\Models\Organisation;
@@ -16,13 +17,20 @@ use Illuminate\Support\Facades\Notification;
 
 /**
  * Cycle de vie des abonnements : souscription (essai ou payante), renouvellement, changement de
- * plan sous contrainte des limites, annulation, expirations quotidiennes avec retour au plan
- * gratuit, et alertes d'échéance (J-7, J-3, J-1) aux responsables de l'organisation.
+ * plan sous contrainte des limites, annulation, expirations quotidiennes, et alertes d'échéance
+ * (J-7, J-3, J-1) aux responsables de l'organisation.
+ *
+ * Un abonnement expiré n'enlève rien en silence : l'organisation garde son plan pendant un délai
+ * de grâce (config `subscriptions.grace_days`), puis passe en lecture seule jusqu'à régularisation ;
+ * une souscription ou un renouvellement la réactive automatiquement.
  *
  * Le plan effectif de l'organisation (`organisations.plan_id`) suit toujours l'abonnement courant.
  */
 class SubscriptionService
 {
+    /** Début du motif de lecture seule posé automatiquement (permet de la lever à la régularisation). */
+    public const READ_ONLY_REASON_PREFIX = 'Abonnement expiré';
+
     /**
      * Souscrit un plan : essai gratuit si $trialDays > 0, sinon période payée selon le cycle.
      * L'abonnement courant éventuel est clos (annulé à la date du jour) et remplacé.
@@ -74,6 +82,7 @@ class SubscriptionService
             ]);
 
             $this->syncPlan($organisation, $plan);
+            $this->liftAutomaticReadOnly($organisation);
 
             return $subscription;
         });
@@ -112,6 +121,7 @@ class SubscriptionService
             ])->save();
 
             $this->syncPlan($subscription->organisation, $plan);
+            $this->liftAutomaticReadOnly($subscription->organisation);
 
             return $subscription->refresh();
         });
@@ -137,6 +147,7 @@ class SubscriptionService
             ])->save();
 
             $this->syncPlan($subscription->organisation, $plan);
+            $this->liftAutomaticReadOnly($subscription->organisation);
 
             return $subscription->refresh();
         });
@@ -144,7 +155,7 @@ class SubscriptionService
 
     /**
      * Annule l'abonnement. Par défaut l'accès au plan est maintenu jusqu'à l'échéance ;
-     * `$immediately` ramène l'organisation au plan gratuit tout de suite.
+     * `$immediately` clôt l'abonnement et passe l'organisation en lecture seule tout de suite.
      */
     public function cancel(Subscription $subscription, ?string $reason = null, bool $immediately = false, ?User $by = null): Subscription
     {
@@ -161,7 +172,7 @@ class SubscriptionService
             ])->save();
 
             if ($immediately) {
-                $this->expire($subscription);
+                $this->expire($subscription, readOnlyNow: true);
             }
 
             return $subscription->refresh();
@@ -169,10 +180,11 @@ class SubscriptionService
     }
 
     /**
-     * Traitement quotidien : expire les abonnements échus (retour au plan gratuit, notification),
-     * puis prévient les responsables des échéances à J-7, J-3 et J-1.
+     * Traitement quotidien : expire les abonnements échus (plan conservé, notification avec le délai
+     * de grâce), passe en lecture seule les organisations dont le délai de grâce est écoulé sans
+     * régularisation, puis prévient les responsables des échéances à J-7, J-3 et J-1.
      *
-     * @return array{expired: int, alerts: int}
+     * @return array{expired: int, read_only: int, alerts: int}
      */
     public function processExpirations(): array
     {
@@ -201,7 +213,121 @@ class SubscriptionService
             }
         });
 
-        return ['expired' => $expired, 'alerts' => $alerts];
+        return ['expired' => $expired, 'read_only' => $this->enforceGracePeriods(), 'alerts' => $alerts];
+    }
+
+    public static function graceDays(): int
+    {
+        return max(0, (int) config('subscriptions.grace_days', 7));
+    }
+
+    /**
+     * Situation d'une organisation dont le dernier abonnement est expiré et non remplacé :
+     * date de passage en lecture seule et jours restants. Null si rien n'est en cours.
+     *
+     * @return array{subscription: Subscription, read_only_at: CarbonInterface, days_left: int}|null
+     */
+    public function graceInfo(Organisation $organisation): ?array
+    {
+        if ($this->currentFor($organisation)) {
+            return null;
+        }
+
+        $latest = Subscription::query()
+            ->where('organisation_id', $organisation->id)
+            ->orderByDesc('ends_at')
+            ->orderByDesc('id')
+            ->first();
+
+        if (! $latest || $latest->status !== SubscriptionStatus::Expired) {
+            return null;
+        }
+
+        $readOnlyAt = $latest->ends_at->toImmutable()->addDays(self::graceDays() + 1)->startOfDay();
+
+        return [
+            'subscription' => $latest,
+            'read_only_at' => $readOnlyAt,
+            'days_left' => max(0, (int) today()->diffInDays($readOnlyAt, false)),
+        ];
+    }
+
+    /**
+     * Organisations actives dont le dernier abonnement est expiré depuis plus que le délai de grâce,
+     * sans abonnement courant : passage en lecture seule et notification. Retourne le nombre traité.
+     */
+    private function enforceGracePeriods(): int
+    {
+        $count = 0;
+
+        Subscription::query()
+            ->where('status', SubscriptionStatus::Expired->value)
+            ->whereDate('ends_at', '<=', today()->subDays(self::graceDays())->toDateString())
+            ->whereHas('organisation', fn ($q) => $q->where('status', OrganisationStatus::Active->value))
+            ->with('organisation')
+            ->chunkById(100, function ($chunk) use (&$count): void {
+                foreach ($chunk as $subscription) {
+                    $organisation = $subscription->organisation;
+
+                    if (! $organisation || ! $this->isLatestFor($subscription) || $this->currentFor($organisation)) {
+                        continue;
+                    }
+
+                    $this->applyReadOnly($organisation, $subscription);
+                    $count++;
+                }
+            });
+
+        return $count;
+    }
+
+    /**
+     * Passe l'organisation en lecture seule pour défaut de renouvellement et prévient les responsables.
+     */
+    private function applyReadOnly(Organisation $organisation, Subscription $subscription): void
+    {
+        if ($organisation->isSuspended()) {
+            return;
+        }
+
+        $organisation->setStatus(OrganisationStatus::ReadOnly, sprintf(
+            '%s le %s et non renouvelé : consultation possible, saisie suspendue jusqu\'à régularisation.',
+            self::READ_ONLY_REASON_PREFIX,
+            $subscription->ends_at->format('d/m/Y'),
+        ));
+
+        $recipients = AlertRecipients::globalAccess($organisation->id);
+
+        if ($recipients->isEmpty()) {
+            return;
+        }
+
+        Notification::send($recipients, new OrganisationAlertNotification(
+            title: 'Organisation en lecture seule : abonnement non renouvelé',
+            lines: [
+                '• '.ucfirst($subscription->summaryLabel()).' expiré le '.$subscription->ends_at->format('d/m/Y').'.',
+                '• Vos données restent consultables ; toute saisie est suspendue jusqu\'au renouvellement.',
+            ],
+            alertKey: 'subscription_read_only',
+            organisationId: $organisation->id,
+            status: 'danger',
+            icon: 'heroicon-o-lock-closed',
+            actionLabel: 'Voir les plans',
+            actionUrl: $this->upgradeUrl($organisation),
+        ));
+    }
+
+    /**
+     * Lève une lecture seule posée automatiquement pour défaut de renouvellement (jamais une
+     * lecture seule décidée par la plateforme).
+     */
+    private function liftAutomaticReadOnly(Organisation $organisation): void
+    {
+        $organisation->refresh();
+
+        if ($organisation->isReadOnly() && str_starts_with((string) $organisation->status_reason, self::READ_ONLY_REASON_PREFIX)) {
+            $organisation->setStatus(OrganisationStatus::Active);
+        }
     }
 
     /**
@@ -232,16 +358,6 @@ class SubscriptionService
             ->first();
     }
 
-    /** Plan gratuit de repli : le plan actif le moins cher à 0 XOF, sinon aucun. */
-    public function freePlan(): ?Plan
-    {
-        return Plan::query()
-            ->where('is_active', true)
-            ->where('monthly_price', 0)
-            ->orderBy('sort_order')
-            ->first();
-    }
-
     // ─── PRIVÉ ────────────────────────────────────────────────────────────────
 
     private function assertWithinLimits(Organisation $organisation, Plan $plan): void
@@ -265,10 +381,11 @@ class SubscriptionService
     }
 
     /**
-     * Marque l'abonnement expiré, ramène l'organisation au plan gratuit (sauf si un autre
-     * abonnement courant existe) et prévient les responsables.
+     * Marque l'abonnement expiré. S'il est remplacé, le plan suit le remplaçant ; sinon le plan
+     * est conservé et les responsables sont prévenus du délai de grâce avant la lecture seule
+     * (`$readOnlyNow` l'applique immédiatement, cas de l'annulation immédiate).
      */
-    private function expire(Subscription $subscription): void
+    private function expire(Subscription $subscription, bool $readOnlyNow = false): void
     {
         $subscription->forceFill(['status' => SubscriptionStatus::Expired])->save();
 
@@ -281,8 +398,11 @@ class SubscriptionService
             return;
         }
 
-        $free = $this->freePlan();
-        $this->syncPlan($organisation, $free);
+        if ($readOnlyNow) {
+            $this->applyReadOnly($organisation, $subscription);
+
+            return;
+        }
 
         $recipients = AlertRecipients::globalAccess($organisation->id);
 
@@ -290,11 +410,14 @@ class SubscriptionService
             return;
         }
 
+        $grace = self::graceDays();
+        $readOnlyAt = $subscription->ends_at->toImmutable()->addDays($grace + 1);
+
         Notification::send($recipients, new OrganisationAlertNotification(
             title: 'Abonnement '.$subscription->plan_name.' expiré',
             lines: [
-                '• Échéance du '.$subscription->ends_at->format('d/m/Y').' dépassée.',
-                '• '.($free ? 'Votre organisation est passée au plan '.$free->name.' : les fonctionnalités avancées sont suspendues.' : 'Aucun plan actif : contactez le support pour renouveler.'),
+                '• Échéance du '.$subscription->ends_at->format('d/m/Y').' dépassée ; vos fonctionnalités sont conservées pendant '.$grace.' jour(s).',
+                '• Sans renouvellement, l\'organisation passera en lecture seule le '.$readOnlyAt->format('d/m/Y').'.',
             ],
             alertKey: 'subscription_expired',
             organisationId: $organisation->id,

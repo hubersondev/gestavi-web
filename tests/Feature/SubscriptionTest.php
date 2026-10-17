@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\BillingCycle;
+use App\Enums\OrganisationStatus;
 use App\Enums\PlanFeature;
 use App\Enums\SubscriptionStatus;
 use App\Exceptions\SubscriptionException;
@@ -103,7 +104,7 @@ it('refuse un plan dont les limites sont dépassées et change de plan sinon', f
     expect(fn () => $this->service->start($this->organisation, $this->free))->toThrow(SubscriptionException::class);
 });
 
-it('annule en maintenant l\'accès jusqu\'à l\'échéance, ou immédiatement avec retour au plan gratuit', function () {
+it('annule en maintenant l\'accès jusqu\'à l\'échéance, ou immédiatement avec passage en lecture seule', function () {
     $subscription = $this->service->start($this->organisation, $this->pro);
 
     $this->service->cancel($subscription, 'Trop cher');
@@ -118,12 +119,21 @@ it('annule en maintenant l\'accès jusqu\'à l\'échéance, ou immédiatement av
     $second = $this->service->start($this->organisation, $this->pro);
     $this->service->cancel($second, immediately: true);
 
+    $organisation = $this->organisation->fresh();
     expect($second->fresh()->status)->toBe(SubscriptionStatus::Expired)
-        ->and($this->organisation->fresh()->plan_id)->toBe($this->free->id);
-    Notification::assertSentTo($this->owner, OrganisationAlertNotification::class, fn (OrganisationAlertNotification $n): bool => $n->alertKey === 'subscription_expired');
+        ->and($organisation->plan_id)->toBe($this->pro->id) // le plan n'est pas retiré
+        ->and($organisation->status)->toBe(OrganisationStatus::ReadOnly)
+        ->and($organisation->status_reason)->toStartWith(SubscriptionService::READ_ONLY_REASON_PREFIX);
+    Notification::assertSentTo($this->owner, OrganisationAlertNotification::class, fn (OrganisationAlertNotification $n): bool => $n->alertKey === 'subscription_read_only');
+
+    // Une nouvelle souscription lève automatiquement la lecture seule
+    $this->service->start($this->organisation, $this->pro);
+    expect($this->organisation->fresh()->status)->toBe(OrganisationStatus::Active)
+        ->and($this->organisation->fresh()->status_reason)->toBeNull();
 });
 
-it('expire les abonnements échus et alerte J-7, J-3, J-1 une seule fois par seuil', function () {
+it('expire les abonnements échus en conservant le plan, passe en lecture seule après le délai de grâce, alerte J-7, J-3, J-1 une fois par seuil', function () {
+    config(['subscriptions.grace_days' => 7]);
     $overdue = Subscription::factory()->create(['organisation_id' => $this->organisation->id, 'plan_id' => $this->pro->id, 'starts_at' => today()->subMonths(2)->toDateString(), 'ends_at' => today()->subDay()->toDateString()]);
     $this->organisation->forceFill(['plan_id' => $this->pro->id])->save();
 
@@ -135,18 +145,41 @@ it('expire les abonnements échus et alerte J-7, J-3, J-1 une seule fois par seu
 
     $this->artisan('gestavi:subscriptions')->assertSuccessful();
 
+    // Expiré hier : plan conservé, organisation toujours active, délai de grâce annoncé
     expect($overdue->fresh()->status)->toBe(SubscriptionStatus::Expired)
-        ->and($this->organisation->fresh()->plan_id)->toBe($this->free->id)
+        ->and($this->organisation->fresh()->plan_id)->toBe($this->pro->id)
+        ->and($this->organisation->fresh()->status)->toBe(OrganisationStatus::Active)
+        ->and($this->service->graceInfo($this->organisation)['days_left'])->toBe(7)
         ->and($soon->fresh()->alerted_thresholds)->toBe([7])
         ->and($far->fresh()->alerted_thresholds)->toBeNull();
 
-    Notification::assertSentTo($this->owner, OrganisationAlertNotification::class, fn (OrganisationAlertNotification $n): bool => $n->alertKey === 'subscription_expired' && $n->status === 'danger');
+    Notification::assertSentTo($this->owner, OrganisationAlertNotification::class, fn (OrganisationAlertNotification $n): bool => $n->alertKey === 'subscription_expired' && $n->status === 'danger' && str_contains(implode(' ', $n->lines), 'lecture seule'));
     Notification::assertSentTo($otherOwner, OrganisationAlertNotification::class, fn (OrganisationAlertNotification $n): bool => $n->alertKey === 'subscription_expiry' && str_contains($n->title, 'dans 5 jours'));
 
     // Rejeu le même jour : rien de nouveau
     Notification::fake();
     $this->artisan('gestavi:subscriptions')->assertSuccessful();
     Notification::assertNothingSent();
+    expect($this->organisation->fresh()->status)->toBe(OrganisationStatus::Active);
+
+    // Délai de grâce écoulé : lecture seule, plan conservé, notification
+    $overdue->forceFill(['ends_at' => today()->subDays(8)->toDateString()])->save();
+    $this->artisan('gestavi:subscriptions')->assertSuccessful();
+
+    $organisation = $this->organisation->fresh();
+    expect($organisation->status)->toBe(OrganisationStatus::ReadOnly)
+        ->and($organisation->plan_id)->toBe($this->pro->id)
+        ->and($organisation->status_reason)->toContain('non renouvelé');
+    Notification::assertSentTo($this->owner, OrganisationAlertNotification::class, fn (OrganisationAlertNotification $n): bool => $n->alertKey === 'subscription_read_only');
+
+    // Le renouvellement réactive l'organisation
+    $this->service->renew($overdue->fresh());
+    expect($this->organisation->fresh()->status)->toBe(OrganisationStatus::Active);
+
+    // Une lecture seule décidée par la plateforme n'est jamais levée par un renouvellement
+    $this->organisation->fresh()->setStatus(OrganisationStatus::ReadOnly, 'Audit en cours');
+    $this->service->renew($overdue->fresh());
+    expect($this->organisation->fresh()->status)->toBe(OrganisationStatus::ReadOnly);
 
     // À J-1 : nouveau seuil, alerte critique
     $soon->forceFill(['ends_at' => today()->addDay()->toDateString()])->save();

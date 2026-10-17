@@ -6,8 +6,9 @@ use App\Services\SubscriptionService;
 use Illuminate\Console\Command;
 
 /**
- * Abonnements : expire les abonnements échus (retour au plan gratuit) et prévient les
- * responsables des échéances proches (J-7, J-3, J-1). Planifié chaque matin.
+ * Abonnements : expire les abonnements échus, passe en lecture seule les organisations dont le
+ * délai de grâce est écoulé sans renouvellement, et prévient les responsables des échéances
+ * proches (J-7, J-3, J-1). Planifié chaque matin.
  */
 class ProcessSubscriptions extends Command
 {
@@ -21,7 +22,7 @@ class ProcessSubscriptions extends Command
 
         $result = $service->processExpirations();
 
-        $this->info(sprintf('%d abonnement(s) expiré(s), %d alerte(s) d\'échéance envoyée(s).', $result['expired'], $result['alerts']));
+        $this->info(sprintf('%d abonnement(s) expiré(s), %d organisation(s) passée(s) en lecture seule, %d alerte(s) d\'échéance envoyée(s).', $result['expired'], $result['read_only'], $result['alerts']));
 
         return self::SUCCESS;
     }
