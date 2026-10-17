@@ -28,6 +28,19 @@ return [
     |
     */
 
+    /*
+    |--------------------------------------------------------------------------
+    | Disque des exports de rapports
+    |--------------------------------------------------------------------------
+    |
+    | Les fichiers générés en arrière-plan (Excel, PDF) sont déposés ici. Avec un disque
+    | S3 (MinIO en production), le lien de téléchargement est une URL temporaire du
+    | serveur d'objets ; avec le disque local, une route signée de l'application.
+    |
+    */
+
+    'exports_disk' => env('EXPORTS_DISK', 'local'),
+
     'disks' => [
 
         'local' => [

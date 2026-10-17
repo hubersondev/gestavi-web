@@ -20,6 +20,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 
 /**
@@ -116,7 +117,7 @@ class GenerateReportExport implements ShouldQueue
         $content = self::build($page, $this->report, $this->format);
 
         $path = sprintf('exports/%d/%s.%s', $organisation->id, Str::uuid(), $this->format);
-        Storage::disk('local')->put($path, $content);
+        Storage::disk(self::disk())->put($path, $content);
 
         $user->notify(new OrganisationAlertNotification(
             title: 'Export prêt : rapport '.$this->report,
@@ -129,19 +130,38 @@ class GenerateReportExport implements ShouldQueue
             status: 'success',
             icon: 'heroicon-o-arrow-down-tray',
             actionLabel: 'Télécharger',
-            actionUrl: $this->downloadUrl($path),
+            actionUrl: self::downloadUrl($path, $user),
         ));
 
         return $path;
     }
 
-    private function downloadUrl(string $path): ?string
+    /** Disque où sont déposés les exports (`EXPORTS_DISK` : local, ou s3 pour MinIO). */
+    public static function disk(): string
     {
+        return (string) config('filesystems.exports_disk', 'local');
+    }
+
+    /**
+     * Lien de téléchargement valable 24 h : URL temporaire du serveur d'objets (MinIO/S3) quand
+     * le disque le permet, sinon route signée de l'application, personnelle au destinataire.
+     */
+    public static function downloadUrl(string $path, User $user): string
+    {
+        $expiresAt = now()->addHours(24);
+        $disk = self::disk();
+        $signedRoute = fn (): string => URL::temporarySignedRoute('exports.download', $expiresAt, ['path' => $path, 'user' => $user->getKey()]);
+
+        // Disque local : lien signé et personnel servi par l'application, plutôt que l'URL
+        // temporaire anonyme du pilote local
+        if (config("filesystems.disks.{$disk}.driver") === 'local') {
+            return $signedRoute();
+        }
+
         try {
-            return Storage::disk('local')->temporaryUrl($path, now()->addHours(24));
+            return Storage::disk($disk)->temporaryUrl($path, $expiresAt);
         } catch (\Throwable) {
-            // Disque sans URL temporaire (tests, driver exotique) : la notification reste informative
-            return null;
+            return $signedRoute();
         }
     }
 }

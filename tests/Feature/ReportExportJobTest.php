@@ -15,6 +15,7 @@ use Filament\Facades\Filament;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 use function Pest\Laravel\actingAs;
 
@@ -66,11 +67,11 @@ it('retourne directement le fichier quand la file est synchrone', function () {
 
     $response = $page->exportPdf();
 
-    expect($response)->toBeInstanceOf(\Symfony\Component\HttpFoundation\StreamedResponse::class)
+    expect($response)->toBeInstanceOf(StreamedResponse::class)
         ->and($response->headers->get('content-type'))->toBe('application/pdf');
 });
 
-it('le job génère le fichier sur le disque privé et notifie l\'utilisateur avec un lien', function () {
+it('le job génère le fichier sur le disque local et notifie avec un lien signé, personnel et téléchargeable', function () {
     Storage::fake('local');
     Notification::fake();
 
@@ -83,9 +84,32 @@ it('le job génère le fichier sur le disque privé et notifie l\'utilisateur av
         ->and($path)->toEndWith('.xlsx')
         ->and(Storage::disk('local')->size($path))->toBeGreaterThan(1000);
 
-    Notification::assertSentTo($this->user, OrganisationAlertNotification::class, fn (OrganisationAlertNotification $n): bool => $n->alertKey === 'report_export'
-        && str_contains($n->title, 'financier')
-        && $n->actionLabel === 'Télécharger');
+    $url = null;
+    Notification::assertSentTo($this->user, OrganisationAlertNotification::class, function (OrganisationAlertNotification $n) use (&$url): bool {
+        $url = $n->actionUrl;
+
+        return $n->alertKey === 'report_export' && str_contains($n->title, 'financier') && $n->actionLabel === 'Télécharger';
+    });
+
+    expect($url)->toContain('/exports/'.$path, 'signature=');
+
+    // Le destinataire télécharge ; un autre utilisateur est refusé ; sans signature, refusé
+    $this->get($url)->assertOk()->assertHeader('content-type', GenerateReportExport::contentType('xlsx'));
+    actingAs(User::factory()->create());
+    $this->get($url)->assertForbidden();
+    actingAs($this->user);
+    $this->get(route('exports.download', ['path' => $path, 'user' => $this->user->id]))->assertForbidden();
+});
+
+it('avec un disque S3 (MinIO), le lien est l\'URL temporaire du serveur d\'objets', function () {
+    config(['filesystems.exports_disk' => 's3']);
+    Storage::fake('s3')->buildTemporaryUrlsUsing(fn (string $path, $expiration): string => 'https://minio.example/gestavi/'.$path.'?X-Amz-Expires=86400');
+    Notification::fake();
+
+    $path = (new GenerateReportExport('financier', 'xlsx', $this->filters, $this->organisation->id, $this->user->id))->handle();
+
+    Storage::disk('s3')->assertExists($path);
+    Notification::assertSentTo($this->user, OrganisationAlertNotification::class, fn (OrganisationAlertNotification $n): bool => $n->actionUrl === 'https://minio.example/gestavi/'.$path.'?X-Amz-Expires=86400');
 });
 
 it('génère aussi les exports production et stocks en PDF ou XLSX', function () {

@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Enums\MobileMoneyOperator;
+use App\Jobs\GenerateReportExport;
 use App\Models\JournalEntry;
 use App\Models\LedgerAnchor;
 use App\Models\Organisation;
@@ -361,5 +362,34 @@ class Doctor extends Command
         is_link(public_path('storage')) || is_dir(public_path('storage'))
             ? $this->pass('Lien public/storage')
             : $this->caution('Lien public/storage', 'absent : php artisan storage:link (logos, justificatifs).');
+
+        $this->checkExportsDisk();
+    }
+
+    /**
+     * Exports de rapports : en production, un serveur d'objets (MinIO/S3) joignable, qui fournit
+     * les liens de téléchargement ; le disque local reste accepté (route signée) mais garde les
+     * fichiers sur le serveur web.
+     */
+    private function checkExportsDisk(): void
+    {
+        $disk = GenerateReportExport::disk();
+
+        if ($disk === 'local') {
+            $this->strict
+                ? $this->caution('Disque des exports', 'EXPORTS_DISK=local : liens par route signée, fichiers sur le serveur web ; viser MinIO (EXPORTS_DISK=s3, AWS_ENDPOINT, AWS_BUCKET).')
+                : $this->pass('Disque des exports', 'local (route signée)');
+
+            return;
+        }
+
+        try {
+            $probe = 'exports/.doctor-'.Str::random(8);
+            Storage::disk($disk)->put($probe, 'ok');
+            Storage::disk($disk)->delete($probe);
+            $this->pass('Disque des exports', sprintf('%s (%s) : écriture OK, liens temporaires du serveur d\'objets', $disk, (string) config("filesystems.disks.{$disk}.endpoint", 'S3')));
+        } catch (Throwable $e) {
+            $this->failIfStrict('Disque des exports', sprintf('%s injoignable : %s', $disk, $e->getMessage()));
+        }
     }
 }
