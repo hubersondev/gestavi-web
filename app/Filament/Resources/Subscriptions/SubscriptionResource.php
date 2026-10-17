@@ -16,6 +16,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Model;
 use UnitEnum;
 
 /**
@@ -68,6 +69,28 @@ class SubscriptionResource extends Resource
     public static function getNavigationBadgeTooltip(): ?string
     {
         return 'Abonnements arrivant à échéance sous 7 jours';
+    }
+
+    protected static ?string $recordTitleAttribute = 'plan_name';
+
+    /**
+     * @return array<int, string>
+     */
+    public static function getGloballySearchableAttributes(): array
+    {
+        return ['plan_name', 'payment_reference', 'organisation.name'];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function getGlobalSearchResultDetails(Model $record): array
+    {
+        return array_filter([
+            'Structure' => $record->organisation?->name,
+            'Statut' => $record->status?->getLabel(),
+            'Échéance' => $record->ends_at?->format('d/m/Y'),
+        ]);
     }
 
     public static function getPages(): array

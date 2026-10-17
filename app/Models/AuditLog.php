@@ -41,13 +41,23 @@ class AuditLog extends Activity
         Supplier::class => 'Fournisseur',
         Transaction::class => 'Transaction de trésorerie',
         Vaccination::class => 'Vaccination',
+        User::class => 'Utilisateur',
+    ];
+
+    /** Événements de support (hors création / modification / suppression). */
+    public const EVENT_LABELS = [
+        'impersonation_started' => 'Connexion en tant que',
+        'impersonation_ended' => 'Fin de connexion en tant que',
+        'password_reset_link_sent' => 'Lien de mot de passe envoyé',
+        'two_factor_reset' => 'Double authentification réinitialisée',
+        'tokens_revoked' => 'Appareils mobiles déconnectés',
     ];
 
     /** Attributs qui servent de référence lisible, par ordre de préférence. */
-    private const REFERENCE_ATTRIBUTES = ['invoice_number', 'reference', 'expense_number', 'code', 'employee_number', 'contract_number', 'name', 'title', 'record_date', 'movement_date', 'transaction_date'];
+    private const REFERENCE_ATTRIBUTES = ['invoice_number', 'email', 'reference', 'expense_number', 'code', 'employee_number', 'contract_number', 'name', 'title', 'record_date', 'movement_date', 'transaction_date'];
 
     /** Champs techniques qui n'apportent rien dans un détail de modification. */
-    private const HIDDEN_FIELDS = ['id', 'organisation_id', 'farm_id', 'created_at', 'updated_at', 'deleted_at', 'hash', 'previous_hash'];
+    private const HIDDEN_FIELDS = ['id', 'organisation_id', 'farm_id', 'created_at', 'updated_at', 'deleted_at', 'hash', 'previous_hash', 'impersonator_id'];
 
     public function organisation(): BelongsTo
     {
@@ -66,8 +76,16 @@ class AuditLog extends Activity
             'updated' => 'Modification',
             'deleted' => 'Suppression',
             'restored' => 'Restauration',
-            default => ucfirst((string) ($this->event ?? $this->description)),
+            default => self::EVENT_LABELS[$this->event] ?? ucfirst((string) ($this->event ?? $this->description)),
         };
+    }
+
+    /** Administrateur de la plateforme qui agissait « en tant que » l'auteur, s'il y en avait un. */
+    public function impersonator(): ?User
+    {
+        $id = $this->getExtraProperty('impersonator_id');
+
+        return $id ? User::query()->find($id) : null;
     }
 
     public function eventColor(): string
@@ -153,7 +171,10 @@ class AuditLog extends Activity
 
     public function causerLabel(): string
     {
-        return $this->causer?->name ?? 'Système';
+        $label = $this->causer?->name ?? 'Système';
+        $impersonator = $this->impersonator();
+
+        return $impersonator ? $label.' (via '.$impersonator->name.', support)' : $label;
     }
 
     /** Valeur lisible d'un attribut journalisé. */

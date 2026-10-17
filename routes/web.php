@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ExportDownloadController;
+use App\Http\Controllers\ImpersonationController;
 use App\Http\Controllers\Offline\FieldEntryController;
 use Illuminate\Support\Facades\Route;
 
@@ -14,6 +15,11 @@ Route::get('/offline/assets.json', [FieldEntryController::class, 'assets'])->nam
 
 // Point d'entrée de la PWA installée : redirige vers la dernière page terrain ouverte (localStorage).
 Route::view('/offline/start', 'offline.start')->name('offline.start');
+
+// Fin d'une session de support « se connecter en tant que »
+Route::get('/impersonation/leave', [ImpersonationController::class, 'leave'])
+    ->middleware('auth')
+    ->name('impersonation.leave');
 
 // Exports de rapports sur disque local : lien signé, personnel, valable 24 h
 Route::get('/exports/{path}', ExportDownloadController::class)

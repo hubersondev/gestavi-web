@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\FarmUsers\Pages;
 
+use App\Filament\Resources\FarmUsers\Actions\FarmUserSupportActions;
 use App\Filament\Resources\FarmUsers\FarmUserResource;
 use Filament\Actions\EditAction;
 use Filament\Resources\Pages\ViewRecord;
@@ -13,6 +14,7 @@ class ViewFarmUser extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            ...FarmUserSupportActions::make(),
             EditAction::make(),
         ];
     }

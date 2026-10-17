@@ -74,6 +74,12 @@ class Farm extends Model
         return $this->hasMany(WeatherForecast::class);
     }
 
+    /** Bandes de la ferme (colonne farm_id, héritée du bâtiment). */
+    public function flocks(): HasMany
+    {
+        return $this->hasMany(Flock::class);
+    }
+
     public function buildings(): HasMany
     {
         return $this->hasMany(Building::class);

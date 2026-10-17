@@ -441,6 +441,18 @@ class Organisation extends Model implements HasCurrentTenantLabel
         return $this->hasMany(Subscription::class);
     }
 
+    /** Appartenances (lignes organisation_users), avec rôle et statut. */
+    public function memberships(): HasMany
+    {
+        return $this->hasMany(OrganisationUser::class);
+    }
+
+    /** Entrées du journal d'audit rattachées à l'organisation. */
+    public function activities(): HasMany
+    {
+        return $this->hasMany(AuditLog::class, 'organisation_id');
+    }
+
     /**
      * Abonnement donnant accès au plan aujourd'hui (essai, actif ou annulé non échu), s'il existe.
      */

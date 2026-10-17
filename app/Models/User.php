@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -175,6 +176,12 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
             ->using(OrganisationUser::class)
             ->withPivot(['id', 'organisation_role_id', 'permissions', 'status', 'joined_at'])
             ->withTimestamps();
+    }
+
+    /** Appartenances (lignes organisation_users), avec rôle, statut et fermes affectées. */
+    public function memberships(): HasMany
+    {
+        return $this->hasMany(OrganisationUser::class);
     }
 
     public function activeOrganisations(): BelongsToMany

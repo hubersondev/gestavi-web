@@ -125,6 +125,10 @@ class FarmPanelProvider extends PanelProvider
             )
             ->renderHook(
                 PanelsRenderHook::CONTENT_START,
+                fn (): View => view('partials.impersonation-banner'),
+            )
+            ->renderHook(
+                PanelsRenderHook::CONTENT_START,
                 fn (): View => view('partials.organisation-status-banner'),
             )
             ->renderHook(

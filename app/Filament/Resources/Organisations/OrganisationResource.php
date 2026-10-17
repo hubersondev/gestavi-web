@@ -6,6 +6,8 @@ use App\Filament\Resources\Organisations\Pages\CreateOrganisation;
 use App\Filament\Resources\Organisations\Pages\EditOrganisation;
 use App\Filament\Resources\Organisations\Pages\ListOrganisations;
 use App\Filament\Resources\Organisations\Pages\ViewOrganisation;
+use App\Filament\Resources\Organisations\RelationManagers\FarmsRelationManager;
+use App\Filament\Resources\Organisations\RelationManagers\MembersRelationManager;
 use App\Filament\Resources\Organisations\RelationManagers\SubscriptionsRelationManager;
 use App\Filament\Resources\Organisations\Schemas\OrganisationForm;
 use App\Filament\Resources\Organisations\Schemas\OrganisationInfolist;
@@ -16,6 +18,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Model;
 use UnitEnum;
 
 class OrganisationResource extends Resource
@@ -52,8 +55,30 @@ class OrganisationResource extends Resource
     public static function getRelations(): array
     {
         return [
+            FarmsRelationManager::class,
+            MembersRelationManager::class,
             SubscriptionsRelationManager::class,
         ];
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public static function getGloballySearchableAttributes(): array
+    {
+        return ['name', 'slug', 'email', 'phone'];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function getGlobalSearchResultDetails(Model $record): array
+    {
+        return array_filter([
+            'Plan' => $record->plan?->name,
+            'Statut' => $record->status?->getLabel(),
+            'Courriel' => $record->email,
+        ]);
     }
 
     public static function getPages(): array

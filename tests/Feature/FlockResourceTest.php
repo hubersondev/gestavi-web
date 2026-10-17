@@ -9,6 +9,7 @@ use App\Filament\Farm\Resources\Flocks\Pages\ListFlocks;
 use App\Filament\Farm\Resources\Flocks\Pages\ViewFlock;
 use App\Models\Building;
 use App\Models\ChickenType;
+use App\Models\DailyRecord;
 use App\Models\Farm;
 use App\Models\Flock;
 use App\Models\Organisation;
@@ -162,8 +163,11 @@ it('valide l\'unicité du code', function () {
 // ──────────────────────────────────────────────
 
 it('peut modifier une bande', function () {
+    // Effectif de départ fixé : la contrainte flocks_quantity_check impose quantity_current <= quantity_started
     $flock = Flock::factory()->create([
         'building_id' => $this->building->id,
+        'quantity_started' => 1000,
+        'quantity_current' => 1000,
     ]);
 
     Livewire::test(EditFlock::class, [
@@ -232,8 +236,8 @@ it('calcule le taux de mortalité à partir des relevés quotidiens', function (
         'start_date' => now()->subDays(10),
     ]);
 
-    \App\Models\DailyRecord::create(['flock_id' => $flock->id, 'record_date' => now()->subDays(2)->toDateString(), 'mortality' => 30]);
-    \App\Models\DailyRecord::create(['flock_id' => $flock->id, 'record_date' => now()->subDay()->toDateString(), 'mortality' => 20]);
+    DailyRecord::create(['flock_id' => $flock->id, 'record_date' => now()->subDays(2)->toDateString(), 'mortality' => 30]);
+    DailyRecord::create(['flock_id' => $flock->id, 'record_date' => now()->subDay()->toDateString(), 'mortality' => 20]);
 
     expect($flock->fresh()->getMortalityRate())->toBe(5.0)
         ->and($flock->fresh()->quantity_current)->toBe(950);
@@ -258,7 +262,7 @@ it('calcule les pertes (mortalité + réformes) à partir des relevés', functio
         'start_date' => now()->subDays(10),
     ]);
 
-    \App\Models\DailyRecord::create(['flock_id' => $flock->id, 'record_date' => now()->subDay()->toDateString(), 'mortality' => 100, 'culls' => 50]);
+    DailyRecord::create(['flock_id' => $flock->id, 'record_date' => now()->subDay()->toDateString(), 'mortality' => 100, 'culls' => 50]);
 
     expect($flock->fresh()->getLossCount())->toBe(150)
         ->and($flock->fresh()->quantity_current)->toBe(1850);

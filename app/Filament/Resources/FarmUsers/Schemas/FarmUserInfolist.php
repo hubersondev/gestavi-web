@@ -2,10 +2,12 @@
 
 namespace App\Filament\Resources\FarmUsers\Schemas;
 
+use App\Models\User;
 use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Carbon;
 
 class FarmUserInfolist
 {
@@ -27,12 +29,21 @@ class FarmUserInfolist
                             ->label('Actif')
                             ->boolean(),
                     ]),
-                Section::make('Organisations')
+                Section::make('Sécurité et appareils')
+                    ->columns(3)
                     ->schema([
-                        TextEntry::make('organisations.name')
-                            ->label('')
+                        TextEntry::make('two_factor')
+                            ->label('Double authentification')
+                            ->state(fn (User $record): string => $record->hasTwoFactorEnabled() ? 'Activée' : 'Non configurée')
                             ->badge()
-                            ->placeholder('Aucune organisation'),
+                            ->color(fn (User $record): string => $record->hasTwoFactorEnabled() ? 'success' : 'gray'),
+                        TextEntry::make('devices')
+                            ->label('Appareils mobiles connectés')
+                            ->state(fn (User $record): string => (string) $record->tokens()->count()),
+                        TextEntry::make('last_device_use')
+                            ->label('Dernier usage mobile')
+                            ->state(fn (User $record): ?string => ($last = $record->tokens()->max('last_used_at')) ? Carbon::parse($last)->diffForHumans() : null)
+                            ->placeholder('jamais'),
                     ]),
                 Section::make('Dates')
                     ->columns(2)
