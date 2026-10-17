@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Auth\EditProfile;
 use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Filament\Facades\Filament;
 use Filament\Http\Middleware\Authenticate;
@@ -31,7 +32,7 @@ class AdminPanelProvider extends PanelProvider
             ->brandName('GESTAVI · Administration')
             ->login()
             // Profil : mot de passe, courriel, et gestion de la double authentification par l'utilisateur
-            ->profile()
+            ->profile(EditProfile::class)
             ->passwordReset()
             ->multiFactorAuthentication(
                 [AppAuthentication::make()->recoverable()],

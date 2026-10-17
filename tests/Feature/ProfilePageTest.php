@@ -1,9 +1,12 @@
 <?php
 
+use App\Filament\Auth\EditProfile;
 use App\Models\Organisation;
 use App\Models\User;
 use Database\Seeders\OrganisationPermissionSeeder;
 use Filament\Facades\Filament;
+use Illuminate\Support\Facades\Hash;
+use Livewire\Livewire;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\get;
@@ -41,4 +44,36 @@ it('offre la page de profil dans le panel Admin', function () {
     Filament::setCurrentPanel(Filament::getPanel('admin'));
 
     get(Filament::getPanel('admin')->getProfileUrl())->assertOk();
+});
+
+it('exige le mot de passe actuel pour changer de mot de passe, et le vérifie', function () {
+    $organisation = Organisation::factory()->create();
+    $owner = User::factory()->create(['password' => 'AncienMotDePasse!1']);
+    $organisation->addMember($owner, 'owner');
+
+    actingAs($owner);
+    Filament::setCurrentPanel(Filament::getPanel('farm'));
+    Filament::setTenant($organisation);
+
+    // Sans mot de passe actuel : refusé
+    Livewire::test(EditProfile::class)
+        ->fillForm(['password' => 'NouveauMotDePasse!2', 'passwordConfirmation' => 'NouveauMotDePasse!2'])
+        ->call('save')
+        ->assertHasFormErrors(['currentPassword' => 'required']);
+
+    // Mauvais mot de passe actuel : refusé
+    Livewire::test(EditProfile::class)
+        ->fillForm(['currentPassword' => 'faux', 'password' => 'NouveauMotDePasse!2', 'passwordConfirmation' => 'NouveauMotDePasse!2'])
+        ->call('save')
+        ->assertHasFormErrors(['currentPassword']);
+
+    expect(Hash::check('AncienMotDePasse!1', $owner->fresh()->password))->toBeTrue();
+
+    // Bon mot de passe actuel : accepté
+    Livewire::test(EditProfile::class)
+        ->fillForm(['currentPassword' => 'AncienMotDePasse!1', 'password' => 'NouveauMotDePasse!2', 'passwordConfirmation' => 'NouveauMotDePasse!2'])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect(Hash::check('NouveauMotDePasse!2', $owner->fresh()->password))->toBeTrue();
 });

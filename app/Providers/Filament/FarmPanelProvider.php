@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Auth\EditProfile;
 use App\Filament\Farm\Pages\Appearance;
 use App\Filament\Farm\Pages\NotificationPreferences;
 use App\Filament\Farm\Pages\Tenancy\EditOrganisationProfile;
@@ -42,7 +43,7 @@ class FarmPanelProvider extends PanelProvider
             ->brandName('GESTAVI')
             ->login()
             // Profil : mot de passe, courriel, et gestion de la double authentification par l'utilisateur
-            ->profile()
+            ->profile(EditProfile::class)
             ->passwordReset()
             ->multiFactorAuthentication(
                 [AppAuthentication::make()->recoverable()],
