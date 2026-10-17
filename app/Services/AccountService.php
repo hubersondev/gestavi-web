@@ -9,6 +9,7 @@ use App\Exceptions\AccountException;
 use App\Models\Account;
 use App\Models\AccountTransfer;
 use App\Models\Transaction;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class AccountService
@@ -62,7 +63,7 @@ class AccountService
     }
 
     /**
-     * Effectue un transfert entre deux comptes de la même organisation.
+     * Effectue un transfert entre deux comptes de la même organisation, daté du jour par défaut.
      */
     public function executeTransfer(
         int $organisationId,
@@ -72,6 +73,7 @@ class AccountService
         float $fees = 0,
         ?string $description = null,
         ?string $notes = null,
+        \DateTimeInterface|string|null $date = null,
     ): AccountTransfer {
         if ($amount <= 0) {
             throw AccountException::invalidAmount();
@@ -102,7 +104,7 @@ class AccountService
             throw AccountException::insufficientBalance($fromAccount->name, $total, (float) $fromAccount->current_balance);
         }
 
-        return DB::transaction(function () use ($organisationId, $fromAccount, $toAccount, $amount, $fees, $description, $notes): AccountTransfer {
+        return DB::transaction(function () use ($organisationId, $fromAccount, $toAccount, $amount, $fees, $description, $notes, $date): AccountTransfer {
             $transfer = AccountTransfer::create([
                 'organisation_id' => $organisationId,
                 'from_account_id' => $fromAccount->id,
@@ -110,7 +112,7 @@ class AccountService
                 'user_id' => auth()->id(),
                 'amount' => $amount,
                 'fees' => $fees,
-                'transfer_date' => now()->toDateString(),
+                'transfer_date' => $date ? Carbon::parse($date)->toDateString() : now()->toDateString(),
                 'status' => AccountTransferStatus::Pending,
                 'description' => $description,
                 'notes' => $notes,
@@ -120,6 +122,89 @@ class AccountService
 
             return $transfer->fresh(['fromAccount', 'toAccount']);
         });
+    }
+
+    /**
+     * Réapprovisionne un compte (caisse le plus souvent) depuis un autre compte de l'organisation :
+     * un transfert interne complété, daté du jour indiqué.
+     */
+    public function replenish(
+        Account $account,
+        int $fromAccountId,
+        float $amount,
+        float $fees = 0,
+        \DateTimeInterface|string|null $date = null,
+        ?string $notes = null,
+    ): AccountTransfer {
+        return $this->executeTransfer(
+            organisationId: (int) $account->organisation_id,
+            fromAccountId: $fromAccountId,
+            toAccountId: (int) $account->id,
+            amount: $amount,
+            fees: $fees,
+            description: "Réapprovisionnement de {$account->name}",
+            notes: $notes,
+            date: $date,
+        );
+    }
+
+    /**
+     * Apport de fonds extérieur (exploitant, associés) sur un compte : crédit en catégorie
+     * « contribution », imputé au compte de l'exploitant.
+     */
+    public function recordContribution(
+        Account $account,
+        float $amount,
+        ?string $description = null,
+        \DateTimeInterface|string|null $date = null,
+        ?string $reference = null,
+    ): Transaction {
+        $this->assertCanBeFunded($account, $amount);
+
+        return $account->credit(
+            amount: $amount,
+            description: $description ?: "Apport de fonds sur {$account->name}",
+            category: TransactionCategory::Contribution,
+            referenceNumber: $reference,
+            date: $date,
+        );
+    }
+
+    /**
+     * Prélèvement de l'exploitant sur un compte : débit en catégorie « withdrawal », refusé si le
+     * solde ne le couvre pas.
+     */
+    public function recordWithdrawal(
+        Account $account,
+        float $amount,
+        ?string $description = null,
+        \DateTimeInterface|string|null $date = null,
+        ?string $reference = null,
+    ): Transaction {
+        $this->assertCanBeFunded($account, $amount);
+
+        if ((float) $account->current_balance < $amount) {
+            throw AccountException::insufficientBalance($account->name, $amount, (float) $account->current_balance);
+        }
+
+        return $account->debit(
+            amount: $amount,
+            description: $description ?: "Prélèvement de l'exploitant sur {$account->name}",
+            category: TransactionCategory::Withdrawal,
+            referenceNumber: $reference,
+            date: $date,
+        );
+    }
+
+    private function assertCanBeFunded(Account $account, float $amount): void
+    {
+        if ($amount <= 0) {
+            throw AccountException::invalidAmount();
+        }
+
+        if (! $account->is_active) {
+            throw AccountException::accountNotActive($account->name);
+        }
     }
 
     /**

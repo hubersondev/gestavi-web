@@ -3,6 +3,7 @@
 namespace App\Filament\Farm\Resources\Accounts\Pages;
 
 use App\Filament\Farm\Resources\Accounts\AccountResource;
+use App\Filament\Farm\Resources\Accounts\Actions\AccountFundingActions;
 use App\Models\Account;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
@@ -19,6 +20,10 @@ class ViewAccount extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            AccountFundingActions::replenish(),
+            AccountFundingActions::contribution(),
+            AccountFundingActions::withdrawal(),
+
             Action::make('setDefault')
                 ->label('Définir par défaut')
                 ->icon('heroicon-o-star')

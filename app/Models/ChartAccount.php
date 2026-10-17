@@ -22,6 +22,7 @@ class ChartAccount extends Model
      */
     public const REFERENCE_PLAN = [
         '101' => ['Capital social', ChartAccountType::Equity],
+        '104' => ['Compte de l\'exploitant (apports et prélèvements)', ChartAccountType::Equity],
         '121' => ['Report à nouveau créditeur', ChartAccountType::Equity],
         '129' => ['Report à nouveau débiteur', ChartAccountType::Equity],
         '131' => ['Résultat net de l\'exercice', ChartAccountType::Equity],

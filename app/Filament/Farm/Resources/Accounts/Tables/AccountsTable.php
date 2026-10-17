@@ -3,6 +3,7 @@
 namespace App\Filament\Farm\Resources\Accounts\Tables;
 
 use App\Enums\AccountType;
+use App\Filament\Farm\Resources\Accounts\Actions\AccountFundingActions;
 use App\Models\Account;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -103,6 +104,7 @@ class AccountsTable
             ->recordActions([
                 ViewAction::make(),
                 EditAction::make(),
+                AccountFundingActions::replenish(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

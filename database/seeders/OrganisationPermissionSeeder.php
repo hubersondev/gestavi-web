@@ -46,6 +46,7 @@ class OrganisationPermissionSeeder extends Seeder
             'account_transfers' => 'les transferts entre comptes',
             'expenses' => 'les dépenses',
             'fiscal_years' => 'les exercices comptables',
+            'bank_reconciliations' => 'les rapprochements bancaires',
             // Commercial
             'customers' => 'les clients',
             'sales' => 'les factures',
@@ -143,6 +144,8 @@ class OrganisationPermissionSeeder extends Seeder
             'accounts' => [
                 'set_default' => 'Définir un compte par défaut',
                 'recalculate_balance' => 'Recalculer le solde d\'un compte',
+                'replenish' => 'Réapprovisionner un compte (transfert entrant, apport de fonds)',
+                'withdraw' => 'Enregistrer un prélèvement de l\'exploitant',
             ],
             'transactions' => [
                 'reconcile' => 'Rapprocher les transactions',
@@ -170,6 +173,9 @@ class OrganisationPermissionSeeder extends Seeder
             'expenses' => [
                 'mark_paid' => 'Enregistrer un paiement sur une dépense',
                 'cancel' => 'Annuler une dépense',
+            ],
+            'bank_reconciliations' => [
+                'complete' => 'Clôturer un rapprochement bancaire',
             ],
             'fiscal_years' => [
                 'close' => 'Clôturer un exercice comptable',

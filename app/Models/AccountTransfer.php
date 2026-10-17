@@ -7,10 +7,12 @@ use App\Enums\TransactionCategory;
 use App\Exceptions\AccountException;
 use App\Models\Concerns\BelongsToOrganisation;
 use App\Models\Concerns\LogsAuditTrail;
+use App\Services\NumberSequence;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class AccountTransfer extends Model
@@ -40,7 +42,7 @@ class AccountTransfer extends Model
     {
         static::creating(function (AccountTransfer $transfer): void {
             if (empty($transfer->reference) && $transfer->organisation_id) {
-                $transfer->reference = self::generateReference($transfer->organisation_id, $transfer->transfer_date ? \Illuminate\Support\Carbon::parse($transfer->transfer_date)->year : null);
+                $transfer->reference = self::generateReference($transfer->organisation_id, $transfer->transfer_date ? Carbon::parse($transfer->transfer_date)->year : null);
             }
         });
     }
@@ -159,6 +161,7 @@ class AccountTransfer extends Model
                 referenceType: self::class,
                 referenceId: $this->id,
                 referenceNumber: $this->reference,
+                date: $this->transfer_date,
             );
 
             $toAccount->credit(
@@ -168,6 +171,7 @@ class AccountTransfer extends Model
                 referenceType: self::class,
                 referenceId: $this->id,
                 referenceNumber: $this->reference,
+                date: $this->transfer_date,
             );
 
             $this->update(['status' => AccountTransferStatus::Completed]);
@@ -227,7 +231,7 @@ class AccountTransfer extends Model
     {
         // Numérotation par année du document, pas de la saisie : une pièce de 2025 saisie en 2026 reste en 2025
         $year ??= now()->year;
-        $sequence = app(\App\Services\NumberSequence::class);
+        $sequence = app(NumberSequence::class);
 
         return $sequence->nextFormatted(
             prefix: 'TRF-',

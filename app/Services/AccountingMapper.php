@@ -75,6 +75,9 @@ class AccountingMapper
         'treasury.adjustment' => '471',
         'treasury.other' => '471',
         'treasury.theft' => '658',
+        // Apports et prélèvements de l'exploitant : compte courant de l'exploitant
+        'treasury.contribution' => '104',
+        'treasury.withdrawal' => '104',
         'closing.result' => '131',
         'closing.retained_earnings' => '121',
         'closing.retained_loss' => '129',

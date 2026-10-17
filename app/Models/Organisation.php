@@ -228,7 +228,7 @@ class Organisation extends Model implements HasCurrentTenantLabel
                 'vet_visits.mark_paid', 'vet_visits.create_follow_up',
                 // Comptabilité
                 'accounts.view', 'accounts.create', 'accounts.update', 'accounts.delete',
-                'accounts.set_default', 'accounts.recalculate_balance',
+                'accounts.set_default', 'accounts.recalculate_balance', 'accounts.replenish', 'accounts.withdraw',
                 'transactions.view', 'transactions.create', 'transactions.update', 'transactions.delete',
                 'transactions.reconcile', 'transactions.reverse',
                 'account_transfers.view', 'account_transfers.create', 'account_transfers.update', 'account_transfers.delete',
@@ -236,6 +236,7 @@ class Organisation extends Model implements HasCurrentTenantLabel
                 'expenses.view', 'expenses.create', 'expenses.update', 'expenses.delete',
                 'expenses.mark_paid', 'expenses.cancel',
                 'fiscal_years.view', 'fiscal_years.create', 'fiscal_years.update', 'fiscal_years.close', 'fiscal_years.opening_balance',
+                'bank_reconciliations.view', 'bank_reconciliations.create', 'bank_reconciliations.update', 'bank_reconciliations.delete', 'bank_reconciliations.complete',
                 // Commercial
                 'customers.view', 'customers.create', 'customers.update', 'customers.delete',
                 'sales.view', 'sales.create', 'sales.update', 'sales.delete',

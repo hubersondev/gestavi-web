@@ -357,6 +357,9 @@ class AccountingService
             TransactionCategory::Adjustment => [$this->mapper->codeFor('treasury.adjustment', $organisationId), null],
             // Vol ou perte de caisse : charge exceptionnelle, pas un simple ajustement
             TransactionCategory::Theft => [$this->mapper->codeFor('treasury.theft', $organisationId), null],
+            // Apport ou prélèvement de l'exploitant : compte courant de l'exploitant, pas un produit ni une charge
+            TransactionCategory::Contribution => [$this->mapper->codeFor('treasury.contribution', $organisationId), null],
+            TransactionCategory::Withdrawal => [$this->mapper->codeFor('treasury.withdrawal', $organisationId), null],
             TransactionCategory::Refund => $transaction->type === TransactionType::Debit
                 ? [$this->mapper->codeFor('sale.customer', $organisationId), $reference instanceof Sale ? $reference->customer?->name : null]
                 : [$this->mapper->codeFor('expense.supplier', $organisationId), null],
