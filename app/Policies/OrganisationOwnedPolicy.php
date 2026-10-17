@@ -82,9 +82,6 @@ abstract class OrganisationOwnedPolicy
             return true;
         }
 
-        return $user->organisations()
-            ->where('organisation_id', $organisationId)
-            ->wherePivot('status', 'active')
-            ->exists();
+        return $user->isActiveMemberOf((int) $organisationId);
     }
 }

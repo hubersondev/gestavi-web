@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\MemberStatus;
+use App\Services\MembershipResolver;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\Pivot;
@@ -10,6 +11,14 @@ use Illuminate\Database\Eloquent\Relations\Pivot;
 class OrganisationUser extends Pivot
 {
     protected $table = 'organisation_users';
+
+    protected static function booted(): void
+    {
+        // Toute écriture d'appartenance invalide le cache de requête (statut, rôle, suppression)
+        $flush = fn (): mixed => app(MembershipResolver::class)->flush();
+        static::saved($flush);
+        static::deleted($flush);
+    }
 
     public $incrementing = true;
 

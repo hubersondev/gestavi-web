@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\MemberStatus;
 use App\Enums\UiTheme;
 use App\Enums\UserType;
+use App\Services\MembershipResolver;
 use App\Services\Sms\PhoneNumber;
 use Database\Factories\UserFactory;
 use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthentication;
@@ -197,17 +198,20 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
     //  Multi-tenancy Filament
     // ──────────────────────────────────────────────
 
+    /** @var Collection<int, Organisation>|null */
+    private ?Collection $tenantsCache = null;
+
+    /**
+     * Organisations accessibles (menu de bascule) : Filament les demande plusieurs fois par page.
+     */
     public function getTenants(Panel $panel): Collection
     {
-        return $this->activeOrganisations()->get();
+        return $this->tenantsCache ??= $this->activeOrganisations()->get();
     }
 
     public function canAccessTenant(Model $tenant): bool
     {
-        return $this->organisations()
-            ->wherePivot('status', MemberStatus::Active)
-            ->whereKey($tenant)
-            ->exists();
+        return $tenant instanceof Organisation && $this->isActiveMemberOf((int) $tenant->getKey());
     }
 
     // ──────────────────────────────────────────────
@@ -262,28 +266,28 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
     //  Helpers organisation
     // ──────────────────────────────────────────────
 
-    /** @var array<int, OrganisationUser|null> */
-    private array $membershipCache = [];
-
     /**
-     * Appartenance de l'utilisateur à une organisation, mémorisée sur l'instance : une page du panel
-     * l'interroge des dizaines de fois (cloisonnement, permissions, colonnes) pour un même résultat.
+     * Appartenance de l'utilisateur à une organisation, lue une fois par requête (rôle et
+     * permissions compris) et partagée entre toutes les instances de l'utilisateur : une page du
+     * panel l'interroge des dizaines de fois (cloisonnement, permissions, colonnes, policies).
      */
-    public function membershipIn(Organisation $organisation): ?OrganisationUser
+    public function membershipIn(Organisation|int $organisation): ?OrganisationUser
     {
-        if (! array_key_exists($organisation->id, $this->membershipCache)) {
-            $this->membershipCache[$organisation->id] = $this->organisations()
-                ->where('organisation_users.organisation_id', $organisation->id)
-                ->first()
-                ?->pivot;
-        }
+        $organisationId = $organisation instanceof Organisation ? (int) $organisation->getKey() : $organisation;
 
-        return $this->membershipCache[$organisation->id];
+        return app(MembershipResolver::class)->resolve((int) $this->getKey(), $organisationId);
+    }
+
+    /** Membre actif d'une organisation (identifiant), sans requête si l'appartenance est déjà résolue. */
+    public function isActiveMemberOf(int $organisationId): bool
+    {
+        return $this->membershipIn($organisationId)?->isActive() ?? false;
     }
 
     public function forgetMembershipCache(): void
     {
-        $this->membershipCache = [];
+        $this->tenantsCache = null;
+        app(MembershipResolver::class)->forget((int) $this->getKey());
     }
 
     public function roleInOrganisation(Organisation $organisation): ?OrganisationRole

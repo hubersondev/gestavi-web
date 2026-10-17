@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Services\CurrentFiscalYear;
+use App\Services\MembershipResolver;
 use App\Services\OrganisationWriteGuard;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -22,7 +23,8 @@ class AppServiceProvider extends ServiceProvider
     {
         // Mémoire d'une requête (réinitialisée par requête sous Octane) : exercices de l'organisation courante
         $this->app->scoped(CurrentFiscalYear::class);
-        //
+        // Appartenances (rôle, permissions) lues une fois par requête, pour toutes les instances de User
+        $this->app->scoped(MembershipResolver::class);
     }
 
     /**

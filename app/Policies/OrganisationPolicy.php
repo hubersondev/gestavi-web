@@ -8,13 +8,12 @@ use App\Models\User;
 
 class OrganisationPolicy
 {
+    /** Appartenance active, lue via le cache de requête de l'utilisateur. */
     private function membership(User $user, Organisation $organisation): ?OrganisationUser
     {
-        return $user->organisations()
-            ->where('organisation_id', $organisation->id)
-            ->wherePivot('status', 'active')
-            ->first()
-            ?->pivot;
+        $membership = $user->membershipIn($organisation);
+
+        return $membership?->isActive() ? $membership : null;
     }
 
     /**
@@ -34,7 +33,7 @@ class OrganisationPolicy
      */
     public function view(User $user, Organisation $organisation): bool
     {
-        return $organisation->hasMember($user);
+        return $user->isActiveMemberOf((int) $organisation->getKey());
     }
 
     /**
