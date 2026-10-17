@@ -17,6 +17,7 @@ class AuditLog extends Activity
     public const SUBJECT_LABELS = [
         Account::class => 'Compte de trésorerie',
         AccountTransfer::class => 'Transfert entre comptes',
+        BankReconciliation::class => 'Rapprochement bancaire',
         Contract::class => 'Contrat de travail',
         CreditNote::class => 'Avoir',
         Customer::class => 'Client',

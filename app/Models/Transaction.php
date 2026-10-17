@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\TransactionCategory;
 use App\Enums\TransactionType;
+use App\Exceptions\TransactionException;
 use App\Models\Concerns\BelongsToOrganisation;
 use App\Models\Concerns\LogsAuditTrail;
 use App\Services\TheftAlert;
@@ -144,21 +145,38 @@ class Transaction extends Model
         return $this->isCredit() ? (float) $this->amount : -((float) $this->amount);
     }
 
-    // ─── ACTIONS ─────────────────────────────────────────────────────────────
-
-    public function reconcile(): void
+    /** Rapprochement bancaire dans lequel la transaction a été pointée. */
+    public function bankReconciliation(): BelongsTo
     {
-        $this->update([
-            'is_reconciled' => true,
-            'reconciled_at' => now(),
-        ]);
+        return $this->belongsTo(BankReconciliation::class);
     }
 
+    // ─── ACTIONS ─────────────────────────────────────────────────────────────
+
+    /**
+     * Pointe la transaction, éventuellement dans un rapprochement par relevé. Les colonnes de
+     * pointage sont les seules que le journal intangible laisse modifier.
+     */
+    public function reconcile(?BankReconciliation $reconciliation = null): void
+    {
+        $this->forceFill([
+            'is_reconciled' => true,
+            'reconciled_at' => now(),
+            'bank_reconciliation_id' => $reconciliation?->getKey() ?? $this->bank_reconciliation_id,
+        ])->save();
+    }
+
+    /** Dépointe la transaction ; refusé si son rapprochement est clôturé. */
     public function unreconcile(): void
     {
-        $this->update([
+        if ($this->bank_reconciliation_id && $this->bankReconciliation?->isCompleted()) {
+            throw TransactionException::lockedByReconciliation($this->id);
+        }
+
+        $this->forceFill([
             'is_reconciled' => false,
             'reconciled_at' => null,
-        ]);
+            'bank_reconciliation_id' => null,
+        ])->save();
     }
 }

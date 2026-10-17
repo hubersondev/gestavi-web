@@ -40,6 +40,7 @@ class PlanSeeder extends Seeder
             PlanFeature::CnpsCalculation->value,
             PlanFeature::Accounting->value,
             PlanFeature::Transfers->value,
+            PlanFeature::BankReconciliation->value,
             PlanFeature::Expenses->value,
             PlanFeature::StockBatches->value,
             PlanFeature::PurchaseOrders->value,

@@ -21,6 +21,11 @@ class TransactionException extends Exception
         return new self("La transaction #{$id} a déjà été contrepassée.");
     }
 
+    public static function lockedByReconciliation(int $id): self
+    {
+        return new self("La transaction #{$id} est pointée dans un rapprochement bancaire clôturé : elle ne peut plus être dépointée.");
+    }
+
     public static function cannotReverseReconciled(int $id): self
     {
         return new self("La transaction #{$id} est rapprochée. Annulez d'abord le rapprochement avant de la contrepasser.");

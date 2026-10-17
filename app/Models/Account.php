@@ -75,6 +75,12 @@ class Account extends Model
         return $this->hasMany(Transaction::class);
     }
 
+    /** Rapprochements par relevé ouverts ou clôturés sur ce compte. */
+    public function bankReconciliations(): HasMany
+    {
+        return $this->hasMany(BankReconciliation::class);
+    }
+
     public function outgoingTransfers(): HasMany
     {
         return $this->hasMany(AccountTransfer::class, 'from_account_id');

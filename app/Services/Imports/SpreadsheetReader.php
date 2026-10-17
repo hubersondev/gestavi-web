@@ -3,6 +3,7 @@
 namespace App\Services\Imports;
 
 use Illuminate\Support\Str;
+use OpenSpout\Reader\CSV\Options as CsvOptions;
 use OpenSpout\Reader\CSV\Reader as CsvReader;
 use OpenSpout\Reader\XLSX\Reader as XlsxReader;
 
@@ -17,7 +18,7 @@ class SpreadsheetReader
      */
     public function read(string $path): array
     {
-        $reader = strtolower(pathinfo($path, PATHINFO_EXTENSION)) === 'csv' ? new CsvReader : new XlsxReader;
+        $reader = strtolower(pathinfo($path, PATHINFO_EXTENSION)) === 'csv' ? new CsvReader(static::csvOptions($path)) : new XlsxReader;
         $reader->open($path);
 
         $headers = [];
@@ -68,6 +69,36 @@ class SpreadsheetReader
     public static function normalizeHeader(string $header): string
     {
         return (string) Str::of($header)->ascii()->lower()->replaceMatches('/[^a-z0-9]+/', '_')->trim('_');
+    }
+
+    /**
+     * Séparateur de champs déduit de la première ligne (les exports bancaires et Excel français
+     * utilisent le point-virgule, d'autres la virgule ou la tabulation).
+     */
+    private static function csvOptions(string $path): CsvOptions
+    {
+        $options = new CsvOptions;
+        $handle = @fopen($path, 'rb');
+        $firstLine = $handle ? (string) fgets($handle) : '';
+
+        if ($handle) {
+            fclose($handle);
+        }
+
+        $counts = [];
+
+        foreach ([';', ',', "\t", '|'] as $delimiter) {
+            $counts[$delimiter] = substr_count($firstLine, $delimiter);
+        }
+
+        arsort($counts);
+        $best = (string) array_key_first($counts);
+
+        if ($counts[$best] > 0) {
+            $options->FIELD_DELIMITER = $best;
+        }
+
+        return $options;
     }
 
     private function normalizeCell(mixed $cell): mixed
