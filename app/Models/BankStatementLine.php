@@ -34,21 +34,28 @@ class BankStatementLine extends Model
 
     protected static function booted(): void
     {
+        // Supprimer une ligne associée d'un brouillon dépointe sa transaction
         static::deleting(function (BankStatementLine $line): void {
-            if ($line->isMatched() && $line->reconciliation?->isDraft() && $line->matchedTransaction?->is_reconciled) {
-                $line->matchedTransaction->unreconcile();
+            if (! $line->isMatched() || ! $line->reconciliation?->isDraft()) {
+                return;
+            }
+
+            $transaction = $line->matchedTransaction;
+
+            if ($transaction?->is_reconciled) {
+                $transaction->setRelation('bankReconciliation', $line->reconciliation)->unreconcile();
             }
         });
     }
 
     public function reconciliation(): BelongsTo
     {
-        return $this->belongsTo(BankReconciliation::class, 'bank_reconciliation_id');
+        return $this->belongsTo(BankReconciliation::class, 'bank_reconciliation_id')->withoutGlobalScopes();
     }
 
     public function matchedTransaction(): BelongsTo
     {
-        return $this->belongsTo(Transaction::class, 'matched_transaction_id');
+        return $this->belongsTo(Transaction::class, 'matched_transaction_id')->withoutGlobalScopes();
     }
 
     /** Sens attendu de la transaction correspondante. */

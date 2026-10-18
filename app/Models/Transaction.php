@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\BankStatementLineStatus;
 use App\Enums\TransactionCategory;
 use App\Enums\TransactionType;
 use App\Exceptions\TransactionException;
@@ -13,6 +14,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Support\Facades\DB;
 
 class Transaction extends Model
 {
@@ -148,7 +150,7 @@ class Transaction extends Model
     /** Rapprochement bancaire dans lequel la transaction a été pointée. */
     public function bankReconciliation(): BelongsTo
     {
-        return $this->belongsTo(BankReconciliation::class);
+        return $this->belongsTo(BankReconciliation::class)->withoutGlobalScopes();
     }
 
     // ─── ACTIONS ─────────────────────────────────────────────────────────────
@@ -166,17 +168,32 @@ class Transaction extends Model
         ])->save();
     }
 
-    /** Dépointe la transaction ; refusé si son rapprochement est clôturé. */
+    /**
+     * Dépointe la transaction ; refusé si son rapprochement est clôturé. Une ligne de relevé qui
+     * lui était associée redevient à rapprocher.
+     */
     public function unreconcile(): void
     {
         if ($this->bank_reconciliation_id && $this->bankReconciliation?->isCompleted()) {
             throw TransactionException::lockedByReconciliation($this->id);
         }
 
-        $this->forceFill([
-            'is_reconciled' => false,
-            'reconciled_at' => null,
-            'bank_reconciliation_id' => null,
-        ])->save();
+        DB::transaction(function (): void {
+            BankStatementLine::query()
+                ->where('matched_transaction_id', $this->getKey())
+                ->update(['matched_transaction_id' => null, 'status' => BankStatementLineStatus::Unmatched->value]);
+
+            $this->forceFill([
+                'is_reconciled' => false,
+                'reconciled_at' => null,
+                'bank_reconciliation_id' => null,
+            ])->save();
+        });
+    }
+
+    /** Pointée dans un rapprochement par relevé (dépointage depuis ce rapprochement uniquement). */
+    public function belongsToBankReconciliation(): bool
+    {
+        return $this->bank_reconciliation_id !== null;
     }
 }

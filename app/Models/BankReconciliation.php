@@ -12,11 +12,17 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Rapprochement d'un compte de trésorerie avec un relevé (bancaire, mobile money, ou comptage de
  * caisse) : solde du relevé à une date, lignes importées et transactions pointées. Un seul
- * rapprochement en cours par compte ; clôturé quand le solde pointé égale celui du relevé.
+ * rapprochement en cours par compte, des relevés successifs dans l'ordre chronologique ; clôturé
+ * quand le solde pointé égale celui du relevé, et ce solde est alors figé.
+ *
+ * Les relations vers le compte et ses transactions ignorent les portées globales du panel : l'accès
+ * au rapprochement est déjà contrôlé, et un compte archivé ou dont la ferme a changé doit rester
+ * entièrement visible pour que soldes et verrous portent sur tous ses mouvements.
  */
 class BankReconciliation extends Model
 {
@@ -28,7 +34,7 @@ class BankReconciliation extends Model
 
     protected $fillable = [
         'organisation_id', 'farm_id', 'account_id',
-        'statement_date', 'statement_balance', 'status',
+        'statement_date', 'statement_balance', 'reconciled_balance', 'status',
         'statement_file', 'notes',
         'completed_at', 'completed_by', 'created_by',
     ];
@@ -38,6 +44,7 @@ class BankReconciliation extends Model
         return [
             'statement_date' => 'date',
             'statement_balance' => 'decimal:2',
+            'reconciled_balance' => 'decimal:2',
             'status' => BankReconciliationStatus::class,
             'completed_at' => 'datetime',
         ];
@@ -51,7 +58,11 @@ class BankReconciliation extends Model
                 throw BankReconciliationException::cannotDeleteCompleted();
             }
 
-            $reconciliation->transactions()->get()->each(fn (Transaction $transaction) => $transaction->unreconcile());
+            DB::transaction(function () use ($reconciliation): void {
+                $reconciliation->transactions()->get()->each(function (Transaction $transaction) use ($reconciliation): void {
+                    $transaction->setRelation('bankReconciliation', $reconciliation)->unreconcile();
+                });
+            });
         });
     }
 
@@ -67,9 +78,10 @@ class BankReconciliation extends Model
         return $this->belongsTo(Farm::class);
     }
 
+    /** Compte rapproché, même archivé. */
     public function account(): BelongsTo
     {
-        return $this->belongsTo(Account::class);
+        return $this->belongsTo(Account::class)->withoutGlobalScopes();
     }
 
     public function creator(): BelongsTo
@@ -85,27 +97,31 @@ class BankReconciliation extends Model
     /** Lignes importées du relevé. */
     public function lines(): HasMany
     {
-        return $this->hasMany(BankStatementLine::class);
+        return $this->hasMany(BankStatementLine::class)->chaperone('reconciliation');
     }
 
     /** Transactions pointées dans ce rapprochement. */
     public function transactions(): HasMany
     {
-        return $this->hasMany(Transaction::class);
+        return $this->hasMany(Transaction::class)->withoutGlobalScopes();
     }
 
     /**
-     * Transactions du compte à pointer dans ce rapprochement : datées au plus tard du relevé et non
-     * encore rapprochées, ou déjà pointées ici (quelle que soit leur date).
+     * Transactions du compte à examiner dans ce rapprochement, toutes datées au plus tard du relevé :
+     * non pointées, pointées ici, ou pointées hors de tout rapprochement (pointage à l'unité ou
+     * antérieur au module), qui comptent dans le solde et seront rattachées à la clôture.
      */
     public function candidateTransactions(): HasMany
     {
+        $statementDate = $this->statement_date?->toDateString() ?? today()->toDateString();
+
         return $this->hasMany(Transaction::class, 'account_id', 'account_id')
+            ->withoutGlobalScopes()
+            ->whereDate('transactions.transaction_date', '<=', $statementDate)
             ->where(function (Builder $query): void {
                 $query
-                    ->where(fn (Builder $pending): Builder => $pending
-                        ->where('transactions.is_reconciled', false)
-                        ->whereDate('transactions.transaction_date', '<=', $this->statement_date?->toDateString() ?? today()->toDateString()))
+                    ->where('transactions.is_reconciled', false)
+                    ->orWhereNull('transactions.bank_reconciliation_id')
                     ->orWhere('transactions.bank_reconciliation_id', $this->getKey() ?? 0);
             });
     }

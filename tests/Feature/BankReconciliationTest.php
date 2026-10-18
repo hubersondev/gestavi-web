@@ -78,21 +78,27 @@ it('importe un relevé CSV français (point-virgule, débit / crédit, montants 
         '14/09/2026;CHEQUE 118;80 000,00;;CHQ-118',
         '28/09/2026;COMMISSIONS;25 000;;',
         '29/09/2026;AGIOS;1 500;;',
-        '05/09/2026;VIR SEPA YAO;;150 000;VIR-2041',
+        '03/10/2026;VENTE OEUFS;;60 000;',
         'date illisible;X;;10;',
     ]);
-    $path = tempnam(sys_get_temp_dir(), 'releve').'.csv';
+    // Extension .txt, comme un fichier envoyé par le navigateur : le format est reconnu au contenu
+    $path = tempnam(sys_get_temp_dir(), 'releve').'.txt';
     file_put_contents($path, $csv);
 
     try {
         $result = $this->service->importStatement($reconciliation, $path, 'releve-septembre.csv');
+        // Réimporter le même relevé n'ajoute rien
+        $again = $this->service->importStatement($reconciliation, $path);
     } finally {
         @unlink($path);
     }
 
     expect($result['imported'])->toBe(4)
-        ->and($result['duplicates'])->toBe(1)
+        ->and($result['duplicates'])->toBe(0)
+        ->and($result['after_statement'])->toBe(1)
         ->and($result['errors'])->toHaveCount(1)
+        ->and($again['imported'])->toBe(0)
+        ->and($again['duplicates'])->toBe(4)
         ->and($reconciliation->fresh()->statement_file)->toBe('releve-septembre.csv');
 
     $lines = $reconciliation->lines()->orderBy('line_date')->orderBy('id')->get();

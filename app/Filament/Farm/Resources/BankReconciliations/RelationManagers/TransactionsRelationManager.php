@@ -33,18 +33,16 @@ class TransactionsRelationManager extends RelationManager
 
     protected static ?string $recordTitleAttribute = 'description';
 
+    /** Le nouveau rendu suffit : les lignes sont relues à chaque rendu. */
     #[On(BankReconciliationResource::REFRESH_EVENT)]
-    public function refreshAfterReconciliation(): void
-    {
-        $this->getOwnerRecord()->refresh();
-    }
+    public function refreshAfterReconciliation(): void {}
 
     public function table(Table $table): Table
     {
         $draft = fn (): bool => $this->reconciliation()->isDraft() && BankReconciliationResource::canPerformAction('update');
 
         return $table
-            ->description('Mouvements du compte datés au plus tard du relevé et non encore rapprochés, plus ceux déjà pointés ici. Pointez ceux qui figurent sur le relevé.')
+            ->description('Mouvements du compte datés au plus tard du relevé : non pointés, pointés ici, ou pointés à l\'unité hors rapprochement (rattachés à celui-ci à la clôture). Pointez ceux qui figurent sur le relevé.')
             ->defaultSort('transaction_date', 'desc')
             ->columns([
                 TextColumn::make('transaction_date')
@@ -83,7 +81,8 @@ class TransactionsRelationManager extends RelationManager
 
                 IconColumn::make('is_reconciled')
                     ->label('Pointée')
-                    ->boolean(),
+                    ->boolean()
+                    ->tooltip(fn (Transaction $record): ?string => $record->is_reconciled && $record->bank_reconciliation_id === null ? 'Pointée hors rapprochement' : null),
             ])
             ->filters([
                 TernaryFilter::make('is_reconciled')
@@ -115,7 +114,7 @@ class TransactionsRelationManager extends RelationManager
                         ->icon('heroicon-o-check')
                         ->color('success')
                         ->visible($draft)
-                        ->action(fn (Collection $records) => $this->mark($records->pluck('id'), true))
+                        ->action(fn (Collection $records) => $this->mark($records->modelKeys(), true))
                         ->deselectRecordsAfterCompletion(),
 
                     BulkAction::make('unreconcileSelected')
@@ -123,7 +122,7 @@ class TransactionsRelationManager extends RelationManager
                         ->icon('heroicon-o-x-mark')
                         ->color('gray')
                         ->visible($draft)
-                        ->action(fn (Collection $records) => $this->mark($records->pluck('id'), false))
+                        ->action(fn (Collection $records) => $this->mark($records->modelKeys(), false))
                         ->deselectRecordsAfterCompletion(),
                 ]),
             ]);

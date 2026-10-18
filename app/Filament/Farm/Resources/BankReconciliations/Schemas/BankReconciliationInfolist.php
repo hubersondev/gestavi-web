@@ -3,6 +3,8 @@
 namespace App\Filament\Farm\Resources\BankReconciliations\Schemas;
 
 use App\Filament\Farm\Resources\BankReconciliations\Pages\ViewBankReconciliation;
+use App\Models\BankReconciliation;
+use App\Services\BankReconciliationService;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
@@ -59,7 +61,7 @@ class BankReconciliationInfolist
                     ]),
 
                 Section::make('Synthèse')
-                    ->description('Le rapprochement se clôture quand le solde pointé (mouvements cochés, solde initial compris) égale le solde du relevé.')
+                    ->description('Le rapprochement se clôture quand le solde pointé (solde initial et mouvements pointés jusqu\'à la date du relevé) égale le solde du relevé, à moins d\'un franc près. Une fois clôturé, ce solde est figé.')
                     ->columns(4)
                     ->schema([
                         TextEntry::make('summary_reconciled_balance')
@@ -75,7 +77,11 @@ class BankReconciliationInfolist
 
                         TextEntry::make('summary_pending')
                             ->label('Transactions à pointer')
-                            ->state(function (ViewBankReconciliation $livewire): string {
+                            ->state(function (ViewBankReconciliation $livewire, BankReconciliation $record): string {
+                                if ($record->isCompleted()) {
+                                    return '—';
+                                }
+
                                 $summary = $livewire->summary();
 
                                 return $summary['pending_count'].' ('.static::money($summary['pending_amount']).')';
@@ -98,6 +104,6 @@ class BankReconciliationInfolist
 
     private static function money(float $amount): string
     {
-        return number_format($amount, 0, ',', ' ').' XOF';
+        return BankReconciliationService::money($amount);
     }
 }

@@ -32,10 +32,14 @@ class StatementLinesRelationManager extends RelationManager
 
     protected static ?string $recordTitleAttribute = 'label';
 
+    /** Le nouveau rendu suffit : les lignes sont relues à chaque rendu. */
     #[On(BankReconciliationResource::REFRESH_EVENT)]
-    public function refreshAfterReconciliation(): void
+    public function refreshAfterReconciliation(): void {}
+
+    /** Les actions sur les lignes se font depuis la fiche (consultation) du rapprochement. */
+    public function isReadOnly(): bool
     {
-        $this->getOwnerRecord()->refresh();
+        return false;
     }
 
     public function table(Table $table): Table
@@ -104,19 +108,19 @@ class StatementLinesRelationManager extends RelationManager
                             ->options(fn (): array => app(BankReconciliationService::class)->suggestionsFor($record)
                                 ->mapWithKeys(fn (Transaction $transaction): array => [
                                     $transaction->id => sprintf(
-                                        '%s — %s XOF — %s',
+                                        '%s — %s — %s',
                                         $transaction->transaction_date->format('d/m/Y'),
-                                        number_format((float) $transaction->amount, 0, ',', ' '),
+                                        BankReconciliationService::money((float) $transaction->amount),
                                         (string) $transaction->description,
                                     ),
                                 ])
                                 ->all())
-                            ->helperText('Transactions non pointées de même sens et de même montant, à ± 45 jours de la ligne.')
+                            ->helperText('Transactions de même sens et de même montant (à moins d\'un franc), à ± '.BankReconciliationService::SUGGESTION_DAY_WINDOW.' jours de la ligne et au plus tard à la date du relevé.')
                             ->required()
                             ->searchable(),
                     ])
                     ->action(function (BankStatementLine $record, array $data): void {
-                        $transaction = Transaction::query()->findOrFail($data['transaction_id']);
+                        $transaction = Transaction::query()->withoutGlobalScopes()->where('account_id', $this->reconciliation()->account_id)->findOrFail($data['transaction_id']);
 
                         $this->run(fn () => app(BankReconciliationService::class)->matchLine($record, $transaction), 'Ligne associée et transaction pointée', 'Association impossible');
                     }),

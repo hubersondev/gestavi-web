@@ -5,6 +5,7 @@ namespace App\Filament\Farm\Resources\BankReconciliations\Schemas;
 use App\Filament\Farm\Components\FiscalYearDatePicker;
 use App\Filament\Farm\Resources\Accounts\AccountResource;
 use App\Models\Account;
+use App\Models\BankReconciliation;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -25,10 +26,10 @@ class BankReconciliationForm
                     ->schema([
                         Select::make('account_id')
                             ->label('Compte')
-                            ->options(fn (): array => static::accountOptions())
-                            // Garde-fou serveur : un compte de l'organisation courante
-                            ->rules(fn (): array => [Rule::exists('accounts', 'id')->where('organisation_id', Filament::getTenant()?->getKey())])
-                            ->required()
+                            ->options(fn (?BankReconciliation $record): array => static::accountOptions($record))
+                            // Garde-fou serveur : un compte de l'organisation courante (à l'ouverture seulement)
+                            ->rules(fn (string $operation): array => $operation === 'create' ? [Rule::exists('accounts', 'id')->where('organisation_id', Filament::getTenant()?->getKey())] : [])
+                            ->required(fn (string $operation): bool => $operation === 'create')
                             ->searchable()
                             ->preload()
                             ->disabled(fn (string $operation): bool => $operation === 'edit')
@@ -60,12 +61,14 @@ class BankReconciliationForm
      *
      * @return array<int, string>
      */
-    private static function accountOptions(): array
+    private static function accountOptions(?BankReconciliation $record): array
     {
-        return AccountResource::getEloquentQuery()
-            ->active()
-            ->orderBy('name')
-            ->get()
+        // En modification, le compte du rapprochement est affiché même désactivé ou archivé
+        $accounts = $record?->account
+            ? collect([$record->account])
+            : AccountResource::getEloquentQuery()->active()->orderBy('name')->get();
+
+        return $accounts
             ->mapWithKeys(fn (Account $account): array => [
                 $account->id => sprintf('%s — %s (%s XOF)', $account->name, $account->type?->getLabel() ?? '', number_format((float) $account->current_balance, 0, ',', ' ')),
             ])

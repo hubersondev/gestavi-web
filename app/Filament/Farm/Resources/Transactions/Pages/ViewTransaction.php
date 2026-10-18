@@ -2,6 +2,7 @@
 
 namespace App\Filament\Farm\Resources\Transactions\Pages;
 
+use App\Exceptions\TransactionException;
 use App\Filament\Farm\Resources\Transactions\TransactionResource;
 use App\Models\Transaction;
 use App\Services\TransactionService;
@@ -33,9 +34,17 @@ class ViewTransaction extends ViewRecord
                 ->label('Annuler le rapprochement')
                 ->icon('heroicon-o-x-circle')
                 ->color('warning')
-                ->visible(fn (Transaction $record): bool => $record->isReconciled() && TransactionResource::canPerformAction('reconcile'))
+                ->visible(fn (Transaction $record): bool => $record->isReconciled() && ! $record->belongsToBankReconciliation() && TransactionResource::canPerformAction('reconcile'))
+                ->requiresConfirmation()
                 ->action(function (Transaction $record): void {
-                    $record->unreconcile();
+                    try {
+                        $record->unreconcile();
+                    } catch (TransactionException $e) {
+                        Notification::make()->title('Annulation impossible')->body($e->getMessage())->danger()->send();
+
+                        return;
+                    }
+
                     Notification::make()->title('Rapprochement annulé.')->success()->send();
                 }),
 

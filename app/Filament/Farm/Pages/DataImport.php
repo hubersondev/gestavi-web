@@ -5,6 +5,8 @@ namespace App\Filament\Farm\Pages;
 use App\Filament\Farm\Concerns\RequiresOrganisationPermission;
 use App\Services\Imports\ExcelImportService;
 use App\Services\Imports\ImportDefinition;
+use App\Services\Imports\UnsupportedSpreadsheetException;
+use App\Services\Imports\UploadedImportFile;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
@@ -15,7 +17,6 @@ use Filament\Pages\Page;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
-use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use UnitEnum;
 
@@ -67,8 +68,10 @@ class DataImport extends Page
                     ->helperText(fn (Get $get): string => $get('type') ? $this->importService()->definition($get('type'))->description() : ''),
                 FileUpload::make('file')
                     ->label('Fichier Excel (.xlsx) ou CSV')
-                    ->disk('local')
-                    ->directory('imports')
+                    ->disk(UploadedImportFile::DISK)
+                    ->directory(UploadedImportFile::DIRECTORY)
+                    // Seul un fichier envoyé dans ce formulaire est accepté, jamais un chemin saisi
+                    ->preventFilePathTampering()
                     ->visibility('private')
                     ->acceptedFileTypes([
                         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -106,18 +109,27 @@ class DataImport extends Page
     public function import(): void
     {
         $state = $this->form->getState();
-        $file = is_array($state['file']) ? reset($state['file']) : $state['file'];
-        $path = Storage::disk('local')->path($file);
+        try {
+            $upload = UploadedImportFile::fromState($state['file'] ?? null);
+        } catch (UnsupportedSpreadsheetException $e) {
+            Notification::make()->title('Import impossible')->body($e->getMessage())->danger()->send();
+
+            return;
+        }
 
         try {
             $this->result = $this->importService()->import(
                 $state['type'],
-                $path,
+                $upload->absolutePath(),
                 Filament::getTenant(),
                 Filament::auth()->id(),
             );
+        } catch (UnsupportedSpreadsheetException $e) {
+            Notification::make()->title('Import impossible')->body($e->getMessage())->danger()->send();
+
+            return;
         } finally {
-            Storage::disk('local')->delete($file);
+            $upload->delete();
         }
 
         if ($this->result['errors'] === []) {

@@ -6,6 +6,8 @@ use App\Exceptions\BankReconciliationException;
 use App\Filament\Farm\Resources\BankReconciliations\BankReconciliationResource;
 use App\Models\BankReconciliation;
 use App\Services\BankReconciliationService;
+use App\Services\Imports\UnsupportedSpreadsheetException;
+use App\Services\Imports\UploadedImportFile;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
@@ -13,7 +15,6 @@ use Filament\Facades\Filament;
 use Filament\Forms\Components\FileUpload;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
-use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\On;
 
 /**
@@ -56,13 +57,15 @@ class ViewBankReconciliation extends ViewRecord
                 ->color('gray')
                 ->visible($draft)
                 ->modalHeading('Importer les lignes du relevé')
-                ->modalDescription('Fichier Excel (.xlsx) ou CSV avec une colonne Date, un Libellé et un Montant signé (ou des colonnes Débit et Crédit), plus éventuellement une Référence. Les lignes déjà importées sont ignorées : vous pouvez réimporter un relevé complété.')
+                ->modalDescription('Fichier Excel (.xlsx) ou CSV avec une colonne Date, des colonnes Débit et Crédit (ou un Montant signé), un Libellé et éventuellement une Référence. Les lignes postérieures à la date du relevé et celles déjà importées sont écartées : vous pouvez réimporter un relevé complété.')
                 ->modalSubmitActionLabel('Importer')
                 ->schema([
                     FileUpload::make('file')
                         ->label('Relevé')
-                        ->disk('local')
-                        ->directory('imports')
+                        ->disk(UploadedImportFile::DISK)
+                        ->directory(UploadedImportFile::DIRECTORY)
+                        // Seul un fichier envoyé dans ce formulaire est accepté, jamais un chemin saisi
+                        ->preventFilePathTampering()
                         ->visibility('private')
                         ->acceptedFileTypes([
                             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -75,12 +78,19 @@ class ViewBankReconciliation extends ViewRecord
                         ->required(),
                 ])
                 ->action(function (BankReconciliation $record, array $data): void {
-                    $path = Storage::disk('local')->path($data['file']);
-                    $fileName = is_string($data['file_name'] ?? null) ? $data['file_name'] : basename($data['file']);
+                    try {
+                        $upload = UploadedImportFile::fromState($data['file'] ?? null);
+                    } catch (UnsupportedSpreadsheetException $e) {
+                        $this->failure('Import impossible', $e->getMessage());
+
+                        return;
+                    }
+
+                    $fileName = is_string($data['file_name'] ?? null) ? $data['file_name'] : basename($upload->relativePath);
 
                     try {
-                        $result = app(BankReconciliationService::class)->importStatement($record, $path, $fileName);
-                    } catch (BankReconciliationException $e) {
+                        $result = app(BankReconciliationService::class)->importStatement($record, $upload->absolutePath(), $fileName);
+                    } catch (BankReconciliationException|UnsupportedSpreadsheetException $e) {
                         $this->failure('Import impossible', $e->getMessage());
 
                         return;
@@ -90,10 +100,14 @@ class ViewBankReconciliation extends ViewRecord
 
                         return;
                     } finally {
-                        Storage::disk('local')->delete($data['file']);
+                        $upload->delete();
                     }
 
                     $body = sprintf('%d ligne(s) importée(s), %d doublon(s) ignoré(s).', $result['imported'], $result['duplicates']);
+
+                    if ($result['after_statement'] > 0) {
+                        $body .= sprintf(' %d ligne(s) postérieure(s) au relevé écartée(s).', $result['after_statement']);
+                    }
 
                     if ($result['errors'] !== []) {
                         $body .= ' Lignes non lues : '.implode(' ', array_slice($result['errors'], 0, 5));
@@ -112,7 +126,7 @@ class ViewBankReconciliation extends ViewRecord
                 ->label('Rapprocher automatiquement')
                 ->icon('heroicon-o-sparkles')
                 ->color('info')
-                ->visible(fn (BankReconciliation $record): bool => $draft($record) && $record->lines()->exists())
+                ->visible(fn (BankReconciliation $record): bool => $draft($record) && $this->summary()['lines_unmatched'] > 0)
                 ->requiresConfirmation()
                 ->modalDescription('Chaque ligne du relevé encore à rapprocher est associée à une transaction non pointée de même sens et de même montant, datée à ± '.BankReconciliationService::DEFAULT_DAY_TOLERANCE.' jours (la référence commune puis la date la plus proche départagent). Les transactions associées sont pointées.')
                 ->action(function (BankReconciliation $record): void {
@@ -145,9 +159,9 @@ class ViewBankReconciliation extends ViewRecord
 
                     return sprintf(
                         'Solde du relevé : %s. Solde pointé : %s. Écart : %s. %s',
-                        $this->money($summary['statement_balance']),
-                        $this->money($summary['reconciled_balance']),
-                        $this->money($summary['difference']),
+                        BankReconciliationService::money($summary['statement_balance']),
+                        BankReconciliationService::money($summary['reconciled_balance']),
+                        BankReconciliationService::money($summary['difference']),
                         $summary['is_balanced']
                             ? 'Une fois clôturé, le rapprochement ne se modifie plus et ses transactions restent pointées.'
                             : 'La clôture sera refusée tant que l\'écart n\'est pas nul.',
@@ -163,6 +177,7 @@ class ViewBankReconciliation extends ViewRecord
                     }
 
                     $this->refreshReconciliation();
+                    $this->dispatch(BankReconciliationResource::REFRESH_EVENT);
 
                     Notification::make()
                         ->title('Rapprochement clôturé')
@@ -184,10 +199,5 @@ class ViewBankReconciliation extends ViewRecord
             ->danger()
             ->persistent()
             ->send();
-    }
-
-    private function money(float $amount): string
-    {
-        return number_format($amount, 0, ',', ' ').' XOF';
     }
 }
