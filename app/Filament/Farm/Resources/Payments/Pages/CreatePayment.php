@@ -6,6 +6,7 @@ use App\Enums\PaymentMethod;
 use App\Filament\Farm\Resources\Payments\PaymentResource;
 use App\Models\Sale;
 use App\Services\SaleService;
+use Carbon\Carbon;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Database\Eloquent\Model;
@@ -24,10 +25,10 @@ class CreatePayment extends CreateRecord
             $payment = app(SaleService::class)->recordPayment(
                 sale: $sale,
                 amount: (float) $data['amount'],
-                method: PaymentMethod::from($data['method']),
+                method: $data['method'] instanceof PaymentMethod ? $data['method'] : PaymentMethod::from($data['method']),
                 accountId: $data['account_id'] ?? null,
                 reference: $data['reference'] ?? null,
-                paidAt: \Carbon\Carbon::parse($data['payment_date']),
+                paidAt: Carbon::parse($data['payment_date']),
             );
 
             if (! empty($data['notes'])) {

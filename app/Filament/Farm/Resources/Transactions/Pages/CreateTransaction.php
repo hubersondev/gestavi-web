@@ -18,8 +18,8 @@ class CreateTransaction extends CreateRecord
         /** @var Account $account */
         $account = Account::findOrFail($data['account_id']);
 
-        $type = TransactionType::from($data['type']);
-        $category = TransactionCategory::from($data['category']);
+        $type = $data['type'] instanceof TransactionType ? $data['type'] : TransactionType::from($data['type']);
+        $category = $data['category'] instanceof TransactionCategory ? $data['category'] : TransactionCategory::from($data['category']);
         $amount = (float) $data['amount'];
 
         $transaction = $type === TransactionType::Credit

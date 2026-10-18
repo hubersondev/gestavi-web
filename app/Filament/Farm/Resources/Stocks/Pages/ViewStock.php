@@ -6,6 +6,7 @@ use App\Enums\StockMovementReason;
 use App\Filament\Farm\Resources\Stocks\StockResource;
 use App\Models\Flock;
 use App\Models\Stock;
+use App\Services\StockService;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Facades\Filament;
@@ -63,7 +64,7 @@ class ViewStock extends ViewRecord
                     try {
                         $record->recordIn(
                             quantity: (float) $data['quantity'],
-                            reason: StockMovementReason::from($data['reason']),
+                            reason: $data['reason'] instanceof StockMovementReason ? $data['reason'] : StockMovementReason::from($data['reason']),
                             unitPrice: ! empty($data['unit_price']) ? (float) $data['unit_price'] : null,
                             reference: $data['reference'] ?? null,
                             notes: $data['notes'] ?? null,
@@ -121,10 +122,10 @@ class ViewStock extends ViewRecord
                 ->action(function (Stock $record, array $data): void {
                     try {
                         // FIFO/FEFO par lots quand le produit est suivi par lots
-                        $movements = app(\App\Services\StockService::class)->recordOut(
+                        $movements = app(StockService::class)->recordOut(
                             stock: $record,
                             quantity: (float) $data['quantity'],
-                            reason: StockMovementReason::from($data['reason']),
+                            reason: $data['reason'] instanceof StockMovementReason ? $data['reason'] : StockMovementReason::from($data['reason']),
                             flockId: ! empty($data['flock_id']) ? (int) $data['flock_id'] : null,
                             reference: $data['reference'] ?? null,
                             notes: $data['notes'] ?? null,

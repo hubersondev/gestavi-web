@@ -3,11 +3,14 @@
 namespace App\Filament\Farm\Resources\Sales\Pages;
 
 use App\Enums\PaymentMethod;
+use App\Enums\PlanFeature;
+use App\Filament\Farm\Resources\Deliveries\DeliveryResource;
 use App\Filament\Farm\Resources\Sales\SaleResource;
 use App\Models\Account;
 use App\Models\Sale;
 use App\Services\SaleService;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Facades\Filament;
@@ -99,10 +102,10 @@ class ViewSale extends ViewRecord
                         app(SaleService::class)->recordPayment(
                             sale: $record,
                             amount: (float) $data['amount'],
-                            method: PaymentMethod::from($data['method']),
+                            method: $data['method'] instanceof PaymentMethod ? $data['method'] : PaymentMethod::from($data['method']),
                             accountId: $data['account_id'] ?? null,
                             reference: $data['reference'] ?? null,
-                            paidAt: \Carbon\Carbon::parse($data['payment_date']),
+                            paidAt: Carbon::parse($data['payment_date']),
                         );
 
                         Notification::make()
@@ -123,9 +126,9 @@ class ViewSale extends ViewRecord
                 ->icon('heroicon-o-truck')
                 ->color('info')
                 ->visible(fn (Sale $record): bool => ! $record->isCancelled()
-                    && \App\Filament\Farm\Resources\Deliveries\DeliveryResource::canCreate()
-                    && Filament::getTenant()?->hasFeature(\App\Enums\PlanFeature::Deliveries))
-                ->url(fn (Sale $record): string => \App\Filament\Farm\Resources\Deliveries\DeliveryResource::getUrl('create', ['sale' => $record->getKey()])),
+                    && DeliveryResource::canCreate()
+                    && Filament::getTenant()?->hasFeature(PlanFeature::Deliveries))
+                ->url(fn (Sale $record): string => DeliveryResource::getUrl('create', ['sale' => $record->getKey()])),
 
             Action::make('cancel')
                 ->label('Annuler la facture')
