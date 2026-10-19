@@ -33,6 +33,11 @@ class PlanSeeder extends Seeder
             PlanFeature::CreditNotes->value,
             PlanFeature::Payments->value,
             PlanFeature::Deliveries->value,
+            // Tableaux de bord des modules inclus (l'IoT n'est pas dans l'offre Pro)
+            PlanFeature::SalesDashboard->value,
+            PlanFeature::FinanceDashboard->value,
+            PlanFeature::HrDashboard->value,
+            PlanFeature::PayrollDashboard->value,
             PlanFeature::Employees->value,
             PlanFeature::Contracts->value,
             PlanFeature::LeaveManagement->value,
