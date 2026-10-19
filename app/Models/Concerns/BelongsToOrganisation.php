@@ -4,8 +4,10 @@ namespace App\Models\Concerns;
 
 use App\Exceptions\OrganisationMismatchException;
 use App\Models\Farm;
+use App\Models\Organisation;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * Discriminant multi-tenant unique : toute table de faits porte `organisation_id`
@@ -32,6 +34,16 @@ trait BelongsToOrganisation
                 $model->assertOrganisationContextConsistent();
             }
         });
+    }
+
+    /**
+     * Organisation propriétaire. Filament s'en sert, au démarrage du panel Ferme, pour rattacher
+     * au tenant courant tout enregistrement créé : sans elle, la création échoue depuis l'interface.
+     * Un modèle peut la redéfinir.
+     */
+    public function organisation(): BelongsTo
+    {
+        return $this->belongsTo(Organisation::class);
     }
 
     /**
