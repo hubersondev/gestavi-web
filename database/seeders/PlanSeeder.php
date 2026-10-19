@@ -32,6 +32,7 @@ class PlanSeeder extends Seeder
             PlanFeature::Quotes->value,
             PlanFeature::CreditNotes->value,
             PlanFeature::Payments->value,
+            PlanFeature::Deliveries->value,
             PlanFeature::Employees->value,
             PlanFeature::Contracts->value,
             PlanFeature::LeaveManagement->value,
@@ -93,7 +94,7 @@ class PlanSeeder extends Seeder
             ],
         );
 
-        Plan::firstOrCreate(
+        $enterprise = Plan::firstOrCreate(
             ['slug' => 'enterprise'],
             [
                 'name' => 'Entreprise',
@@ -109,5 +110,10 @@ class PlanSeeder extends Seeder
                 'is_active' => true,
             ],
         );
+
+        // Le plan Entreprise donne accès à tout : il reçoit aussi les fonctionnalités ajoutées depuis sa création
+        if (array_diff($enterpriseFeatures, $enterprise->features ?? []) !== []) {
+            $enterprise->update(['features' => $enterpriseFeatures]);
+        }
     }
 }
